@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { caja } from './util.js';
-import { texturaDeCanvas } from './texturas.js';
+import { caja, GEO_CAJA } from './util.js';
+import { texturaDeCanvas, recorteCanvas } from './texturas.js';
 
 const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
 
@@ -13,6 +13,25 @@ export function crearPersonaje(p, cabezaTex) {
   matPiel.color.multiplyScalar(0.87);
 
   const gordo = p.cuerpo === 'gordo';
+  const anchoTorso = gordo ? 2.7 : 2;
+  const fondoTorso = gordo ? 1.7 : 1;
+  const extras = []; // texturas y materiales propios, para liberar al cambiar de personaje
+
+  // Remera con foto: frente con el diseño y el resto (espalda, costados, mangas) con la tela.
+  let remera = p.remera;
+  let torso;
+  let panzaFrente = null;
+  if (cabezaTex.ropa) {
+    const tex = (c) => { const t = texturaDeCanvas(c); extras.push(t); return t; };
+    const lambert = (t) => { const m = new THREE.MeshLambertMaterial({ map: t }); extras.push(m); return m; };
+    const tela = lambert(tex(cabezaTex.ropa.tela));
+    torso = [tela, tela, tela, tela, lambert(tex(cabezaTex.ropa.frente)), tela];
+    // La panza muestra la parte del frente que tapa, así el diseño sigue continuo.
+    const u0 = (anchoTorso / 2 - 1.1) / anchoTorso;
+    const frentePanza = lambert(tex(recorteCanvas(cabezaTex.ropa.frente, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2)));
+    panzaFrente = [tela, tela, tela, tela, frentePanza, tela];
+    remera = tela;
+  }
   const extremidad = (x, y, colorArriba, colorAbajo, largoArriba, grosor = 0.95) => {
     const pivote = new THREE.Group();
     pivote.position.set(x, y, 0);
@@ -23,14 +42,20 @@ export function crearPersonaje(p, cabezaTex) {
   };
 
   // Cuerpo normal o 'gordo' (torso más ancho y profundo, panza, extremidades más gruesas).
-  const anchoTorso = gordo ? 2.7 : 2;
   const xBrazo = anchoTorso / 2 + (gordo ? 0.55 : 0.5);
   const piernaI = extremidad(gordo ? -0.65 : -0.5, 2, p.pantalon, null, 2, gordo ? 1.25 : 0.95);
   const piernaD = extremidad(gordo ? 0.65 : 0.5, 2, p.pantalon, null, 2, gordo ? 1.25 : 0.95);
-  const brazoI = extremidad(-xBrazo, 4, p.remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
-  const brazoD = extremidad(xBrazo, 4, p.remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
-  grupo.add(caja(anchoTorso, 2, gordo ? 1.7 : 1, p.remera, 0, 3, 0));
-  if (gordo) grupo.add(caja(2.2, 1.4, 0.45, p.remera, 0, 2.75, 1.05));
+  const brazoI = extremidad(-xBrazo, 4, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
+  const brazoD = extremidad(xBrazo, 4, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
+  const bloque = (w, h, d, material, x, y, z) => {
+    if (!Array.isArray(material)) return caja(w, h, d, material, x, y, z);
+    const m = new THREE.Mesh(GEO_CAJA, material);
+    m.scale.set(w, h, d);
+    m.position.set(x, y, z);
+    return m;
+  };
+  grupo.add(bloque(anchoTorso, 2, fondoTorso, torso || p.remera, 0, 3, 0));
+  if (gordo) grupo.add(bloque(2.2, 1.4, 0.45, panzaFrente || p.remera, 0, 2.75, fondoTorso / 2 + 0.2));
 
   // Sin iluminación: la foto se ve siempre con sus colores reales. Los costados y la nuca
   // van un poco más oscuros para que se note el volumen del bloque.
@@ -68,6 +93,7 @@ export function crearPersonaje(p, cabezaTex) {
       texturas.forEach((t) => t.dispose());
       materiales.forEach((m) => m.dispose());
       matPiel.dispose();
+      extras.forEach((e) => e.dispose());
     },
   };
 }

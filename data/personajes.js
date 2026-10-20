@@ -10,6 +10,7 @@
 // - peinado: 'liso', 'ondulado' o 'rulos'
 // - cuerpo:  (opcional) 'gordo'
 // - remera / pantalon: color de la ropa
+// - remeraFotos: (opcional) remera con imágenes en assets/: { frente: con el diseño, tela: espalda y mangas }
 
 export const PERSONAJES = [
   { id: 'toto',   nombre: 'Toto',   foto: 'toto.jpeg',   recorte: [0.5, 0.53, 0.52],   piel: '#f3d3bd',                    remera: '#e53935', pantalon: '#1e3a8a' },
@@ -21,5 +22,6 @@ export const PERSONAJES = [
   { id: 'mateo',  nombre: 'Mateo',  foto: 'mateo.jpeg',  recorte: [0.5, 0.45, 1],    piel: '#8a5a3c',                     remera: '#fdd835', pantalon: '#1565c0' },
   { id: 'negro',  nombre: 'Negro',  foto: 'negro.jpeg',  recorte: [0.5, 0.46, 0.45],                                      remera: '#212121', pantalon: '#c62828' },
   { id: 'joaco',  nombre: 'Joaco',  foto: 'joaco.jpeg',  recorte: [0.5, 0.45, 0.7],  piel: '#f1c27d',                     remera: '#d81b60', pantalon: '#424242' },
-  { id: 'bauti',  nombre: 'Bauti',  foto: 'bauti.jpeg',  recorte: [0.43, 0.32, 0.34], piel: '#f5d7c3', pelo: '#5c3a21', peinado: 'liso', cuerpo: 'gordo', remera: '#5e35b1', pantalon: '#3e2723' },
+  { id: 'bauti',  nombre: 'Bauti',  foto: 'bauti.jpeg',  recorte: [0.43, 0.32, 0.34], piel: '#f5d7c3', pelo: '#5c3a21', peinado: 'liso', cuerpo: 'gordo', remera: '#2e2e2e', pantalon: '#3e2723',
+    remeraFotos: { frente: 'ropa/glassy_frente.jpg', tela: 'ropa/glassy_tela.jpg' } },
 ];

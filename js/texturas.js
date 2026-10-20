@@ -2,6 +2,15 @@ import * as THREE from 'three';
 
 const FUENTE = "Fredoka, 'Arial Black', Arial, sans-serif";
 
+// Recorte de un canvas (fracciones de 0 a 1), para texturas que continúan un dibujo.
+export function recorteCanvas(canvas, u0, v0, u1, v1) {
+  const w = Math.round(canvas.width * (u1 - u0));
+  const h = Math.round(canvas.height * (v1 - v0));
+  const c = nuevoCanvas(w, h);
+  c.getContext('2d').drawImage(canvas, canvas.width * u0, canvas.height * v0, w, h, 0, 0, w, h);
+  return c;
+}
+
 export function texturaDeCanvas(canvas) {
   const t = new THREE.CanvasTexture(canvas);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -269,7 +278,23 @@ export function cargarCabeza(p) {
       const [abajo, gab] = lienzo();
       gab.fillStyle = piel;
       gab.fillRect(0, 0, s, s);
-      return { frente, der, izq, atras, arriba, abajo, piel, pelo };
+      // Remera con foto (opcional): { frente, tela } en assets/.
+      let ropa = null;
+      if (p.remeraFotos) {
+        const [imgFrente, imgTela] = await Promise.all([
+          cargarImagen(`assets/${p.remeraFotos.frente}`),
+          cargarImagen(`assets/${p.remeraFotos.tela}`),
+        ]);
+        if (imgFrente && imgTela) {
+          const aCanvas = (img) => {
+            const c = nuevoCanvas(img.naturalWidth, img.naturalHeight);
+            c.getContext('2d').drawImage(img, 0, 0);
+            return c;
+          };
+          ropa = { frente: aCanvas(imgFrente), tela: aCanvas(imgTela) };
+        }
+      }
+      return { frente, der, izq, atras, arriba, abajo, piel, pelo, ropa };
     })());
   }
   return caras.get(p.id);

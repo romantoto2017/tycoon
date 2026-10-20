@@ -17,6 +17,7 @@ Tycoon 3D de bloques para el navegador. Es un sitio 100% estático (HTML + JS + 
 - Van en `assets/caras/`. El archivo de cada uno se indica en `data/personajes.js` (campo `foto`, por ejemplo `toto.jpeg`).
 - La foto va en el frente de la cabeza. La nuca, los costados y la parte de arriba se dibujan solos con el color de pelo y de piel de la foto.
 - En `data/personajes.js` podés forzar `piel` y `pelo` (colores), `peinado` (`'liso'`, `'ondulado'` o `'rulos'`) y `cuerpo: 'gordo'`. Lo que no pongas se saca de la foto.
+- `remeraFotos` pone una remera con imágenes (frente con el diseño + tela para espalda y mangas). La de Bauti sale de `assets/caras/glassybauti.jpg`, recortada con `herramientas/remera_glassy.py` en `assets/ropa/`.
 - Si querés una nuca propia (por ejemplo hecha con IA), subila a `assets/caras/` y poné su nombre en `fotoAtras` (ej. `fotoAtras: 'toto_atras.jpeg'`).
 - Si la cara sale mal encuadrada, ajustá `recorte: [centroX, centroY, tamaño]` en `data/personajes.js`:
   - `centroX` / `centroY`: dónde está la cara, de 0 a 1 (0.5 = medio de la foto; un número más chico en `centroY` sube el recuadro).
