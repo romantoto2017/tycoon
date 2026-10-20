@@ -1,24 +1,64 @@
 import * as THREE from 'three';
 import { DROPPERS } from '../data/objetos.js';
 import { ITEMS, ITEMS_POR_ID } from './progresion.js';
+import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA } from './constantes.js';
 import { caja, mat, formato } from './util.js';
-import { crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta } from './texturas.js';
+import { Lote } from './lote.js';
+import { Fuegos } from './fuegos.js';
+import {
+  crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro,
+} from './texturas.js';
 import { sfx } from './sfx.js';
 
-// Fábrica: cinta a lo largo de Z, del lado izquierdo del terreno.
-const CINTA = { x: -26, z0: -24, z1: 10, alto: 1.2, ancho: 2.4, vel: 5 };
-const SLOTS_DROPPER = [-21, -15.5, -10, -4.5, 1, 6.5];
-const COLECTOR_Z = 11.8;
-const COBRAR = { x: -21.5, z: COLECTOR_Z };
 const TAM_MONEDA = 0.6;
-const MAX_MONEDAS = 300;
+const MAX_MONEDAS = 500;
 const ALTURA_CAIDA = 14;
 
 const GEO_BOTON = new THREE.CylinderGeometry(1.4, 1.4, 0.3, 20);
 const GEO_ARO = new THREE.CylinderGeometry(1.75, 1.75, 0.16, 20);
+const GEO_HAZ = new THREE.CylinderGeometry(0.5, 0.5, 40, 8, 1, true);
 const MAT_VERDE = new THREE.MeshLambertMaterial({ color: '#2fd14a', emissive: '#0b4a14' });
 const MAT_ROJO = new THREE.MeshLambertMaterial({ color: '#e53935', emissive: '#3a0a0a' });
 const MAT_DORADO = new THREE.MeshLambertMaterial({ color: '#ffc928', emissive: '#4a3500' });
+const MAT_HAZ = new THREE.MeshBasicMaterial({ color: '#7dff6a', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
+
+function crearKit() {
+  const brillos = new Map();
+  const material = (c) => (c instanceof THREE.Material ? c : mat(c));
+  const malla = (geo, c, x, y, z) => {
+    const m = new THREE.Mesh(geo, material(c));
+    m.position.set(x, y, z);
+    return m;
+  };
+  const kit = {
+    THREE,
+    caja,
+    cajaDe: (x0, y0, z0, x1, y1, z1, c) => caja(x1 - x0, y1 - y0, z1 - z0, c, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2),
+    noSolido: (m) => { m.userData.noSolido = true; return m; },
+    cilindro: (rArriba, rAbajo, h, c, x, y, z, seg = 12) => malla(new THREE.CylinderGeometry(rArriba, rAbajo, h, seg), c, x, y, z),
+    cono: (r, h, c, x, y, z, seg = 8) => malla(new THREE.ConeGeometry(r, h, seg), c, x, y, z),
+    esfera: (r, c, x, y, z) => malla(new THREE.SphereGeometry(r, 14, 10), c, x, y, z),
+    grupo: () => new THREE.Group(),
+    etiqueta: (lineas, ancho) => crearEtiqueta(lineas, ancho).sprite,
+    cartel(texto, ancho, alto, color, fondo) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto),
+        new THREE.MeshBasicMaterial({ map: texturaDeCanvas(canvasCartel(texto, ancho, alto, color, fondo)) }));
+      return kit.noSolido(m);
+    },
+    lamina(archivo, i, ancho, alto) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: texturaCuadro(archivo, i) }));
+      return kit.noSolido(m);
+    },
+    brillo(c) {
+      if (!brillos.has(c)) brillos.set(c, new THREE.MeshBasicMaterial({ color: c }));
+      return brillos.get(c);
+    },
+    vidrio: new THREE.MeshLambertMaterial({ color: '#bfe7ff', transparent: true, opacity: 0.35, depthWrite: false }),
+    agua: new THREE.MeshLambertMaterial({ color: '#29b6f6', emissive: '#08324a', transparent: true, opacity: 0.6, depthWrite: false }),
+    red: new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.35, depthWrite: false }),
+  };
+  return kit;
+}
 
 export class Tycoon {
   constructor({ escena, colisiones, estado, ui, guardar }) {
@@ -27,14 +67,20 @@ export class Tycoon {
     this.estado = estado;
     this.ui = ui;
     this.guardar = guardar;
+    this.kit = crearKit();
+    this.lote = new Lote(escena);
+    this.fuegos = new Fuegos(escena);
 
     this.multValor = 1;
     this.multVel = 1;
-    this.droppers = [];     // { i, z, t }
+    this.droppers = [];
     this.botones = [];
     this.animaciones = [];
+    this.giratorios = [];
+    this.agua = [];
     this.monedas = [];
     this.fabrica = null;
+    this.pelota = null;
     this.tiempo = 0;
 
     const texMoneda = texturaDeCanvas(canvasMoneda(64, true));
@@ -50,17 +96,21 @@ export class Tycoon {
     this.dummy = new THREE.Object3D();
   }
 
-  // Al cargar una partida: arma todo lo comprado sin animación.
   reconstruir() {
     for (const id of this.estado.compras) {
       const item = ITEMS_POR_ID[id];
       if (item) this.aplicar(item, false);
     }
-    this.refrescarBotones();
+    this.refrescarBotones(false);
   }
 
   get ingresoPorSegundo() {
     return this.droppers.reduce((a, d) => a + this.valorMoneda(d) / this.intervalo(d), 0);
+  }
+
+  get progreso() {
+    const comprados = new Set(this.estado.compras);
+    return ITEMS.filter((i) => comprados.has(i.id)).length / ITEMS.length;
   }
 
   valorMoneda(d) { return DROPPERS[d.i].valor * this.multValor; }
@@ -76,7 +126,13 @@ export class Tycoon {
       if (item.valor) this.multValor *= item.valor;
       if (item.velocidad) this.multVel *= item.velocidad;
     }
-    if (item.construir) this.agregarPieza(item.construir({ caja, mat }), animar);
+    if (item.construir) {
+      const g = new THREE.Group();
+      item.construir(this.kit, g);
+      this.agregarPieza(g, animar, { muebles: item.muebles });
+    }
+    if (item.id === 'cancha') this.crearPelota();
+    if (item.final) this.fuegos.activo = true;
   }
 
   intentarComprar(boton) {
@@ -84,23 +140,29 @@ export class Tycoon {
     if (this.estado.plata < item.precio) return false;
     this.estado.plata -= item.precio;
     this.estado.compras.push(item.id);
-    this.escena.remove(boton.grupo);
-    this.botones.splice(this.botones.indexOf(boton), 1);
+    this.quitarBoton(boton);
     this.aplicar(item, true);
-    this.refrescarBotones();
-    sfx.comprar();
-    this.ui.toast(`¡${item.nombre}!`, 'ok');
+    this.refrescarBotones(true);
+    if (item.final) {
+      sfx.final();
+      this.ui.celebrar(this.estado.tiempoJugado || 0);
+    } else {
+      sfx.comprar();
+      this.ui.toast(`¡${item.nombre}!`, 'ok');
+      if (item.descripcion) this.ui.toast(item.descripcion, 'plata');
+    }
     this.guardar();
     return true;
   }
 
-  refrescarBotones() {
+  refrescarBotones(avisar) {
     const comprados = new Set(this.estado.compras);
     const conBoton = new Set(this.botones.map((b) => b.item.id));
     for (const item of ITEMS) {
       if (comprados.has(item.id) || conBoton.has(item.id)) continue;
       if (!item.requiere.every((r) => comprados.has(r))) continue;
       this.crearBoton(item);
+      if (avisar && item.tipo === 'construccion' && !item.especial) this.ui.toast(`Nuevo botón: ${item.nombre}`, 'info');
     }
   }
 
@@ -112,44 +174,61 @@ export class Tycoon {
     aro.position.y = 0.08;
     const disco = new THREE.Mesh(GEO_BOTON, MAT_ROJO);
     disco.position.y = 0.2;
+    const haz = new THREE.Mesh(GEO_HAZ, MAT_HAZ);
+    haz.position.y = 20;
+    haz.visible = false;
     const precio = item.precio === 0 ? 'GRATIS' : formato(item.precio);
     const etiqueta = crearEtiqueta([
-      { texto: item.nombre, tam: 56 },
+      { texto: item.nombre, tam: 56, color: item.final ? '#ffd23f' : '#ffffff' },
       { texto: precio, tam: 60, color: '#8dff6a', moneda: item.precio > 0 },
     ], 6);
     etiqueta.sprite.position.y = 3.6;
-    grupo.add(aro, disco, etiqueta.sprite);
+    grupo.add(aro, disco, haz, etiqueta.sprite);
     this.escena.add(grupo);
-    this.botones.push({ item, grupo, disco, etiqueta, x, y, z, pisado: false, alcanza: null, fase: Math.random() * 6 });
+    this.botones.push({ item, grupo, disco, haz, etiqueta, x, y, z, pisado: false, alcanza: null, fase: Math.random() * 6 });
     grupo.scale.setScalar(0.01);
     this.animaciones.push({ obj: grupo, y0: y, t: 0, dur: 0.4, caida: 0 });
   }
 
+  quitarBoton(boton) {
+    this.escena.remove(boton.grupo);
+    boton.etiqueta.sprite.material.map.dispose();
+    boton.etiqueta.sprite.material.dispose();
+    this.botones.splice(this.botones.indexOf(boton), 1);
+  }
+
   // ---------- Piezas y animación ----------
 
-  // Centra el grupo en su base (para que crezca desde el piso), registra
-  // colisiones y lo agrega a la escena, cayendo desde arriba si animar = true.
-  agregarPieza(grupo, animar, sinColision = false) {
+  // Centra el grupo en su base (para que crezca desde el piso), registra colisiones
+  // y lo agrega a la escena. Cuando termina de aparecer, sus bloques pasan al lote.
+  agregarPieza(grupo, animar, { sinColision = false, muebles = false } = {}) {
     const caja3 = new THREE.Box3();
     const tmp = new THREE.Box3();
     grupo.updateMatrixWorld(true);
     grupo.traverse((o) => { if (o.isMesh) caja3.union(tmp.setFromObject(o)); });
+    if (caja3.isEmpty()) caja3.set(new THREE.Vector3(), new THREE.Vector3());
     const centro = new THREE.Vector3((caja3.min.x + caja3.max.x) / 2, caja3.min.y, (caja3.min.z + caja3.max.z) / 2);
     grupo.children.forEach((c) => c.position.sub(centro));
     grupo.position.add(centro);
     grupo.updateMatrixWorld(true);
 
-    if (!sinColision) {
-      grupo.traverse((o) => {
-        if (o.isMesh && !o.userData.noSolido) this.colisiones.push(new THREE.Box3().setFromObject(o));
-      });
-    }
+    grupo.traverse((o) => {
+      if (o.userData.girar) this.giratorios.push(o);
+      if (!o.isMesh) return;
+      if (o.material === this.kit.agua && o.geometry.type === 'BoxGeometry') this.agua.push(new THREE.Box3().setFromObject(o));
+      if (sinColision || o.userData.noSolido) return;
+      const b = new THREE.Box3().setFromObject(o);
+      if (muebles) b.camara = false;
+      this.colisiones.push(b);
+    });
     this.escena.add(grupo);
     if (animar) {
       const y0 = grupo.position.y;
       grupo.position.y += ALTURA_CAIDA;
       grupo.scale.setScalar(0.3);
-      this.animaciones.push({ obj: grupo, y0, t: 0, dur: 0.7, caida: ALTURA_CAIDA });
+      this.animaciones.push({ obj: grupo, y0, t: 0, dur: 0.7, caida: ALTURA_CAIDA, alTerminar: () => this.lote.absorber(grupo) });
+    } else {
+      this.lote.absorber(grupo);
     }
     return grupo;
   }
@@ -164,12 +243,14 @@ export class Tycoon {
       a.obj.scale.setScalar(easeOutBack(k));
       if (k >= 1) {
         a.obj.scale.setScalar(1);
+        a.obj.position.y = a.y0;
         this.animaciones.splice(i, 1);
+        a.alTerminar?.();
       }
     }
   }
 
-  // ---------- Fábrica: cinta, colector, botón Cobrar ----------
+  // ---------- Fábrica ----------
 
   construirFabrica(animar) {
     const largo = CINTA.z1 - CINTA.z0;
@@ -177,9 +258,10 @@ export class Tycoon {
     const cinta = new THREE.Group();
     this.texCinta = texturaCinta();
     this.texCinta.repeat.set(1, largo / 2);
+    const gris = mat('#333');
     const banda = new THREE.Mesh(
       new THREE.BoxGeometry(CINTA.ancho, 0.25, largo),
-      [mat('#333'), mat('#333'), new THREE.MeshLambertMaterial({ map: this.texCinta }), mat('#333'), mat('#333'), mat('#333')],
+      [gris, gris, new THREE.MeshLambertMaterial({ map: this.texCinta }), gris, gris, gris],
     );
     banda.position.set(CINTA.x, CINTA.alto - 0.125, cz);
     cinta.add(banda);
@@ -194,8 +276,7 @@ export class Tycoon {
     const boca = caja(CINTA.ancho + 0.2, 1.2, 0.1, '#111', cx, CINTA.alto + 0.5, COLECTOR_Z - 1.81);
     boca.userData.noSolido = true;
     colector.add(boca);
-    const tapa = caja(4.3, 0.3, 3.9, '#ffc928', cx, 3.35, COLECTOR_Z);
-    colector.add(tapa);
+    colector.add(caja(4.3, 0.3, 3.9, '#ffc928', cx, 3.35, COLECTOR_Z));
     this.etiquetaColector = crearEtiqueta([{ texto: 'COLECTOR', tam: 44 }, { texto: '0', tam: 70, color: '#ffd23f', moneda: true }], 6);
     this.etiquetaColector.sprite.position.set(cx, 6.2, COLECTOR_Z);
     colector.add(this.etiquetaColector.sprite);
@@ -210,10 +291,9 @@ export class Tycoon {
     const et = crearEtiqueta([{ texto: 'COBRAR', tam: 64, color: '#ffd23f' }], 5);
     et.sprite.position.set(COBRAR.x, 3, COBRAR.z);
     cobrar.add(aro, disco, et.sprite);
-    this.agregarPieza(cobrar, animar, true);
+    this.agregarPieza(cobrar, animar, { sinColision: true });
     this.cobrar = { pisado: false, espera: 0 };
-
-    this.fabrica = { cinta, colector };
+    this.fabrica = true;
   }
 
   agregarDropper(i, animar) {
@@ -237,8 +317,56 @@ export class Tycoon {
     et.sprite.position.set(x, 10, z);
     g.add(et.sprite);
     this.agregarPieza(g, animar);
-    // Si se animó, que espere a "aterrizar" antes de tirar monedas.
     this.droppers.push({ i, z, t: animar ? -0.7 : 0 });
+  }
+
+  // ---------- Pelota de la cancha ----------
+
+  crearPelota() {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.9, 14, 10), mat('#fafafa'));
+    const cx = (CANCHA.x0 + CANCHA.x1) / 2;
+    const cz = (CANCHA.z0 + CANCHA.z1) / 2;
+    m.position.set(cx, 0.9, cz);
+    this.escena.add(m);
+    this.pelota = { m, vel: new THREE.Vector3(), cx, cz };
+  }
+
+  actualizarPelota(dt, jugador) {
+    const p = this.pelota;
+    const b = p.m.position;
+    const dx = b.x - jugador.pos.x;
+    const dz = b.z - jugador.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 1.8 && jugador.pos.y < b.y + 1) {
+      const fuerza = 10 + Math.hypot(jugador.vel.x, jugador.vel.z) * 0.6;
+      p.vel.set((dx / (d || 1)) * fuerza, 5, (dz / (d || 1)) * fuerza);
+    }
+    p.vel.y -= 30 * dt;
+    b.addScaledVector(p.vel, dt);
+    if (b.y < 0.9) {
+      b.y = 0.9;
+      p.vel.y = Math.abs(p.vel.y) > 2 ? -p.vel.y * 0.5 : 0;
+      p.vel.x *= 1 - dt * 1.2;
+      p.vel.z *= 1 - dt * 1.2;
+    }
+    const C = CANCHA;
+    if (b.x < C.x0 + 0.9 || b.x > C.x1 - 0.9) {
+      b.x = THREE.MathUtils.clamp(b.x, C.x0 + 0.9, C.x1 - 0.9);
+      p.vel.x *= -0.7;
+    }
+    if (b.z < C.z0 + 0.9 || b.z > C.z1 - 0.9) {
+      if (Math.abs(b.x - p.cx) < 3 && b.y < 3.2) {
+        sfx.gol();
+        this.ui.toast('¡¡GOOOOL!!', 'plata');
+        b.set(p.cx, 4, p.cz);
+        p.vel.set(0, 0, 0);
+      } else {
+        b.z = THREE.MathUtils.clamp(b.z, C.z0 + 0.9, C.z1 - 0.9);
+        p.vel.z *= -0.7;
+      }
+    }
+    p.m.rotation.x += p.vel.z * dt;
+    p.m.rotation.z -= p.vel.x * dt;
   }
 
   // ---------- Bucle ----------
@@ -247,10 +375,12 @@ export class Tycoon {
     this.tiempo += dt;
     this.actualizarAnimaciones(dt);
     this.actualizarBotones(dt, jugador);
+    for (const o of this.giratorios) o.rotation.y += o.userData.girar * dt;
+    this.fuegos.actualizar(dt);
+    if (this.pelota) this.actualizarPelota(dt, jugador);
     if (!this.fabrica) return;
 
-    this.texCinta.offset.y += (CINTA.vel * dt) / 2;
-    this.texCinta.offset.y %= 1;
+    this.texCinta.offset.y = (this.texCinta.offset.y + (CINTA.vel * dt) / 2) % 1;
 
     for (const d of this.droppers) {
       d.t += dt;
@@ -264,7 +394,7 @@ export class Tycoon {
     this.actualizarCobrar(dt, jugador);
 
     const banco = Math.floor(this.estado.banco);
-    if (banco !== this.bancoMostrado && this.tiempo - (this.ultimoCartel || 0) > 0.15) {
+    if (banco !== this.bancoMostrado && this.tiempo - (this.ultimoCartel || 0) > 0.2) {
       this.bancoMostrado = banco;
       this.ultimoCartel = this.tiempo;
       this.etiquetaColector.actualizar([{ texto: 'COLECTOR', tam: 44 }, { texto: formato(banco), tam: 70, color: '#ffd23f', moneda: true }]);
@@ -274,7 +404,7 @@ export class Tycoon {
   soltarMoneda(d) {
     const valor = this.valorMoneda(d);
     if (this.monedas.length >= MAX_MONEDAS) {
-      this.estado.banco += valor; // demasiadas en pantalla: va directo al colector
+      this.estado.banco += valor;
       return;
     }
     this.monedas.push({
@@ -343,6 +473,7 @@ export class Tycoon {
       if (alcanza !== b.alcanza) {
         b.alcanza = alcanza;
         b.disco.material = alcanza ? MAT_VERDE : MAT_ROJO;
+        b.haz.visible = alcanza;
       }
 
       const dx = jugador.pos.x - b.x;

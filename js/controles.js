@@ -12,7 +12,9 @@ const RADIO_STICK = 55;
 // Teclado + mouse (arrastrar para girar la cámara) + táctil (joystick y botón de salto).
 export class Controles {
   constructor(canvas) {
-    this.activo = false;
+    this._activo = false;
+    this.esTactil = false;
+    this.sensibilidad = 1;
     this.teclas = new Set();
     this.yaw = 0;
     this.pitch = 0.42;
@@ -50,8 +52,23 @@ export class Controles {
     btnSaltar.addEventListener('pointerleave', soltarSalto);
   }
 
+  // Al desactivar (menús abiertos) se sueltan las teclas y se ocultan los controles táctiles.
+  get activo() { return this._activo; }
+  set activo(v) {
+    this._activo = v;
+    if (!v) {
+      this.teclas.clear();
+      this.saltoTactil = false;
+      for (const id of [...this.punteros.keys()]) this.alSoltar({ pointerId: id });
+    }
+    this.tactil.classList.toggle('oculto', !(v && this.esTactil));
+  }
+
   alApretar(e) {
-    if (e.pointerType === 'touch') this.tactil.classList.remove('oculto');
+    if (e.pointerType === 'touch' && !this.esTactil) {
+      this.esTactil = true;
+      this.activo = this._activo;
+    }
     if (!this.activo) return;
     e.target.setPointerCapture(e.pointerId);
     if (e.pointerType === 'touch' && e.clientX < window.innerWidth * 0.45 && ![...this.punteros.values()].some((p) => p.tipo === 'stick')) {
@@ -68,7 +85,7 @@ export class Controles {
     const p = this.punteros.get(e.pointerId);
     if (!p) return;
     if (p.tipo === 'camara') {
-      const k = e.pointerType === 'touch' ? 0.008 : 0.006;
+      const k = (e.pointerType === 'touch' ? 0.008 : 0.006) * this.sensibilidad;
       this.yaw -= (e.clientX - p.x) * k;
       this.pitch = THREE.MathUtils.clamp(this.pitch + (e.clientY - p.y) * k, 0.05, 1.35);
       p.x = e.clientX;

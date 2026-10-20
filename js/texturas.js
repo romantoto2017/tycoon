@@ -96,17 +96,34 @@ function dibujarCaraPlaceholder(g, s, p) {
   g.fillText(p.nombre[0].toUpperCase(), s / 2, s * 0.55);
 }
 
-// Canvas cuadrado con la foto (recortada al centro) o la inicial si no hay foto.
+// Busca la foto: primero el archivo indicado en personajes.js, después id.jpg/.jpeg/.png.
+async function cargarFoto(p) {
+  const nombres = [p.foto, `${p.id}.jpg`, `${p.id}.jpeg`, `${p.id}.png`].filter(Boolean);
+  for (const n of [...new Set(nombres)]) {
+    const img = await cargarImagen(`assets/caras/${n}`);
+    if (img) return img;
+  }
+  return null;
+}
+
+// Canvas cuadrado con la cara (recortada según p.recorte) o la inicial si no hay foto.
+// p.recorte = [centroX, centroY, tamaño]: centro en fracción del ancho/alto de la foto
+// y tamaño del cuadrado en fracción del lado más corto.
 export function obtenerCara(p) {
   if (!caras.has(p.id)) {
     caras.set(p.id, (async () => {
-      const img = await cargarImagen(`assets/caras/${p.id}.jpg`);
+      const img = await cargarFoto(p);
       const s = 256;
       const c = nuevoCanvas(s);
       const g = c.getContext('2d');
       if (img) {
-        const lado = Math.min(img.width, img.height);
-        g.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, s, s);
+        const [cx, cy, t] = p.recorte || [0.5, 0.5, 1];
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        const lado = Math.min(w, h) * Math.min(1, t);
+        const x0 = Math.min(Math.max(cx * w - lado / 2, 0), w - lado);
+        const y0 = Math.min(Math.max(cy * h - lado / 2, 0), h - lado);
+        g.drawImage(img, x0, y0, lado, lado, 0, 0, s, s);
       } else {
         dibujarCaraPlaceholder(g, s, p);
       }
@@ -235,4 +252,63 @@ export function texturaSombra() {
   g.fillStyle = grad;
   g.fillRect(0, 0, s, s);
   return new THREE.CanvasTexture(c);
+}
+
+// Cartel con texto (letras grandes con borde), para paredes y carteles.
+export function canvasCartel(texto, ancho, alto, color, fondo) {
+  const h = 128;
+  const w = Math.min(2048, Math.round((h * ancho) / alto));
+  const c = nuevoCanvas(w, h);
+  const g = c.getContext('2d');
+  g.fillStyle = fondo;
+  g.fillRect(0, 0, w, h);
+  let tam = h * 0.7;
+  g.font = `700 ${tam}px ${FUENTE}`;
+  while (g.measureText(texto).width > w * 0.92 && tam > 10) {
+    tam -= 4;
+    g.font = `700 ${tam}px ${FUENTE}`;
+  }
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineJoin = 'round';
+  g.lineWidth = tam * 0.14;
+  g.strokeStyle = '#000';
+  g.strokeText(texto, w / 2, h * 0.54);
+  g.fillStyle = color;
+  g.fillText(texto, w / 2, h * 0.54);
+  return c;
+}
+
+// Cuadro: placeholder colorido y, si existe, la imagen de assets/cuadros/ recortada a 4:3.
+export function texturaCuadro(archivo, i) {
+  const w = 256;
+  const h = 192;
+  const c = nuevoCanvas(w, h);
+  const g = c.getContext('2d');
+  const fondos = ['#ff7043', '#29b6f6', '#ab47bc', '#66bb6a', '#ffca28', '#ec407a', '#26c6da', '#8d6e63'];
+  g.fillStyle = fondos[i % fondos.length];
+  g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,0.25)';
+  for (let k = 0; k < 6; k++) g.fillRect((k * 53) % w, (k * 37) % h, 40, 40);
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `700 34px ${FUENTE}`;
+  g.lineWidth = 6;
+  g.strokeStyle = '#000';
+  g.strokeText('VECIBANDA', w / 2, h * 0.42);
+  g.fillStyle = '#fff';
+  g.fillText('VECIBANDA', w / 2, h * 0.42);
+  g.font = `700 28px ${FUENTE}`;
+  g.strokeText(`Cuadro ${i + 1}`, w / 2, h * 0.68);
+  g.fillText(`Cuadro ${i + 1}`, w / 2, h * 0.68);
+  const tex = texturaDeCanvas(c);
+  cargarImagen(`assets/cuadros/${archivo}`).then((img) => {
+    if (!img) return;
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const k = Math.min(iw / w, ih / h);
+    g.drawImage(img, (iw - w * k) / 2, (ih - h * k) / 2, w * k, h * k, 0, 0, w, h);
+    tex.needsUpdate = true;
+  });
+  return tex;
 }

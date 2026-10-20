@@ -9,12 +9,15 @@ export function prepararHUD() {
 
 let plataMostrada = '';
 let ppsMostrado = '';
+let progresoMostrado = '';
 
-export function actualizarHUD(plata, pps) {
+export function actualizarHUD(plata, pps, progreso) {
   const p = formato(plata);
   if (p !== plataMostrada) { $('plata').textContent = p; plataMostrada = p; }
   const s = `+${pps < 100 ? (Math.round(pps * 10) / 10) : formato(pps)}/s`;
   if (s !== ppsMostrado) { $('pps').textContent = s; ppsMostrado = s; }
+  const m = `Mansión ${Math.floor(progreso * 100)}%`;
+  if (m !== progresoMostrado) { $('progreso').textContent = m; progresoMostrado = m; }
 }
 
 export function toast(texto, tipo = 'ok') {
@@ -31,11 +34,15 @@ export function mostrar(id, visible) {
   $(id).classList.toggle('oculto', !visible);
 }
 
+export function visible(id) {
+  return !$(id).classList.contains('oculto');
+}
+
 // Arma la grilla de personajes. alElegir(personaje) se llama al tocar una carta.
 export async function armarSeleccion(personajes, elegidoId, alElegir) {
   const grilla = $('grilla-personajes');
-  grilla.innerHTML = '';
   const caras = await Promise.all(personajes.map(obtenerCara));
+  grilla.innerHTML = '';
   personajes.forEach((p, i) => {
     const carta = document.createElement('button');
     carta.className = 'carta' + (p.id === elegidoId ? ' elegida' : '');
@@ -62,4 +69,32 @@ export function pedirConfirmacion() {
     $('btn-confirmar').onclick = () => cerrar(true);
     $('btn-cancelar').onclick = () => cerrar(false);
   });
+}
+
+export function duracion(seg) {
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  return h > 0 ? `${h} h ${m} min` : `${m} min`;
+}
+
+let alCelebrar = null;
+export function onCelebrar(fn) { alCelebrar = fn; }
+
+export function celebrar(segundos) {
+  $('final-tiempo').textContent = `Tiempo de juego: ${duracion(segundos)}`;
+  mostrar('final', true);
+  alCelebrar?.();
+}
+
+// Conecta los sliders de configuración. alCambiar(ajustes) se llama en cada cambio.
+export function prepararConfig(ajustes, alCambiar) {
+  const sliders = { general: 'aj-general', musica: 'aj-musica', efectos: 'aj-efectos', sensibilidad: 'aj-sensibilidad' };
+  for (const [clave, id] of Object.entries(sliders)) {
+    const el = $(id);
+    el.value = Math.round(ajustes[clave] * 100);
+    el.addEventListener('input', () => {
+      ajustes[clave] = Number(el.value) / 100;
+      alCambiar(ajustes);
+    });
+  }
 }

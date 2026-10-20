@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>La Vecibanda House</title>
+  <title>Tycoon Vecibanda</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
@@ -16,30 +16,63 @@
   <canvas id="juego"></canvas>
 
   <div id="hud" class="oculto">
+    <button id="btn-config" class="btn-config" aria-label="Configuración">⚙</button>
     <div class="hud-centro">
       <div class="caja-plata"><img id="icono-moneda" alt=""><span id="plata">0</span></div>
       <div id="pps">+0/s</div>
-    </div>
-    <div class="hud-derecha">
-      <button id="btn-personaje" class="btn azul">Personaje</button>
-      <button id="btn-reiniciar" class="btn rojo">Reiniciar</button>
+      <div id="progreso">Mansión 0%</div>
     </div>
   </div>
 
+  <div id="menu" class="pantalla oculto">
+    <h1 class="titulo">TYCOON <span>VECIBANDA</span></h1>
+    <p class="subtitulo">La Vecibanda House</p>
+    <div class="menu-botones">
+      <button id="btn-jugar" class="btn verde grande">JUGAR</button>
+      <button id="btn-menu-personaje" class="btn azul">Elegir personaje</button>
+    </div>
+    <p id="menu-progreso" class="menu-progreso"></p>
+  </div>
+
   <div id="seleccion" class="pantalla oculto">
-    <h1 class="titulo">LA VECIBANDA <span>HOUSE</span></h1>
+    <h1 class="titulo chico">TYCOON <span>VECIBANDA</span></h1>
     <p class="subtitulo">Elegí tu personaje</p>
     <div id="grilla-personajes"></div>
+    <button id="btn-volver-seleccion" class="btn gris volver">Volver</button>
+  </div>
+
+  <div id="config" class="pantalla oculto">
+    <div class="modal config">
+      <h2>Configuración</h2>
+      <label class="ajuste">Volumen general <input id="aj-general" type="range" min="0" max="100"></label>
+      <label class="ajuste">Música <input id="aj-musica" type="range" min="0" max="100"></label>
+      <label class="ajuste">Efectos de sonido <input id="aj-efectos" type="range" min="0" max="100"></label>
+      <label class="ajuste">Sensibilidad de cámara <input id="aj-sensibilidad" type="range" min="20" max="250"></label>
+      <div class="columna">
+        <button id="btn-cambiar-personaje" class="btn azul">Cambiar personaje</button>
+        <button id="btn-salir-menu" class="btn gris">Salir al menú</button>
+        <button id="btn-reiniciar" class="btn rojo">Reiniciar partida</button>
+        <button id="btn-cerrar-config" class="btn verde">Volver al juego</button>
+      </div>
+    </div>
   </div>
 
   <div id="confirmar" class="pantalla oculto">
     <div class="modal">
-      <h2>¿Reiniciar progreso?</h2>
-      <p>Perdés toda la plata y la mansión. No se puede deshacer.</p>
+      <h2>¿Reiniciar partida?</h2>
+      <p>Si aceptás, se reinicia <b>TODO</b> tu progreso: la plata, la mansión y todos los objetos comprados. No se puede deshacer.</p>
       <div class="fila">
         <button id="btn-cancelar" class="btn gris">Cancelar</button>
-        <button id="btn-confirmar" class="btn rojo">Sí, reiniciar</button>
+        <button id="btn-confirmar" class="btn rojo">Sí, reiniciar todo</button>
       </div>
+    </div>
+  </div>
+
+  <div id="final" class="pantalla oculto">
+    <div class="modal">
+      <h2 class="dorado">¡TERMINASTE LA VECIBANDA HOUSE!</h2>
+      <p id="final-tiempo"></p>
+      <button id="btn-final" class="btn verde">Seguir jugando</button>
     </div>
   </div>
 
@@ -51,7 +84,7 @@
   </div>
 
   <div id="cargando" class="pantalla">
-    <h1 class="titulo">LA VECIBANDA <span>HOUSE</span></h1>
+    <h1 class="titulo">TYCOON <span>VECIBANDA</span></h1>
     <p id="msg-carga">Cargando...</p>
   </div>
 

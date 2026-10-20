@@ -95,15 +95,30 @@ html, body {
   color: #9dff7a;
   text-shadow: 0 2px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000;
 }
-.hud-derecha {
+#progreso {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000;
+}
+.btn-config {
   position: absolute;
   top: 10px;
-  right: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  left: 12px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 26px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 3px solid rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  cursor: pointer;
   pointer-events: auto;
 }
+.btn-config:active { transform: translateY(2px); }
 
 /* ---------- Pantallas ---------- */
 .pantalla {
@@ -129,6 +144,26 @@ html, body {
   text-shadow: 0 6px 0 #000, 3px 0 0 #000, -3px 0 0 #000, 0 -3px 0 #000, 3px 3px 0 #000, -3px 3px 0 #000;
 }
 .titulo span { color: #fff; }
+.titulo.chico { font-size: clamp(24px, 5vw, 40px); }
+.btn.grande { font-size: 30px; padding: 12px 48px; }
+.menu-botones { display: flex; flex-direction: column; gap: 14px; align-items: center; margin-top: 18px; }
+.menu-progreso { margin-top: 18px; font-size: 18px; font-weight: 700; color: #fff; text-shadow: 0 2px 0 #000; }
+#menu { background: rgba(20, 60, 120, 0.25); }
+.volver { margin-top: 16px; }
+.modal.config { width: min(420px, 100%); }
+.ajuste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+}
+.ajuste input { width: 100%; accent-color: #2f8cff; height: 24px; }
+.columna { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.dorado { color: #e2a200 !important; }
 .subtitulo, #msg-carga {
   font-size: 22px;
   font-weight: 700;
@@ -140,7 +175,7 @@ html, body {
 
 #grilla-personajes {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 150px));
+  grid-template-columns: repeat(5, minmax(0, 140px));
   gap: 12px;
   width: 100%;
   justify-content: center;
@@ -211,6 +246,7 @@ html, body {
 .toast.ok { background: var(--verde); }
 .toast.error { background: var(--rojo); }
 .toast.plata { background: #e2a200; }
+.toast.info { background: #2f8cff; font-size: 18px; }
 @keyframes toast {
   0% { transform: scale(0.5); opacity: 0; }
   10% { transform: scale(1.1); opacity: 1; }
@@ -268,12 +304,15 @@ html, body {
   white-space: pre-wrap;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 760px) {
   #grilla-personajes { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+}
+@media (max-width: 520px) {
   .carta canvas { width: 56px; height: 56px; }
   .carta span { font-size: 16px; }
   #plata { font-size: 26px; }
   #icono-moneda { width: 30px; height: 30px; }
   .btn { font-size: 13px; padding: 6px 10px; }
-  .hud-derecha { top: 70px; }
 }
+
+.modal.config h2 { color: var(--azul); }

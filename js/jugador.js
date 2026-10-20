@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { texturaSombra } from './texturas.js';
+import { SPAWN } from './constantes.js';
 
 const RADIO = 0.75;
 const ALTO = 5.3;
@@ -11,7 +12,8 @@ const LIMITE = 150;
 
 export class Jugador {
   constructor(escena) {
-    this.pos = new THREE.Vector3(0, 0, 24);
+    this.pos = new THREE.Vector3(SPAWN.x, 0, SPAWN.z);
+    this.enAgua = false;
     this.vel = new THREE.Vector3();
     this.enSuelo = true;
     this.suelo = 0;
@@ -39,12 +41,20 @@ export class Jugador {
   }
 
   // dir: vector en el plano XZ con largo 0..1. saltar: tecla de salto apretada.
-  actualizar(dt, dir, saltar, colisiones) {
-    this.vel.x = dir.x * VEL_CAMINAR;
-    this.vel.z = dir.z * VEL_CAMINAR;
+  // agua: cajas (Box3) donde se nada. Devuelve true si saltó.
+  actualizar(dt, dir, saltar, colisiones, agua = []) {
+    const p = this.pos;
+    this.enAgua = agua.some((b) => p.x > b.min.x && p.x < b.max.x && p.z > b.min.z && p.z < b.max.z && p.y + 1.5 < b.max.y && p.y > b.min.y - 1);
+    const vel = this.enAgua ? VEL_CAMINAR * 0.6 : VEL_CAMINAR;
+    this.vel.x = dir.x * vel;
+    this.vel.z = dir.z * vel;
+    let salto = false;
     if (saltar && this.enSuelo) {
       this.vel.y = VEL_SALTO;
       this.enSuelo = false;
+      salto = true;
+    } else if (saltar && this.enAgua) {
+      this.vel.y = Math.max(this.vel.y, 6); // nadar hacia arriba
     }
 
     this.moverHorizontal(dt, colisiones);
@@ -61,7 +71,8 @@ export class Jugador {
     this.contenedor.position.copy(this.pos);
     this.contenedor.rotation.y = this.angulo;
     this.sombra.position.set(this.pos.x, this.suelo + 0.06, this.pos.z);
-    if (this.modelo) this.modelo.animar(dt, velPlano, this.enSuelo);
+    if (this.modelo) this.modelo.animar(dt, velPlano, this.enSuelo || this.enAgua);
+    return salto;
   }
 
   moverHorizontal(dt, colisiones) {
@@ -86,7 +97,8 @@ export class Jugador {
   moverVertical(dt, colisiones) {
     const p = this.pos;
     const yAntes = p.y;
-    this.vel.y -= GRAVEDAD * dt;
+    this.vel.y -= (this.enAgua ? GRAVEDAD * 0.3 : GRAVEDAD) * dt;
+    if (this.enAgua) this.vel.y = Math.max(this.vel.y, -6);
     p.y += this.vel.y * dt;
 
     let suelo = 0;

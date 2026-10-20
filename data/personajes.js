@@ -1,16 +1,20 @@
 // Personajes de la Vecibanda.
-// - id: nombre del archivo de la foto en assets/caras/ (ej: toto -> assets/caras/toto.jpg)
+// - foto:     archivo en assets/caras/ (si no existe, se muestra la inicial)
+// - recorte:  [centroX, centroY, tamaño] para encuadrar la cara dentro de la foto.
+//             centroX/centroY van de 0 a 1 (0.5 = medio de la foto).
+//             tamaño: 1 = el lado más corto entero; más chico = más zoom.
 // - remera / pantalon: color de la ropa
-// - piel: color de los costados de la cabeza y las manos (ajustalo para que combine con la foto)
+// - piel: color de los costados de la cabeza y las manos
 
 export const PERSONAJES = [
-  { id: 'toto',   nombre: 'Toto',   remera: '#e53935', pantalon: '#1e3a8a', piel: '#f1c27d' },
-  { id: 'nico',   nombre: 'Nico',   remera: '#1e88e5', pantalon: '#37474f', piel: '#f1c27d' },
-  { id: 'val',    nombre: 'Val',    remera: '#8e24aa', pantalon: '#263238', piel: '#f1c27d' },
-  { id: 'juanma', nombre: 'Juanma', remera: '#43a047', pantalon: '#5d4037', piel: '#f1c27d' },
-  { id: 'jeipi',  nombre: 'Jeipi',  remera: '#fb8c00', pantalon: '#283593', piel: '#f1c27d' },
-  { id: 'tepho',  nombre: 'Tepho',  remera: '#00acc1', pantalon: '#212121', piel: '#f1c27d' },
-  { id: 'mateo',  nombre: 'Mateo',  remera: '#fdd835', pantalon: '#1565c0', piel: '#f1c27d' },
-  { id: 'negro',  nombre: 'Negro',  remera: '#212121', pantalon: '#c62828', piel: '#f1c27d' },
-  { id: 'joaco',  nombre: 'Joaco',  remera: '#d81b60', pantalon: '#424242', piel: '#f1c27d' },
+  { id: 'toto',   nombre: 'Toto',   foto: 'toto.jpeg',   recorte: [0.5, 0.5, 0.6],   remera: '#e53935', pantalon: '#1e3a8a', piel: '#e8b48f' },
+  { id: 'nico',   nombre: 'Nico',   foto: 'nico.jpeg',   recorte: [0.5, 0.54, 1],    remera: '#1e88e5', pantalon: '#37474f', piel: '#c99a78' },
+  { id: 'val',    nombre: 'Val',    foto: 'val.jpeg',    recorte: [0.53, 0.6, 0.85], remera: '#8e24aa', pantalon: '#263238', piel: '#d9a083' },
+  { id: 'juanma', nombre: 'Juanma', foto: 'juanma.jpeg', recorte: [0.5, 0.47, 0.75], remera: '#43a047', pantalon: '#5d4037', piel: '#d3a07e' },
+  { id: 'jeipi',  nombre: 'Jeipi',  foto: 'jeipi.jpeg',  recorte: [0.5, 0.55, 0.85], remera: '#fb8c00', pantalon: '#283593', piel: '#b98b6e' },
+  { id: 'tepho',  nombre: 'Tepho',  foto: 'tepho.jpeg',  recorte: [0.5, 0.47, 0.6],  remera: '#00acc1', pantalon: '#212121', piel: '#e3b394' },
+  { id: 'mateo',  nombre: 'Mateo',  foto: 'mateo.jpeg',  recorte: [0.5, 0.47, 1],    remera: '#fdd835', pantalon: '#1565c0', piel: '#e2ad8e' },
+  { id: 'negro',  nombre: 'Negro',  foto: 'negro.jpeg',  recorte: [0.5, 0.41, 0.55], remera: '#212121', pantalon: '#c62828', piel: '#c8946f' },
+  { id: 'joaco',  nombre: 'Joaco',  foto: 'joaco.jpeg',  recorte: [0.5, 0.45, 0.7],  remera: '#d81b60', pantalon: '#424242', piel: '#f1c27d' },
+  { id: 'bauti',  nombre: 'Bauti',  foto: 'bauti.jpeg',  recorte: [0.42, 0.3, 0.42], remera: '#5e35b1', pantalon: '#3e2723', piel: '#e6b294' },
 ];

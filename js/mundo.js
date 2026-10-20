@@ -1,15 +1,11 @@
 import * as THREE from 'three';
 import { caja, aleatorio } from './util.js';
 import { texturaBaseplate } from './texturas.js';
-
-// Terreno del jugador: de -35 a 35 en X y Z. La mansión mira hacia +Z (la calle).
-export const TERRENO = 35;
-export const MANSION = { x0: -14, x1: 14, z0: -20, z1: 0 };
-const CALLE_Z = 48;
+import { TERRENO as T, MANSION, CALLE_Z } from './constantes.js';
 
 export function crearMundo(escena) {
   const horizonte = new THREE.Color('#cdeeff');
-  escena.fog = new THREE.Fog(horizonte, 110, 260);
+  escena.fog = new THREE.Fog(horizonte, 140, 320);
 
   // Cielo: esfera con degradé por vértice.
   const geoCielo = new THREE.SphereGeometry(400, 16, 8);
@@ -28,7 +24,7 @@ export function crearMundo(escena) {
   })));
 
   // Luces: una hemisférica + un sol, sin sombras.
-  escena.add(new THREE.HemisphereLight('#ffffff', '#7a9a6a', 1.5));
+  escena.add(new THREE.HemisphereLight('#ffffff', '#b9a98f', 1.5));
   const sol = new THREE.DirectionalLight('#fff4dd', 1.6);
   sol.position.set(40, 80, 30);
   escena.add(sol);
@@ -38,20 +34,22 @@ export function crearMundo(escena) {
   pasto.rotation.x = -Math.PI / 2;
   escena.add(pasto);
 
+  const ancho = T.x1 - T.x0;
+  const largo = T.z1 - T.z0;
+  const cz = (T.z0 + T.z1) / 2;
   const texBase = texturaBaseplate();
-  texBase.repeat.set(TERRENO, TERRENO);
-  const base = new THREE.Mesh(new THREE.PlaneGeometry(TERRENO * 2, TERRENO * 2), new THREE.MeshLambertMaterial({ map: texBase }));
+  texBase.repeat.set(ancho / 2, largo / 2);
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), new THREE.MeshLambertMaterial({ map: texBase }));
   base.rotation.x = -Math.PI / 2;
-  base.position.y = 0.02;
+  base.position.set((T.x0 + T.x1) / 2, 0.02, cz);
   escena.add(base);
 
   // Cordón del terreno y contorno de la mansión.
   const borde = new THREE.Group();
-  const T = TERRENO;
-  borde.add(caja(T * 2 + 1, 0.3, 0.5, '#e8e8e8', 0, 0.15, -T));
-  borde.add(caja(T * 2 + 1, 0.3, 0.5, '#e8e8e8', 0, 0.15, T));
-  borde.add(caja(0.5, 0.3, T * 2, '#e8e8e8', -T, 0.15, 0));
-  borde.add(caja(0.5, 0.3, T * 2, '#e8e8e8', T, 0.15, 0));
+  borde.add(caja(ancho + 1, 0.3, 0.5, '#e8e8e8', 0, 0.15, T.z0));
+  borde.add(caja(ancho + 1, 0.3, 0.5, '#e8e8e8', 0, 0.15, T.z1));
+  borde.add(caja(0.5, 0.3, largo, '#e8e8e8', T.x0, 0.15, cz));
+  borde.add(caja(0.5, 0.3, largo, '#e8e8e8', T.x1, 0.15, cz));
   const M = MANSION;
   const anchoM = M.x1 - M.x0;
   const largoM = M.z1 - M.z0;
@@ -61,14 +59,18 @@ export function crearMundo(escena) {
   borde.add(caja(anchoM, 0.06, 0.35, '#ffffff', cxM, 0.05, M.z1));
   borde.add(caja(0.35, 0.06, largoM, '#ffffff', M.x0, 0.05, czM));
   borde.add(caja(0.35, 0.06, largoM, '#ffffff', M.x1, 0.05, czM));
-  escena.add(borde);
+  // Bloques quietos del barrio: main.js los pasa al lote para dibujarlos juntos.
+  const estaticos = new THREE.Group();
+  escena.add(estaticos);
+  estaticos.add(borde);
 
-  crearCalle(escena);
-  crearCasasVecinas(escena);
+  crearCalle(estaticos);
+  crearCasasVecinas(estaticos);
   crearArboles(escena);
   const nubes = crearNubes(escena);
 
   return {
+    estaticos,
     actualizar(dt) { nubes.actualizar(dt); },
   };
 }
@@ -78,7 +80,7 @@ function crearCalle(escena) {
   g.add(caja(600, 0.1, 12, '#4d4f55', 0, 0.05, CALLE_Z));
   g.add(caja(600, 0.25, 2.5, '#c9c9c9', 0, 0.125, CALLE_Z - 7.25));
   g.add(caja(600, 0.25, 2.5, '#c9c9c9', 0, 0.125, CALLE_Z + 7.25));
-  g.add(caja(6, 0.08, 6, '#bdbdbd', 0, 0.04, TERRENO + 3)); // caminito al terreno
+  g.add(caja(6, 0.08, CALLE_Z - 7 - T.z1, '#bdbdbd', 0, 0.04, (T.z1 + CALLE_Z - 6) / 2)); // vereda al terreno
   escena.add(g);
 
   // Líneas amarillas punteadas: un solo InstancedMesh.
@@ -97,7 +99,7 @@ function crearCasasVecinas(escena) {
   techoGeo.rotateY(Math.PI / 4);
   const colores = ['#f4a261', '#90caf9', '#f48fb1', '#fff59d', '#a5d6a7', '#ce93d8'];
   const techos = ['#8d3b2f', '#455a64', '#6d4c41'];
-  const z = CALLE_Z + 20;
+  const z = CALLE_Z + 22;
   for (let i = 0; i < 6; i++) {
     const x = -75 + i * 30;
     const g = new THREE.Group();
@@ -117,11 +119,11 @@ function crearCasasVecinas(escena) {
 function crearArboles(escena) {
   const rnd = aleatorio(7);
   const puntos = [];
-  while (puntos.length < 60) {
-    const x = (rnd() - 0.5) * 300;
-    const z = (rnd() - 0.5) * 300;
-    if (Math.abs(x) < TERRENO + 6 && Math.abs(z) < TERRENO + 6) continue; // terreno
-    if (z > CALLE_Z - 10 && z < CALLE_Z + 32) continue;                   // calle y casas
+  while (puntos.length < 70) {
+    const x = (rnd() - 0.5) * 360;
+    const z = (rnd() - 0.5) * 360;
+    if (x > T.x0 - 6 && x < T.x1 + 6 && z > T.z0 - 6 && z < T.z1 + 6) continue; // terreno
+    if (z > CALLE_Z - 10 && z < CALLE_Z + 34) continue;                          // calle y casas
     puntos.push([x, z, 0.8 + rnd() * 0.6]);
   }
   const n = puntos.length;

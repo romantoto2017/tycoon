@@ -1,7 +1,7 @@
 const CLAVE = 'vecibanda-house-v1';
 
 export function estadoInicial() {
-  return { plata: 0, banco: 0, compras: [], personaje: null };
+  return { plata: 0, banco: 0, compras: [], personaje: null, tiempoJugado: 0 };
 }
 
 export function cargar() {
@@ -25,6 +25,27 @@ export function guardar(estado) {
 export function borrar() {
   try {
     localStorage.removeItem(CLAVE);
+  } catch {
+    // nada
+  }
+}
+
+// ---------- Ajustes (separados de la partida: reiniciar no los borra) ----------
+
+const CLAVE_AJUSTES = 'vecibanda-house-ajustes';
+
+export function cargarAjustes() {
+  const base = { general: 0.8, musica: 0.5, efectos: 0.8, sensibilidad: 1 };
+  try {
+    return { ...base, ...JSON.parse(localStorage.getItem(CLAVE_AJUSTES)) };
+  } catch {
+    return base;
+  }
+}
+
+export function guardarAjustes(ajustes) {
+  try {
+    localStorage.setItem(CLAVE_AJUSTES, JSON.stringify(ajustes));
   } catch {
     // nada
   }
