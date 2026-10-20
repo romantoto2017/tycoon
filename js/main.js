@@ -39,6 +39,8 @@ async function iniciar() {
   const controles = new Controles(canvas);
 
   const estado = cargar();
+  // Partidas guardadas antes de que el terreno fuera una compra.
+  if (estado.compras.length && !estado.compras.includes('terreno')) estado.compras.unshift('terreno');
   let reiniciando = false;
   const guardarAhora = () => { if (!reiniciando) guardar(estado); };
 

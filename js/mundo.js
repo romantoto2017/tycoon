@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { caja, aleatorio } from './util.js';
-import { texturaBaseplate } from './texturas.js';
-import { TERRENO as T, MANSION, CALLE_Z } from './constantes.js';
+import { TERRENO as T, CALLE_Z } from './constantes.js';
 
 export function crearMundo(escena) {
   const horizonte = new THREE.Color('#cdeeff');
@@ -29,40 +28,14 @@ export function crearMundo(escena) {
   sol.position.set(40, 80, 30);
   escena.add(sol);
 
-  // Pasto general y baseplate del terreno.
+  // Pasto general (el baseplate del terreno es la primera compra).
   const pasto = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshLambertMaterial({ color: '#6cc04a' }));
   pasto.rotation.x = -Math.PI / 2;
   escena.add(pasto);
 
-  const ancho = T.x1 - T.x0;
-  const largo = T.z1 - T.z0;
-  const cz = (T.z0 + T.z1) / 2;
-  const texBase = texturaBaseplate();
-  texBase.repeat.set(ancho / 2, largo / 2);
-  const base = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), new THREE.MeshLambertMaterial({ map: texBase }));
-  base.rotation.x = -Math.PI / 2;
-  base.position.set((T.x0 + T.x1) / 2, 0.02, cz);
-  escena.add(base);
-
-  // Cordón del terreno y contorno de la mansión.
-  const borde = new THREE.Group();
-  borde.add(caja(ancho + 1, 0.3, 0.5, '#e8e8e8', 0, 0.15, T.z0));
-  borde.add(caja(ancho + 1, 0.3, 0.5, '#e8e8e8', 0, 0.15, T.z1));
-  borde.add(caja(0.5, 0.3, largo, '#e8e8e8', T.x0, 0.15, cz));
-  borde.add(caja(0.5, 0.3, largo, '#e8e8e8', T.x1, 0.15, cz));
-  const M = MANSION;
-  const anchoM = M.x1 - M.x0;
-  const largoM = M.z1 - M.z0;
-  const cxM = (M.x0 + M.x1) / 2;
-  const czM = (M.z0 + M.z1) / 2;
-  borde.add(caja(anchoM, 0.06, 0.35, '#ffffff', cxM, 0.05, M.z0));
-  borde.add(caja(anchoM, 0.06, 0.35, '#ffffff', cxM, 0.05, M.z1));
-  borde.add(caja(0.35, 0.06, largoM, '#ffffff', M.x0, 0.05, czM));
-  borde.add(caja(0.35, 0.06, largoM, '#ffffff', M.x1, 0.05, czM));
   // Bloques quietos del barrio: main.js los pasa al lote para dibujarlos juntos.
   const estaticos = new THREE.Group();
   escena.add(estaticos);
-  estaticos.add(borde);
 
   crearCalle(estaticos);
   crearCasasVecinas(estaticos);

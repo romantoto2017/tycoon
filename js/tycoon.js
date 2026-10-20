@@ -6,7 +6,7 @@ import { caja, mat, formato } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
 import {
-  crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro,
+  crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro, texturaBaseplate,
 } from './texturas.js';
 import { sfx } from './sfx.js';
 
@@ -47,6 +47,14 @@ function crearKit() {
     },
     lamina(archivo, i, ancho, alto) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: texturaCuadro(archivo, i) }));
+      return kit.noSolido(m);
+    },
+    baseplate(ancho, largo, x, z) {
+      const tex = texturaBaseplate();
+      tex.repeat.set(ancho / 2, largo / 2);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), new THREE.MeshLambertMaterial({ map: tex }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, 0.02, z);
       return kit.noSolido(m);
     },
     brillo(c) {

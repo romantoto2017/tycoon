@@ -1,5 +1,24 @@
 // Piezas del terreno alrededor de la mansión (coordenadas del mundo, piso en y = 0).
-import { TERRENO as T, PISCINA as P, CANCHA as C, GARAGE as G } from './constantes.js';
+import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G } from './constantes.js';
+
+// Baseplate verde con cordón y el contorno de la mansión marcado en el piso.
+export function terreno(k, g) {
+  const ancho = T.x1 - T.x0;
+  const largo = T.z1 - T.z0;
+  const cx = (T.x0 + T.x1) / 2;
+  const cz = (T.z0 + T.z1) / 2;
+  g.add(k.baseplate(ancho, largo, cx, cz));
+  const borde = (x0, z0, x1, z1, alto, color) => g.add(k.noSolido(k.cajaDe(x0, 0, z0, x1, alto, z1, color)));
+  borde(T.x0 - 0.25, T.z0 - 0.25, T.x1 + 0.25, T.z0 + 0.25, 0.3, '#e8e8e8');
+  borde(T.x0 - 0.25, T.z1 - 0.25, T.x1 + 0.25, T.z1 + 0.25, 0.3, '#e8e8e8');
+  borde(T.x0 - 0.25, T.z0, T.x0 + 0.25, T.z1, 0.3, '#e8e8e8');
+  borde(T.x1 - 0.25, T.z0, T.x1 + 0.25, T.z1, 0.3, '#e8e8e8');
+  const l = 0.18;
+  borde(M.x0, M.z0 - l, M.x1, M.z0 + l, 0.08, '#ffffff');
+  borde(M.x0, M.z1 - l, M.x1, M.z1 + l, 0.08, '#ffffff');
+  borde(M.x0 - l, M.z0, M.x0 + l, M.z1, 0.08, '#ffffff');
+  borde(M.x1 - l, M.z0, M.x1 + l, M.z1, 0.08, '#ffffff');
+}
 
 export function camino(k, g) {
   g.add(k.noSolido(k.cajaDe(-2.5, 0, 2, 2.5, 0.08, T.z1, '#d6d6d6')));

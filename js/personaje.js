@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { caja, mat } from './util.js';
+import { caja } from './util.js';
 import { texturaDeCanvas } from './texturas.js';
 
 const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
@@ -26,9 +26,8 @@ export function crearPersonaje(p, caraCanvas) {
   const texCara = texturaDeCanvas(caraCanvas);
   // Sin iluminación: la foto se ve siempre con sus colores reales.
   const matCara = new THREE.MeshBasicMaterial({ map: texCara });
-  const piel = mat(p.piel);
-  // Orden de caras de BoxGeometry: +x, -x, +y, -y, +z (frente), -z
-  const cabeza = new THREE.Mesh(GEO_CABEZA, [piel, piel, piel, piel, matCara, piel]);
+  // La foto va en las 6 caras de la cabeza.
+  const cabeza = new THREE.Mesh(GEO_CABEZA, matCara);
   cabeza.position.y = 4.7;
   grupo.add(cabeza);
 

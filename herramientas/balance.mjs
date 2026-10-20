@@ -30,7 +30,7 @@ ITEMS.forEach((item, i) => {
   const objetivo = T0 + T1 * Math.pow(i / N, CURVA);
   const sugerido = redondo(ingreso * EFICIENCIA * objetivo);
   let precio;
-  if (item.id === 'dropper1') precio = 0;
+  if (item.gratis) precio = 0;
   else if (item.especial) precio = item.precio;
   else { precio = sugerido; precios[item.id] = precio; }
   const espera = precio === 0 ? 0 : precio / (ingreso * EFICIENCIA);

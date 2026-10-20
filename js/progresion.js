@@ -32,7 +32,8 @@ const agregar = (item) => lista.push(item);
 function dropper(i, requiere) {
   agregar({
     id: `dropper${i + 1}`, nombre: DROPPERS[i].nombre, tipo: 'dropper', dropper: i, requiere,
-    boton: i === 0 ? suelo(-10, 40) : suelo(-50, SLOTS_DROPPER[i]),
+    boton: i === 0 ? suelo(-6, 30) : suelo(-50, SLOTS_DROPPER[i]),
+    ...(i === 0 ? { gratis: true } : {}),
   });
 }
 
@@ -80,7 +81,9 @@ const subir = (n) => en(n, n % 2 === 0 ? SUBIR_PAR : SUBIR_IMPAR);
 
 // ---------- Orden de la partida ----------
 
-dropper(0, []);
+// Se arranca sin nada: primero el terreno y la primera máquina, los dos gratis.
+obra('terreno', 'Comprar Terreno', [], suelo(0, 32), Ex.terreno, { gratis: true });
+dropper(0, ['terreno']);
 estructuraPiso(0, ['dropper1'], suelo(0, 6), [
   () => dropper(1, ['piso_pb']),
   () => mejora('valor', ['dropper2']),
@@ -189,7 +192,7 @@ agregar({
 });
 
 for (const item of lista) {
-  if (item.precio === undefined) item.precio = item.id === 'dropper1' ? 0 : (PRECIOS[item.id] ?? 1e15);
+  if (item.precio === undefined) item.precio = item.gratis ? 0 : (PRECIOS[item.id] ?? 1e15);
 }
 
 export const ITEMS = lista;

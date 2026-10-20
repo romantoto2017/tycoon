@@ -15,7 +15,7 @@ Tycoon 3D de bloques para el navegador. Es un sitio 100% estático (HTML + JS + 
 ## Fotos de las caras
 
 - Van en `assets/caras/`. El archivo de cada uno se indica en `data/personajes.js` (campo `foto`, por ejemplo `toto.jpeg`).
-- Si la cara sale mal encuadrada, ajustá `recorte: [centroX, centroY, tamaño]` en `data/personajes.js`:
+- La foto se pone en las 6 caras de la cabeza. Si sale mal encuadrada, ajustá `recorte: [centroX, centroY, tamaño]` en `data/personajes.js`:
   - `centroX` / `centroY`: dónde está la cara, de 0 a 1 (0.5 = medio de la foto; un número más chico en `centroY` sube el recuadro).
   - `tamaño`: 1 = foto entera; más chico = más zoom.
 - Si no hay foto, se muestra la inicial.
