@@ -120,26 +120,56 @@ function colorPromedio(img, x, y, w, h, oscuros = false) {
   return `rgb(${m[0]},${m[1]},${m[2]})`;
 }
 
-// Mechones: trazos finos más claros y más oscuros sobre el color del pelo.
-function mechones(g, s, y0, y1, semilla) {
+// Textura del pelo según el peinado: 'liso' (mechones rectos), 'ondulado' u 'rulos'.
+function mechones(g, s, y0, y1, semilla, peinado = 'liso') {
   let a = semilla;
   const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
+  const tono = () => (rnd() < 0.5 ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.16)');
   g.lineCap = 'round';
-  for (let i = 0; i < 70; i++) {
+  if (peinado === 'rulos') {
+    for (let i = 0; i < 260; i++) {
+      g.strokeStyle = tono();
+      g.lineWidth = 2 + rnd() * 2;
+      g.beginPath();
+      g.arc(rnd() * s, y0 + rnd() * (y1 - y0), 4 + rnd() * 7, rnd() * 6, rnd() * 6 + 4);
+      g.stroke();
+    }
+    return;
+  }
+  const n = peinado === 'ondulado' ? 45 : 70;
+  for (let i = 0; i < n; i++) {
     const x = rnd() * s;
     const ya = y0 + rnd() * (y1 - y0) * 0.5;
     const largo = (y1 - y0) * (0.3 + rnd() * 0.6);
-    g.strokeStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.12)';
+    g.strokeStyle = tono();
     g.lineWidth = 2 + rnd() * 5;
     g.beginPath();
-    g.moveTo(x, ya);
-    g.quadraticCurveTo(x + (rnd() - 0.5) * 30, ya + largo / 2, x + (rnd() - 0.5) * 20, Math.min(y1, ya + largo));
+    if (peinado === 'ondulado') {
+      const fase = rnd() * 6;
+      for (let y = ya; y <= Math.min(y1, ya + largo); y += 4) {
+        const xx = x + Math.sin(y * 0.09 + fase) * 7;
+        if (y === ya) g.moveTo(xx, y); else g.lineTo(xx, y);
+      }
+    } else {
+      g.moveTo(x, ya);
+      g.quadraticCurveTo(x + (rnd() - 0.5) * 30, ya + largo / 2, x + (rnd() - 0.5) * 20, Math.min(y1, ya + largo));
+    }
     g.stroke();
   }
 }
 
+// Bultitos de rulos a lo largo del borde del pelo.
+function bordeRulos(g, s, puntos, pelo) {
+  g.fillStyle = pelo;
+  for (const [x, y] of puntos) {
+    g.beginPath();
+    g.arc(x * s, y * s, s * 0.075, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
 // Costado derecho de la cabeza (en la textura, el frente queda a la izquierda).
-function dibujarCostado(g, s, pelo, piel) {
+function dibujarCostado(g, s, pelo, piel, peinado) {
   g.fillStyle = piel;
   g.fillRect(0, 0, s, s);
   g.fillStyle = pelo;
@@ -155,7 +185,8 @@ function dibujarCostado(g, s, pelo, piel) {
   g.lineTo(0, s * 0.26);
   g.closePath();
   g.fill();
-  mechones(g, s, 0, s * 0.8, 7);
+  if (peinado === 'rulos') bordeRulos(g, s, [[0.05, 0.28], [0.15, 0.32], [0.38, 0.38], [0.55, 0.42], [0.62, 0.55], [0.66, 0.68], [0.75, 0.8], [0.88, 0.84], [1, 0.84]], pelo);
+  mechones(g, s, 0, s * 0.85, 7, peinado);
   // Oreja.
   g.fillStyle = 'rgba(120,60,40,0.25)';
   g.beginPath();
@@ -167,7 +198,7 @@ function dibujarCostado(g, s, pelo, piel) {
   g.fill();
 }
 
-function dibujarAtras(g, s, pelo, piel) {
+function dibujarAtras(g, s, pelo, piel, peinado) {
   g.fillStyle = piel;
   g.fillRect(0, 0, s, s);
   g.fillStyle = pelo;
@@ -178,7 +209,8 @@ function dibujarAtras(g, s, pelo, piel) {
   for (let i = 8; i >= 0; i--) g.lineTo((s * i) / 8, s * (i % 2 ? 0.88 : 0.82));
   g.closePath();
   g.fill();
-  mechones(g, s, 0, s * 0.86, 3);
+  if (peinado === 'rulos') bordeRulos(g, s, [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => [i / 8, 0.86]), pelo);
+  mechones(g, s, 0, s * 0.9, 3, peinado);
 }
 
 // Las 6 caras de la cabeza: frente con la foto y el resto dibujado con los colores
@@ -194,7 +226,7 @@ export function cargarCabeza(p) {
       };
       const [frente, gf] = lienzo();
       let pelo = '#3e2723';
-      let piel = p.piel;
+      let piel = '#f1c27d';
       if (img) {
         const [cx, cy, t] = p.recorte || [0.5, 0.5, 1];
         const w = img.naturalWidth;
@@ -210,10 +242,14 @@ export function cargarCabeza(p) {
         // Piel: los cachetes.
         piel = colorPromedio(frente, s * 0.22, s * 0.56, s * 0.56, s * 0.1);
       } else {
-        dibujarCaraPlaceholder(gf, s, p);
+        dibujarCaraPlaceholder(gf, s, { ...p, piel: p.piel || piel });
       }
+      // Lo que diga personajes.js manda sobre lo que se saca de la foto.
+      pelo = p.pelo || pelo;
+      piel = p.piel || piel;
+      const peinado = p.peinado || 'liso';
       const [der, gd] = lienzo();
-      dibujarCostado(gd, s, pelo, piel);
+      dibujarCostado(gd, s, pelo, piel, peinado);
       const [izq, gi] = lienzo();
       gi.translate(s, 0);
       gi.scale(-1, 1);
@@ -224,12 +260,12 @@ export function cargarCabeza(p) {
         const l = Math.min(imgAtras.naturalWidth, imgAtras.naturalHeight);
         ga.drawImage(imgAtras, (imgAtras.naturalWidth - l) / 2, (imgAtras.naturalHeight - l) / 2, l, l, 0, 0, s, s);
       } else {
-        dibujarAtras(ga, s, pelo, piel);
+        dibujarAtras(ga, s, pelo, piel, peinado);
       }
       const [arriba, gar] = lienzo();
       gar.fillStyle = pelo;
       gar.fillRect(0, 0, s, s);
-      mechones(gar, s, 0, s, 11);
+      mechones(gar, s, 0, s, 11, peinado);
       const [abajo, gab] = lienzo();
       gab.fillStyle = piel;
       gab.fillRect(0, 0, s, s);

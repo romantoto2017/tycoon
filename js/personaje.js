@@ -8,22 +8,29 @@ const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
 // cabeza: lo que devuelve cargarCabeza() (las 6 texturas y el color de piel de la foto).
 export function crearPersonaje(p, cabezaTex) {
   const grupo = new THREE.Group();
-  const piel = cabezaTex.piel || p.piel;
+  // Manos sin iluminación, igual que la cabeza, para que el tono de piel coincida.
+  const matPiel = new THREE.MeshBasicMaterial({ color: cabezaTex.piel || p.piel || '#f1c27d' });
+  matPiel.color.multiplyScalar(0.87);
 
-  const extremidad = (x, y, colorArriba, colorAbajo, largoArriba) => {
+  const gordo = p.cuerpo === 'gordo';
+  const extremidad = (x, y, colorArriba, colorAbajo, largoArriba, grosor = 0.95) => {
     const pivote = new THREE.Group();
     pivote.position.set(x, y, 0);
-    pivote.add(caja(0.95, largoArriba, 0.95, colorArriba, 0, -largoArriba / 2, 0));
-    if (colorAbajo) pivote.add(caja(0.95, 2 - largoArriba, 0.95, colorAbajo, 0, -largoArriba - (2 - largoArriba) / 2, 0));
+    pivote.add(caja(grosor, largoArriba, grosor, colorArriba, 0, -largoArriba / 2, 0));
+    if (colorAbajo) pivote.add(caja(grosor, 2 - largoArriba, grosor, colorAbajo, 0, -largoArriba - (2 - largoArriba) / 2, 0));
     grupo.add(pivote);
     return pivote;
   };
 
-  const piernaI = extremidad(-0.5, 2, p.pantalon, null, 2);
-  const piernaD = extremidad(0.5, 2, p.pantalon, null, 2);
-  const brazoI = extremidad(-1.5, 4, p.remera, piel, 0.8);
-  const brazoD = extremidad(1.5, 4, p.remera, piel, 0.8);
-  grupo.add(caja(2, 2, 1, p.remera, 0, 3, 0));
+  // Cuerpo normal o 'gordo' (torso más ancho y profundo, panza, extremidades más gruesas).
+  const anchoTorso = gordo ? 2.7 : 2;
+  const xBrazo = anchoTorso / 2 + (gordo ? 0.55 : 0.5);
+  const piernaI = extremidad(gordo ? -0.65 : -0.5, 2, p.pantalon, null, 2, gordo ? 1.25 : 0.95);
+  const piernaD = extremidad(gordo ? 0.65 : 0.5, 2, p.pantalon, null, 2, gordo ? 1.25 : 0.95);
+  const brazoI = extremidad(-xBrazo, 4, p.remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
+  const brazoD = extremidad(xBrazo, 4, p.remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
+  grupo.add(caja(anchoTorso, 2, gordo ? 1.7 : 1, p.remera, 0, 3, 0));
+  if (gordo) grupo.add(caja(2.2, 1.4, 0.45, p.remera, 0, 2.75, 1.05));
 
   // Sin iluminación: la foto se ve siempre con sus colores reales. Los costados y la nuca
   // van un poco más oscuros para que se note el volumen del bloque.
@@ -60,6 +67,7 @@ export function crearPersonaje(p, cabezaTex) {
     liberar() {
       texturas.forEach((t) => t.dispose());
       materiales.forEach((m) => m.dispose());
+      matPiel.dispose();
     },
   };
 }
