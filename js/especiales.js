@@ -3,7 +3,7 @@
 import { nivel } from './constantes.js';
 
 // Pedestales a los costados del camino de entrada: [x, z].
-export const SLOTS_ESPECIALES = [[-8, 10], [8, 10], [-8, 18], [8, 18], [-8, 26], [8, 26], [-8, 34], [8, 34]];
+export const SLOTS_ESPECIALES = [[-8, 18], [8, 18], [-8, 26], [8, 26], [-8, 34], [8, 34], [-8, 42], [8, 42]];
 
 // Cuadros: dos por piso, en las paredes del pasillo.
 export function slotCuadro(i) {
@@ -93,9 +93,9 @@ function cohete(k, p) {
 
 export function cuadro(k, g, i, datos) {
   const { piso, lado } = slotCuadro(i);
-  const y = nivel(piso) + 3.8;
-  const x = lado * 4.8;
-  const z = -10;
+  const y = nivel(piso) + 4.5;
+  const x = lado * 7.8;
+  const z = -6;
   g.add(k.noSolido(k.cajaDe(Math.min(x, x - lado * 0.18), y - 1.45, z - 1.9, Math.max(x, x - lado * 0.18), y + 1.45, z + 1.9, '#6d4c41')));
   const lamina = k.lamina(datos.archivo, i, 3.4, 2.55);
   lamina.position.set(x - lado * 0.2, y, z);
@@ -105,16 +105,15 @@ export function cuadro(k, g, i, datos) {
 
 export function cartelFinal(k, g) {
   const y = nivel(4);
-  g.add(k.cajaDe(-14, y, -1.6, -13, y + 3, -0.6, '#455a64'));
-  g.add(k.cajaDe(13, y, -1.6, 14, y + 3, -0.6, '#455a64'));
-  g.add(k.cajaDe(-18, y + 2.6, -0.6, 18, y + 11, -0.1, '#c62828'));
-  const cartel = k.cartel('LA VECIBANDA HOUSE', 34, 7, '#ffd23f', '#b71c1c');
-  cartel.position.set(0, y + 6.8, 0);
+  [-18, 18].forEach((x) => g.add(k.cajaDe(x - 0.6, y, -2, x + 0.6, y + 3.4, -0.8, '#263238')));
+  g.add(k.cajaDe(-26, y + 3, -0.8, 26, y + 14, -0.2, '#c62828'));
+  const cartel = k.cartel('LA VECIBANDA HOUSE', 50, 10, '#ffd23f', '#b71c1c');
+  cartel.position.set(0, y + 8.5, -0.18);
   g.add(cartel);
-  for (let i = 0; i <= 24; i++) {
-    const bx = -17.6 + i * (35.2 / 24);
+  for (let i = 0; i <= 32; i++) {
+    const bx = -25.6 + i * (51.2 / 32);
     const c = i % 2 ? '#fff59d' : '#ffffff';
-    g.add(k.noSolido(k.cajaDe(bx - 0.25, y + 2.75, -0.1, bx + 0.25, y + 3.25, 0.1, k.brillo(c))));
-    g.add(k.noSolido(k.cajaDe(bx - 0.25, y + 10.35, -0.1, bx + 0.25, y + 10.85, 0.1, k.brillo(c))));
+    g.add(k.noSolido(k.cajaDe(bx - 0.3, y + 3.15, -0.2, bx + 0.3, y + 3.75, 0.05, k.brillo(c))));
+    g.add(k.noSolido(k.cajaDe(bx - 0.3, y + 13.25, -0.2, bx + 0.3, y + 13.85, 0.05, k.brillo(c))));
   }
 }

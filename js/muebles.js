@@ -1,42 +1,56 @@
 // Muebles de cada habitación. Coordenadas locales: (0,0) es el centro de la habitación,
 // x de -8 a 8, z de -6.6 a 6.6, y desde el piso terminado.
-import { nivel } from './constantes.js';
+import { nivel, ALTO_PISO, LOSA } from './constantes.js';
+import { colgante } from './arquitectura.js';
 
-// W = ala oeste, E = ala este; F = adelante (hacia la calle), B = atrás.
-const SALAS = {
-  WF: { cx: -13.5, cz: -7 },
-  WB: { cx: -13.5, cz: -21 },
-  EF: { cx: 13.5, cz: -7 },
-  EB: { cx: 13.5, cz: -21 },
+// Habitaciones: W/E = ala oeste/este, I/O = columna interior/exterior, F/B = adelante/atrás.
+const LUGARES = {
+  WIF: [-17, -7], WIB: [-17, -27], WOF: [-35, -7], WOB: [-35, -27],
+  EIF: [17, -7], EIB: [17, -27], EOF: [35, -7], EOB: [35, -27],
 };
 
-function sala(k, g, id, piso) {
-  const { cx, cz } = SALAS[id];
+// Cada diseño se dibujó para un tipo de habitación ("nativo": WF, WB, EF o EB). Si va en
+// otra, se refleja en X (oeste/este) y/o en Z (adelante/atrás) para que la puerta quede libre.
+function sala(k, g, lugar, piso, nativo) {
+  const [cx, cz] = LUGARES[lugar];
   const y = nivel(piso);
+  const ex = lugar[0] === nativo[0] ? 1 : -1;
+  const ez = lugar[2] === nativo[1] ? 1 : -1;
+  const rango = (a, b, e) => (e > 0 ? [a, b] : [-b, -a]);
+  const girar = (rot) => {
+    let r = ex > 0 ? rot : -rot;
+    if (ez < 0) r = Math.PI - r;
+    return r;
+  };
   const s = {
     b(x0, y0, z0, x1, y1, z1, color) {
-      const m = k.cajaDe(cx + x0, y + y0, cz + z0, cx + x1, y + y1, cz + z1, color);
+      const [a0, a1] = rango(x0, x1, ex);
+      const [c0, c1] = rango(z0, z1, ez);
+      const m = k.cajaDe(cx + a0, y + y0, cz + c0, cx + a1, y + y1, cz + c1, color);
       g.add(m);
       return m;
     },
     // Decoración que no choca.
     d(x0, y0, z0, x1, y1, z1, color) { return k.noSolido(s.b(x0, y0, z0, x1, y1, z1, color)); },
     cil(r, h, color, x, y0, z, seg = 12) {
-      const m = k.cilindro(r, r, h, color, cx + x, y + y0 + h / 2, cz + z, seg);
+      const m = k.cilindro(r, r, h, color, cx + ex * x, y + y0 + h / 2, cz + ez * z, seg);
       g.add(m);
       return m;
     },
     esf(r, color, x, y0, z) {
-      const m = k.esfera(r, color, cx + x, y + y0, cz + z);
+      const m = k.esfera(r, color, cx + ex * x, y + y0, cz + ez * z);
+      g.add(m);
+      return m;
+    },
+    // Coloca una lámina (cartel, retrato) que mira hacia rotY.
+    plano(m, x, y0, z, rotY) {
+      m.position.set(cx + ex * x, y + y0, cz + ez * z);
+      m.rotation.y = girar(rotY);
       g.add(m);
       return m;
     },
     cartel(texto, ancho, alto, x, y0, z, rotY, color, fondo) {
-      const m = k.cartel(texto, ancho, alto, color, fondo);
-      m.position.set(cx + x, y + y0, cz + z);
-      m.rotation.y = rotY;
-      g.add(m);
-      return m;
+      return s.plano(k.cartel(texto, ancho, alto, color, fondo), x, y0, z, rotY);
     },
   };
   return s;
@@ -46,8 +60,7 @@ const brillo = (k, c) => k.brillo(c);
 
 // ---------- Planta baja ----------
 
-export function living(k, g) {
-  const s = sala(k, g, 'WF', 0);
+function living(k, s) {
   s.d(-6.5, 0, -4, 1, 0.06, 4, '#c62828');
   s.b(-1, 0, -3, 1.2, 1.2, 3, '#455a64');
   s.b(0.6, 1.2, -3, 1.2, 2.7, 3, '#455a64');
@@ -66,8 +79,7 @@ export function living(k, g) {
   ['#e53935', '#1e88e5', '#fdd835', '#43a047'].forEach((c, i) => s.d(-7.6 + i * 0.9, 1 + (i % 2) * 2, 4.1, -6.9 + i * 0.9, 2.4 + (i % 2) * 2, 4.2, c));
 }
 
-export function cocina(k, g) {
-  const s = sala(k, g, 'WB', 0);
+function cocina(k, s) {
   s.b(-8, 0, -6.6, 4, 1.8, -5.2, '#eceff1');
   s.d(-8, 1.8, -6.7, 4, 2, -5.1, '#424242');
   s.b(-8, 0, -5.2, -6.6, 1.8, 2, '#eceff1');
@@ -83,8 +95,7 @@ export function cocina(k, g) {
   s.d(2.5, 2, -0.5, 3.5, 2.6, 0.5, '#ffeb3b');
 }
 
-export function salaJuegos(k, g) {
-  const s = sala(k, g, 'EF', 0);
+function salaJuegos(k, s) {
   s.b(-3, 0, -2, 3, 1.6, 2, '#5d4037');
   s.d(-2.7, 1.6, -1.7, 2.7, 1.72, 1.7, '#2e7d32');
   s.esf(0.2, '#ffffff', -1, 1.92, 0);
@@ -101,8 +112,7 @@ export function salaJuegos(k, g) {
   s.d(-8.2, 0, 4.5, -4.5, 0.06, 6.5, '#ffb300');
 }
 
-export function banioPB(k, g) {
-  const s = sala(k, g, 'EB', 0);
+function banioPB(k, s) {
   s.b(5, 0, -6.4, 6.4, 1.4, -5, '#ffffff');
   s.b(5, 1.4, -6.6, 6.4, 3, -6.1, '#ffffff');
   s.b(1.2, 0, -6.6, 3.2, 2.2, -5.6, '#ffffff');
@@ -118,8 +128,7 @@ export function banioPB(k, g) {
 
 // ---------- Piso 1 ----------
 
-export function dormitorio1(k, g) {
-  const s = sala(k, g, 'WF', 1);
+function dormitorio1(k, s) {
   s.b(-8.2, 0, -2, -7.7, 3, 2, '#5d4037');
   s.b(-7.7, 0, -1.8, -2, 1.4, 1.8, '#eeeeee');
   s.d(-6, 1.4, -1.85, -2, 1.62, 1.85, '#1e88e5');
@@ -134,8 +143,7 @@ export function dormitorio1(k, g) {
   s.d(-3, 0, -4, 2, 0.06, 3, '#90caf9');
 }
 
-export function dormitorio2(k, g) {
-  const s = sala(k, g, 'WB', 1);
+function dormitorio2(k, s) {
   [[-8, -6.6], [-3.2, -6.6], [-8, -4.6], [-3.2, -4.6]].forEach(([x, z]) => s.b(x, 0, z, x + 0.3, 4.8, z + 0.3, '#5d4037'));
   s.b(-7.7, 0.6, -6.5, -3.2, 1.4, -4.4, '#eeeeee');
   s.d(-7, 1.4, -6.55, -3.2, 1.6, -4.35, '#43a047');
@@ -150,8 +158,7 @@ export function dormitorio2(k, g) {
   s.d(-4, 0, -2, 3, 0.06, 2, '#ffcc80');
 }
 
-export function salaGamer(k, g) {
-  const s = sala(k, g, 'EF', 1);
+function salaGamer(k, s) {
   s.b(3, 0, -6.6, 7.9, 2, -5.2, '#212121');
   [3.6, 5.2, 6.8].forEach((x, i) => {
     s.d(x - 0.75, 2, -6.4, x + 0.75, 3.3, -6.2, '#111111');
@@ -170,8 +177,7 @@ export function salaGamer(k, g) {
   s.d(-3, 0, -3, 4, 0.06, 2.5, '#263238');
 }
 
-export function banio1(k, g) {
-  const s = sala(k, g, 'EB', 1);
+function banio1(k, s) {
   s.b(-8, 0, -6.6, -2, 1.6, -3.6, '#ffffff');
   s.d(-7.6, 1.2, -6.3, -2.4, 1.5, -3.9, k.agua);
   s.d(-7.8, 1.6, -6.5, -7.4, 3, -6.1, '#9e9e9e');
@@ -186,8 +192,7 @@ export function banio1(k, g) {
 
 // ---------- Piso 2 ----------
 
-export function dormitorioPrincipal(k, g) {
-  const s = sala(k, g, 'WF', 2);
+function dormitorioPrincipal(k, s) {
   s.b(-8.2, 0, -3.6, -7.7, 4.2, 3.6, '#4e342e');
   s.b(-7.7, 0, -3.3, -1, 1.5, 3.3, '#fafafa');
   s.d(-5, 1.5, -3.35, -1, 1.72, 3.35, '#8e24aa');
@@ -203,8 +208,7 @@ export function dormitorioPrincipal(k, g) {
   s.b(-1, 0, -6.6, 3.5, 6.5, -5.6, '#8d6e63');
 }
 
-export function gimnasio(k, g) {
-  const s = sala(k, g, 'WB', 2);
+function gimnasio(k, s) {
   s.d(-8, 0, -6.6, 8, 0.06, 3, '#263238');
   s.b(-8, 0, -6.4, -5, 1, -2.4, '#333333');
   s.d(-7.8, 0.9, -6.2, -5.2, 1.02, -2.6, '#616161');
@@ -221,8 +225,7 @@ export function gimnasio(k, g) {
   s.cartel('VECIBANDA FIT', 6, 1.2, -1, 5.5, -6.55, 0, '#ffeb3b', '#212121');
 }
 
-export function cine(k, g) {
-  const s = sala(k, g, 'EF', 2);
+function cine(k, s) {
   s.d(-8, 0, -6.6, 8, 0.06, 6.6, '#311b92');
   s.b(7.6, 1, -6, 7.95, 6.8, 6, '#000000');
   s.d(7.55, 1.3, -5.7, 7.6, 6.5, 5.7, brillo(k, '#e3f2fd'));
@@ -238,8 +241,7 @@ export function cine(k, g) {
   [-6, -2, 2, 6].forEach((z) => s.d(-8, 6.9, z - 0.3, 8, 7.1, z + 0.3, brillo(k, '#ffd54f')));
 }
 
-export function biblioteca(k, g) {
-  const s = sala(k, g, 'EB', 2);
+function biblioteca(k, s) {
   const libros = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#fb8c00'];
   [[-8, -4], [4, 8]].forEach(([x0, x1]) => {
     s.b(x0, 0, -6.6, x1, 6.8, -5.4, '#5d4037');
@@ -261,8 +263,7 @@ export function biblioteca(k, g) {
 
 // ---------- Piso 3 ----------
 
-export function salonFiestas(k, g) {
-  const s = sala(k, g, 'WF', 3);
+function salonFiestas(k, s) {
   const colores = ['#ff1744', '#00e5ff', '#76ff03', '#ffea00'];
   for (let i = 0; i < 4; i++) {
     for (let j = 0; j < 4; j++) {
@@ -283,8 +284,7 @@ export function salonFiestas(k, g) {
   s.cartel('FIESTA VECIBANDA', 7, 1.4, 1, 5.2, -6.55, 0, '#ff4081', '#1a0033');
 }
 
-export function estudioMusica(k, g) {
-  const s = sala(k, g, 'WB', 3);
+function estudioMusica(k, s) {
   s.d(-8, 0, -6.6, 8, 0.06, 3, '#3e2723');
   const bombo = s.cil(1.1, 1, '#d32f2f', -5, 1.1, -4, 16);
   bombo.rotation.x = Math.PI / 2;
@@ -305,8 +305,7 @@ export function estudioMusica(k, g) {
   [-6, -2, 2, 6].forEach((x, i) => s.d(x - 1.2, 2, 6.55, x + 1.2, 5, 6.6, ['#7e57c2', '#26a69a', '#ef5350', '#ffca28'][i]));
 }
 
-export function bar(k, g) {
-  const s = sala(k, g, 'EF', 3);
+function bar(k, s) {
   s.b(2.8, 0, -6.6, 7.9, 2.4, -4.6, '#6d4c41');
   s.d(2.6, 2.4, -6.7, 8, 2.6, -4.4, '#3e2723');
   s.b(6.2, 0, -4.6, 7.9, 2.4, 2, '#6d4c41');
@@ -325,8 +324,7 @@ export function bar(k, g) {
   s.cartel('BAR VECIBANDA', 6, 1.3, -1, 5.5, -6.55, 0, '#00e5ff', '#0d0221');
 }
 
-export function salaTrofeos(k, g) {
-  const s = sala(k, g, 'EB', 3);
+function salaTrofeos(k, s) {
   s.d(-1, 0, -6.6, 1.5, 0.08, 6.6, '#c62828');
   [[-7, -5], [-7, -1], [-7, 3], [5.8, -5]].forEach(([x, z]) => {
     s.b(x - 1, 0, z - 1, x + 1, 2, z + 1, '#5d4037');
@@ -341,6 +339,157 @@ export function salaTrofeos(k, g) {
   s.cartel('SALA DE TROFEOS', 6, 1.2, 3, 5.6, -6.55, 0, '#ffd54f', '#3e2723');
 }
 
+// ---------- Diseños nuevos ----------
+
+// Cuarto de un integrante de la Vecibanda: su color, su retrato y su nombre.
+function cuarto(k, s, p) {
+  s.d(-6.5, 0, -3.6, 2, 0.06, 3.6, p.remera);
+  s.b(-8.6, 0, -2.3, -8.1, 3.2, 2.3, '#4e342e');
+  s.b(-8.1, 0, -2.1, -2.3, 1.4, 2.1, '#f5f5f5');
+  s.d(-6, 1.4, -2.15, -2.3, 1.62, 2.15, p.remera);
+  s.d(-7.9, 1.4, -1.5, -6.8, 1.9, 1.5, '#ffffff');
+  s.b(-8.6, 0, 2.6, -7.4, 1.6, 3.8, '#8d6e63');
+  s.d(-8.2, 1.6, 3, -7.8, 2.4, 3.4, brillo(k, '#fff59d'));
+  s.plano(k.retrato(p, 3, 3), -8.5, 4.8, 0, Math.PI / 2);
+  s.d(-8.66, 3.15, -1.65, -8.6, 6.45, 1.65, '#212121');
+  s.b(-8.6, 0, -6.7, -4.6, 6.5, -5.6, '#eceff1');
+  s.b(2, 0, 5.5, 6.6, 2, 6.7, '#eeeeee');
+  s.d(3.2, 2, 6, 5.4, 3.5, 6.2, '#111111');
+  s.d(3.3, 2.1, 5.98, 5.3, 3.4, 6, brillo(k, p.remera));
+  s.b(3.7, 0, 3.8, 4.9, 1.3, 4.9, p.remera);
+  s.b(5.4, 0, -1.2, 7.6, 1, 1.2, '#424242');
+  s.cartel(`CUARTO DE ${p.nombre.toUpperCase()}`, 7, 1.2, 0, 8.2, -6.7, 0, '#ffffff', p.remera);
+  s.cartel('VECIBANDA', 4, 1, 8.65, 5, -3, -Math.PI / 2, '#ffd23f', '#212121');
+}
+
+function comedor(k, s) {
+  s.d(-6.5, 0, -3.5, 6.5, 0.06, 3.5, '#bcaaa4');
+  s.b(-5, 1.8, -1.5, 5, 2.1, 1.5, '#5d4037');
+  [[-4.5, -1], [4.5, -1], [-4.5, 1], [4.5, 1]].forEach(([x, z]) => s.d(x - 0.15, 0, z - 0.15, x + 0.15, 1.8, z + 0.15, '#3e2723'));
+  [-3.8, -1.3, 1.3, 3.8].forEach((x) => [-2.5, 2.5].forEach((z) => {
+    s.b(x - 0.6, 0, z - 0.6, x + 0.6, 1.1, z + 0.6, '#eceff1');
+    s.b(x - 0.6, 1.1, z + (z < 0 ? -0.6 : 0.4), x + 0.6, 2.6, z + (z < 0 ? -0.4 : 0.6), '#eceff1');
+  }));
+  s.d(-0.05, 6.8, -0.05, 0.05, 9.6, 0.05, '#212121');
+  s.d(-1.5, 6.4, -0.6, 1.5, 6.8, 0.6, brillo(k, '#fff59d'));
+  s.b(-8.6, 0, -3, -7.6, 2.2, 3, '#795548');
+  [-1.5, 0.5, 2.5].forEach((z, i) => s.cil(0.3, 0.8, ['#4fc3f7', '#ffffff', '#ffb74d'][i], -8.1, 2.2, z, 8));
+  [[-7.5, 5.5], [7.5, 5.5]].forEach(([x, z]) => {
+    s.b(x - 0.6, 0, z - 0.6, x + 0.6, 1, z + 0.6, '#6d4c41');
+    s.d(x - 0.9, 1, z - 0.9, x + 0.9, 3.2, z + 0.9, '#2e7d32');
+  });
+}
+
+function arcade(k, s) {
+  s.d(-8, 0, -6.6, 8, 0.06, 3, '#1a237e');
+  ['#e53935', '#43a047', '#1e88e5', '#fdd835'].forEach((c, i) => {
+    const x = -6.3 + i * 3.1;
+    s.b(x - 1, 0, -6.7, x + 1, 5, -5.2, c);
+    s.d(x - 0.8, 3, -5.22, x + 0.8, 4.4, -5.18, brillo(k, ['#00e5ff', '#ff4081', '#76ff03', '#ffea00'][i]));
+    s.d(x - 0.9, 2, -5.4, x + 0.9, 2.3, -4.8, '#212121');
+  });
+  s.b(-2, 0, -1.2, 2, 1.6, 1.2, '#1565c0');
+  s.d(-1.9, 1.6, -1.1, 1.9, 1.65, 1.1, '#ffffff');
+  s.b(6.2, 0, -2, 7.8, 2.2, 2, '#e91e63');
+  s.d(6.25, 2.2, -1.9, 7.75, 2.25, 1.9, brillo(k, '#ff80ab'));
+  s.b(-8.4, 0, 0, -6.4, 1.6, 2, '#ffeb3b');
+  s.b(-8.4, 1.6, 0, -6.4, 4.6, 2, k.vidrio);
+  s.b(-8.4, 4.6, 0, -6.4, 5, 2, '#ffeb3b');
+  s.cartel('ARCADE', 5, 1.2, 0, 7, -6.7, 0, '#00e5ff', '#1a0033');
+}
+
+function galeria(k, s) {
+  s.d(-8, 0, -6.6, 8, 0.06, 6.6, '#eeeeee');
+  const cuadro = (x, z, rot, c1, c2) => {
+    s.plano(k.cartel(' ', 3, 2.2, c1, c2), x, 4, z, rot);
+  };
+  cuadro(-8.62, -3, Math.PI / 2, '#000', '#e53935');
+  cuadro(-8.62, 2.5, Math.PI / 2, '#000', '#1e88e5');
+  cuadro(8.62, -3, -Math.PI / 2, '#000', '#fdd835');
+  cuadro(8.62, 2.5, -Math.PI / 2, '#000', '#43a047');
+  cuadro(-4, 6.7, Math.PI, '#000', '#8e24aa');
+  cuadro(4, 6.7, Math.PI, '#000', '#ff7043');
+  [[-3.5, -1], [3.5, -1]].forEach(([x, z], i) => {
+    s.b(x - 0.8, 0, z - 0.8, x + 0.8, 2.2, z + 0.8, '#fafafa');
+    if (i === 0) s.esf(0.9, '#ffc928', x, 3.1, z);
+    else s.cil(0.5, 2, '#e53935', x, 2.2, z, 6).rotation.z = 0.3;
+  });
+  s.b(-2, 0, 2.5, 2, 1, 3.5, '#5d4037');
+  s.cartel('GALERÍA VECIBANDA', 7, 1.2, 0, 7.5, -6.7, 0, '#212121', '#fafafa');
+}
+
+function spa(k, s) {
+  s.d(-8, 0, -6.6, 8, 0.06, 3, '#b2dfdb');
+  // Sauna de madera con puerta.
+  s.b(-8.6, 0, -6.7, -3, 6, -6.4, '#a1785c');
+  s.b(-3.3, 0, -6.4, -3, 6, -3, '#a1785c');
+  s.b(-8.6, 0, -1.8, -6, 6, -1.5, '#a1785c');
+  s.b(-4.2, 0, -1.8, -3, 6, -1.5, '#a1785c');
+  s.b(-8.6, 6, -6.7, -3, 6.3, -1.5, '#8d6e63');
+  s.b(-8.3, 0, -6.3, -3.6, 1.4, -5, '#bcaaa4');
+  // Hidromasaje.
+  s.b(1, 0, -5.5, 7.6, 1.2, -5.1, '#ffffff');
+  s.b(1, 0, -1.4, 7.6, 1.2, -1, '#ffffff');
+  s.b(1, 0, -5.1, 1.4, 1.2, -1.4, '#ffffff');
+  s.b(7.2, 0, -5.1, 7.6, 1.2, -1.4, '#ffffff');
+  s.d(1.4, 0.2, -5.1, 7.2, 1, -1.4, k.agua);
+  s.b(-2, 0, 1, 2, 1.6, 2.6, '#eceff1');
+  [[7, 2.5], [-7.5, 2.5]].forEach(([x, z]) => s.d(x - 0.7, 0, z - 0.7, x + 0.7, 2.6, z + 0.7, '#2e7d32'));
+  s.cartel('SPA', 3, 1.1, 4.3, 6.6, -6.7, 0, '#ffffff', '#00897b');
+}
+
+function karaoke(k, s) {
+  s.d(-8, 0, -6.6, 8, 0.06, 6.6, '#311b92');
+  s.b(-8.6, 0, -4, -4.5, 0.6, 4, '#4a148c');
+  s.b(-6.6, 0.6, -0.1, -6.4, 4.5, 0.1, '#9e9e9e');
+  s.esf(0.3, '#212121', -6.5, 4.7, 0);
+  s.b(-8.66, 2.5, -3.5, -8.6, 7.5, 3.5, '#111111');
+  s.d(-8.6, 2.7, -3.3, -8.56, 7.3, 3.3, brillo(k, '#e1bee7'));
+  [-3, 3].forEach((z) => s.b(-8.6, 0, z - 0.7, -7.2, 3.5, z + 0.7, '#212121'));
+  s.b(3, 0, -3.5, 4.5, 1.3, 3.5, '#d81b60');
+  s.b(4.5, 1.3, -3.5, 5, 2.6, 3.5, '#d81b60');
+  ['#ff1744', '#00e5ff', '#76ff03', '#ffea00'].forEach((c, i) => s.d(-6 + i * 4, 9.2, -0.4, -5 + i * 4, 9.5, 0.4, brillo(k, c)));
+  s.cartel('KARAOKE', 5, 1.2, 0, 7.6, -6.7, 0, '#ff4081', '#1a0033');
+}
+
+function streaming(k, s) {
+  s.d(-3, 0, -2, 5, 0.06, 4, '#263238');
+  s.b(1, 0, 3.6, 6.6, 2, 5, '#212121');
+  [2.4, 4.6].forEach((x, i) => {
+    s.d(x - 1, 2, 4.4, x + 1, 3.4, 4.6, '#111111');
+    s.d(x - 0.9, 2.1, 4.38, x + 0.9, 3.3, 4.4, brillo(k, i ? '#7c4dff' : '#00e5ff'));
+  });
+  s.b(3, 0, 1.6, 4.4, 1.5, 2.8, '#212121');
+  s.b(3, 1.5, 1.4, 4.4, 4, 1.7, '#e53935');
+  s.b(0.4, 0, 2, 0.6, 3.8, 2.2, '#9e9e9e');
+  s.cil(0.8, 0.12, '#fffde7', 0.5, 4.2, 2.1, 20).rotation.x = Math.PI / 2;
+  s.d(8.6, 0, -4, 8.66, 7, 3, '#00c853');
+  s.cartel('EN VIVO', 4, 1.2, 0, 7.6, -6.7, 0, '#ffffff', '#d50000');
+  s.cartel('VECIBANDA TV', 5, 1, -8.65, 5.5, 0, Math.PI / 2, '#ffd23f', '#212121');
+}
+
+// ---------- Registro ----------
+// tipo nativo de cada diseño (ver sala()).
+const DISENOS = {
+  living: ['WF', living], cocina: ['WB', cocina], salaJuegos: ['EF', salaJuegos], banioPB: ['EB', banioPB],
+  dormitorio1: ['WF', dormitorio1], dormitorio2: ['WB', dormitorio2], salaGamer: ['EF', salaGamer],
+  banio1: ['EB', banio1], dormitorioPrincipal: ['WF', dormitorioPrincipal], gimnasio: ['WB', gimnasio],
+  cine: ['EF', cine], biblioteca: ['EB', biblioteca], salonFiestas: ['WF', salonFiestas],
+  estudioMusica: ['WB', estudioMusica], bar: ['EF', bar], salaTrofeos: ['EB', salaTrofeos],
+  comedor: ['WF', comedor], arcade: ['EB', arcade], galeria: ['EF', galeria], spa: ['EB', spa],
+  karaoke: ['WF', karaoke], streaming: ['EF', streaming], cuarto: ['WF', cuarto],
+};
+
+// Arma los muebles del diseño en la habitación `lugar` del piso `piso`.
+export function amueblar(k, g, diseno, lugar, piso, extra) {
+  const [nativo, fn] = DISENOS[diseno];
+  fn(k, sala(k, g, lugar, piso, nativo), extra);
+  const [cx, cz] = LUGARES[lugar];
+  colgante(k, g, cx, nivel(piso) + ALTO_PISO - LOSA, cz);
+}
+
+export { LUGARES };
+
 // ---------- Terraza ----------
 
 export function jacuzzi(k, g) {
@@ -350,20 +499,19 @@ export function jacuzzi(k, g) {
     if (!solido) k.noSolido(m);
     g.add(m);
   };
-  add(-18, 0, -10, -10, 1.2, -9.5, '#eceff1');
-  add(-18, 0, -3.5, -10, 1.2, -3, '#eceff1');
-  add(-18, 0, -9.5, -17.5, 1.2, -3.5, '#eceff1');
-  add(-10.5, 0, -9.5, -10, 1.2, -3.5, '#eceff1');
-  add(-17.5, 0.9, -9.5, -10.5, 1.05, -3.5, k.agua, false);
-  [-6, -3].forEach((z) => {
-    add(-6, 0, z, -2, 0.6, z + 1.6, '#ffffff');
-    add(-6, 0.6, z, -5.4, 1.6, z + 1.6, '#ffffff');
+  add(-26, 0, -12, -16, 1.2, -11.5, '#eceff1');
+  add(-26, 0, -4.5, -16, 1.2, -4, '#eceff1');
+  add(-26, 0, -11.5, -25.5, 1.2, -4.5, '#eceff1');
+  add(-16.5, 0, -11.5, -16, 1.2, -4.5, '#eceff1');
+  add(-25.5, 0.9, -11.5, -16.5, 1.05, -4.5, k.agua, false);
+  [-24, -20, -16].forEach((x) => {
+    add(x, 0, -24, x + 2, 0.6, -20, '#ffffff');
+    add(x, 0.6, -24, x + 2, 1.6, -23.4, '#ffffff');
   });
-  add(-1.2, 0, -5, -0.9, 4.5, -4.7, '#9e9e9e');
-  const sombrilla = k.cono(2.4, 1.2, '#e53935', -1.05, y + 5, -4.85, 8);
-  g.add(sombrilla);
-  [[-20, -26], [-20, -1.5], [19, -1.5], [19, -26]].forEach(([x, z]) => {
-    add(x, 0, z, x + 1.2, 1, z + 1.2, '#8d6e63');
+  add(-12.2, 0, -22.2, -11.8, 4.5, -21.8, '#9e9e9e');
+  g.add(k.cono(2.6, 1.2, '#263238', -12, y + 5, -22, 8));
+  [[-42, -32], [-42, -3], [40.8, -3], [40.8, -32], [20, -32], [20, -3]].forEach(([x, z]) => {
+    add(x, 0, z, x + 1.2, 1, z + 1.2, '#455a64');
     add(x - 0.2, 1, z - 0.2, x + 1.4, 2.8, z + 1.4, '#2e7d32', false);
   });
 }

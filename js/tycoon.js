@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { DROPPERS } from '../data/objetos.js';
 import { ITEMS, ITEMS_POR_ID } from './progresion.js';
-import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA } from './constantes.js';
-import { caja, mat, formato } from './util.js';
+import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA, ASCENSOR, nivel } from './constantes.js';
+import { caja, mat, matTex, formato } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
 import {
-  crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro, texturaBaseplate,
+  crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro,
+  texturaCascada, obtenerCara,
 } from './texturas.js';
 import { sfx } from './sfx.js';
 
@@ -20,6 +21,8 @@ const GEO_HAZ = new THREE.CylinderGeometry(0.5, 0.5, 40, 8, 1, true);
 const MAT_VERDE = new THREE.MeshLambertMaterial({ color: '#2fd14a', emissive: '#0b4a14' });
 const MAT_ROJO = new THREE.MeshLambertMaterial({ color: '#e53935', emissive: '#3a0a0a' });
 const MAT_DORADO = new THREE.MeshLambertMaterial({ color: '#ffc928', emissive: '#4a3500' });
+const MAT_ASCENSOR = new THREE.MeshLambertMaterial({ color: '#7c4dff', emissive: '#2a1060' });
+const PISOS_ASCENSOR = ['piso_pb', 'piso_1', 'piso_2', 'piso_3', 'techo'];
 const MAT_HAZ = new THREE.MeshBasicMaterial({ color: '#7dff6a', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
 
 function crearKit() {
@@ -49,12 +52,31 @@ function crearKit() {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: texturaCuadro(archivo, i) }));
       return kit.noSolido(m);
     },
+    tex: (tipo, color, tamano) => matTex(tipo, color, tamano),
+    // Césped del terreno con franjas de cortadora.
     baseplate(ancho, largo, x, z) {
-      const tex = texturaBaseplate();
-      tex.repeat.set(ancho / 2, largo / 2);
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), new THREE.MeshLambertMaterial({ map: tex }));
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), matTex('pasto', '#86c95f', 8));
       m.rotation.x = -Math.PI / 2;
       m.position.set(x, 0.02, z);
+      return kit.noSolido(m);
+    },
+    // Retrato con la cara de un personaje (se completa cuando carga la foto).
+    retrato(p, ancho, alto) {
+      const mat = new THREE.MeshBasicMaterial({ color: '#222222' });
+      obtenerCara(p).then((c) => {
+        mat.map = texturaDeCanvas(c);
+        mat.color.set('#ffffff');
+        mat.needsUpdate = true;
+      });
+      return kit.noSolido(new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), mat));
+    },
+    // Lámina de agua cayendo (la textura se mueve sola en actualizar()).
+    cascada(ancho, alto) {
+      const tex = texturaCascada();
+      tex.repeat.set(ancho / 4, alto / 8);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.9, depthWrite: false }));
+      m.userData.cascada = tex;
       return kit.noSolido(m);
     },
     brillo(c) {
@@ -86,6 +108,12 @@ export class Tycoon {
     this.animaciones = [];
     this.giratorios = [];
     this.agua = [];
+    this.cascadas = [];
+    this.pads = [];
+    this.padBloqueado = null;
+    this.ascensor = false;
+    this.autoCobro = false;
+    this.esperaAuto = 0;
     this.monedas = [];
     this.fabrica = null;
     this.pelota = null;
@@ -104,10 +132,27 @@ export class Tycoon {
     this.dummy = new THREE.Object3D();
   }
 
+  // Al cargar: arma todo lo comprado sin animación. Si la mansión cambió de diseño y algo
+  // ya no tiene dónde ir (le faltan requisitos), se saca y se devuelve la plata.
   reconstruir() {
+    const hechos = new Set();
+    const validos = [];
+    let reintegro = 0;
     for (const id of this.estado.compras) {
       const item = ITEMS_POR_ID[id];
-      if (item) this.aplicar(item, false);
+      if (!item || hechos.has(id)) continue;
+      if (item.requiere.every((r) => hechos.has(r))) {
+        this.aplicar(item, false);
+        hechos.add(id);
+        validos.push(id);
+      } else {
+        reintegro += item.precio;
+      }
+    }
+    this.estado.compras = validos;
+    if (reintegro > 0) {
+      this.estado.plata += reintegro;
+      this.reintegro = reintegro;
     }
     this.refrescarBotones(false);
   }
@@ -140,6 +185,9 @@ export class Tycoon {
       this.agregarPieza(g, animar, { muebles: item.muebles });
     }
     if (item.id === 'cancha') this.crearPelota();
+    if (item.id === 'auto_cobro') this.autoCobro = true;
+    if (item.id === 'ascensor') this.ascensor = true;
+    if ((this.ascensor && PISOS_ASCENSOR.includes(item.id)) || item.id === 'ascensor') this.actualizarAscensor();
     if (item.final) this.fuegos.activo = true;
   }
 
@@ -222,6 +270,7 @@ export class Tycoon {
 
     grupo.traverse((o) => {
       if (o.userData.girar) this.giratorios.push(o);
+      if (o.userData.cascada) this.cascadas.push(o.userData.cascada);
       if (!o.isMesh) return;
       if (o.material === this.kit.agua && o.geometry.type === 'BoxGeometry') this.agua.push(new THREE.Box3().setFromObject(o));
       if (sinColision || o.userData.noSolido) return;
@@ -384,6 +433,8 @@ export class Tycoon {
     this.actualizarAnimaciones(dt);
     this.actualizarBotones(dt, jugador);
     for (const o of this.giratorios) o.rotation.y += o.userData.girar * dt;
+    for (const t of this.cascadas) t.offset.y = (t.offset.y + dt * 0.9) % 1;
+    this.actualizarPads(jugador);
     this.fuegos.actualizar(dt);
     if (this.pelota) this.actualizarPelota(dt, jugador);
     if (!this.fabrica) return;
@@ -454,7 +505,59 @@ export class Tycoon {
     this.mallaMonedas.instanceMatrix.needsUpdate = true;
   }
 
+  // ---------- Ascensor ----------
+
+  // Una plataforma por cada piso construido; al pisarla te lleva al piso de arriba
+  // (desde el último, vuelve a planta baja).
+  actualizarAscensor() {
+    const comprados = new Set(this.estado.compras);
+    PISOS_ASCENSOR.forEach((id, n) => {
+      if (!comprados.has(id) || this.pads.some((p) => p.n === n)) return;
+      const grupo = new THREE.Group();
+      const y = nivel(n);
+      grupo.position.set(ASCENSOR.x, y, ASCENSOR.z);
+      const aro = new THREE.Mesh(GEO_ARO, mat('#2a2a2a'));
+      aro.position.y = 0.08;
+      const disco = new THREE.Mesh(GEO_BOTON, MAT_ASCENSOR);
+      disco.position.y = 0.2;
+      const et = crearEtiqueta([{ texto: 'ASCENSOR', tam: 56, color: '#e1bee7' }, { texto: 'sube un piso', tam: 34 }], 5);
+      et.sprite.position.y = 3.2;
+      grupo.add(aro, disco, et.sprite);
+      this.escena.add(grupo);
+      this.pads.push({ n, y, grupo });
+    });
+    this.pads.sort((a, b) => a.n - b.n);
+  }
+
+  actualizarPads(jugador) {
+    if (!this.pads.length) return;
+    const sobre = (pad) => {
+      const dx = jugador.pos.x - ASCENSOR.x;
+      const dz = jugador.pos.z - ASCENSOR.z;
+      return dx * dx + dz * dz < 1.6 * 1.6 && Math.abs(jugador.pos.y - pad.y) < 1;
+    };
+    if (this.padBloqueado && !sobre(this.padBloqueado)) this.padBloqueado = null;
+    if (this.padBloqueado || this.pads.length < 2) return;
+    const actual = this.pads.find(sobre);
+    if (!actual) return;
+    const destino = this.pads[(this.pads.indexOf(actual) + 1) % this.pads.length];
+    jugador.pos.set(ASCENSOR.x, destino.y, ASCENSOR.z);
+    jugador.vel.set(0, 0, 0);
+    this.padBloqueado = destino;
+    sfx.comprar();
+    this.ui.toast(destino.n === 0 ? 'Planta Baja' : destino.n === 4 ? 'Terraza' : `Piso ${destino.n}`, 'info');
+  }
+
   actualizarCobrar(dt, jugador) {
+    if (this.autoCobro) {
+      this.esperaAuto -= dt;
+      if (this.esperaAuto <= 0 && this.estado.banco >= 1) {
+        this.esperaAuto = 1;
+        const monto = Math.floor(this.estado.banco);
+        this.estado.plata += monto;
+        this.estado.banco -= monto;
+      }
+    }
     const dx = jugador.pos.x - COBRAR.x;
     const dz = jugador.pos.z - COBRAR.z;
     const encima = dx * dx + dz * dz < 1.7 * 1.7 && jugador.pos.y < 1;

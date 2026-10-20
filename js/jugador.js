@@ -14,6 +14,7 @@ export class Jugador {
   constructor(escena) {
     this.pos = new THREE.Vector3(SPAWN.x, 0, SPAWN.z);
     this.enAgua = false;
+    this.factorVel = 1; // por personaje (data/personajes.js: velocidad)
     this.vel = new THREE.Vector3();
     this.enSuelo = true;
     this.suelo = 0;
@@ -45,7 +46,7 @@ export class Jugador {
   actualizar(dt, dir, saltar, colisiones, agua = []) {
     const p = this.pos;
     this.enAgua = agua.some((b) => p.x > b.min.x && p.x < b.max.x && p.z > b.min.z && p.z < b.max.z && p.y + 1.5 < b.max.y && p.y > b.min.y - 1);
-    const vel = this.enAgua ? VEL_CAMINAR * 0.6 : VEL_CAMINAR;
+    const vel = VEL_CAMINAR * this.factorVel * (this.enAgua ? 0.6 : 1);
     this.vel.x = dir.x * vel;
     this.vel.z = dir.z * vel;
     let salto = false;

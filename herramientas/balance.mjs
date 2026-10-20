@@ -6,10 +6,10 @@ import { DROPPERS } from '../data/objetos.js';
 import { ITEMS } from '../js/progresion.js';
 
 const T0 = 8;          // segundos de espera para las primeras compras
-const T1 = 240;        // segundos extra hacia el final
+const T1 = 185;        // segundos extra hacia el final
 const CURVA = 1.2;
-const EFICIENCIA = 0.85; // se pierde algo de tiempo yendo a cobrar
-const CAMINAR = 12;    // segundos promedio para llegar a cada botón
+let eficiencia = 0.85;    // se pierde algo de tiempo yendo a cobrar (hasta el cobrador automático)
+const CAMINAR = 15;    // segundos promedio para llegar a cada botón
 
 const redondo = (n) => {
   if (n < 100) return Math.max(1, Math.round(n));
@@ -28,14 +28,15 @@ const filas = [];
 
 ITEMS.forEach((item, i) => {
   const objetivo = T0 + T1 * Math.pow(i / N, CURVA);
-  const sugerido = redondo(ingreso * EFICIENCIA * objetivo);
+  const sugerido = redondo(ingreso * eficiencia * objetivo);
   let precio;
   if (item.gratis) precio = 0;
   else if (item.especial) precio = item.precio;
   else { precio = sugerido; precios[item.id] = precio; }
-  const espera = precio === 0 ? 0 : precio / (ingreso * EFICIENCIA);
+  const espera = precio === 0 ? 0 : precio / (ingreso * eficiencia);
   t += espera + CAMINAR;
   if (item.tipo === 'dropper') droppers.push(item.dropper);
+  if (item.id === 'auto_cobro') eficiencia = 0.97;
   if (item.valor) multValor *= item.valor;
   if (item.velocidad) multVel *= item.velocidad;
   ingreso = droppers.reduce((a, d) => a + DROPPERS[d].valor / DROPPERS[d].cada, 0) * multValor * multVel;

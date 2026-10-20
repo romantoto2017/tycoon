@@ -9,6 +9,7 @@ import { prepararMoneda, cargarCabeza } from './texturas.js';
 import { cargar, guardar, borrar, cargarAjustes, guardarAjustes } from './guardado.js';
 import { iniciarAudio, setVolumenes, pausarAudio, sfx } from './sfx.js';
 import * as UI from './ui.js';
+import { formato } from './util.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -70,6 +71,10 @@ async function iniciar() {
     UI.mostrar('config', false);
     controles.activo = nuevo === 'juego';
     if (nuevo === 'juego' && estado.compras.length === 0) UI.toast('Pisá los botones verdes para comprar', 'info');
+    if (nuevo === 'juego' && tycoon.reintegro) {
+      UI.toast(`¡Mansión nueva! Te devolvimos ${formato(tycoon.reintegro)} de lo que ya no entra`, 'plata');
+      tycoon.reintegro = 0;
+    }
     if (nuevo === 'menu') {
       document.getElementById('menu-progreso').textContent =
         estado.compras.length ? `Mansión ${Math.floor(tycoon.progreso * 100)}% · ${UI.duracion(estado.tiempoJugado)} jugados` : '';
@@ -79,6 +84,7 @@ async function iniciar() {
 
   const ponerPersonaje = async (p) => {
     jugador.setModelo(crearPersonaje(p, await cargarCabeza(p)));
+    jugador.factorVel = p.velocidad || 1;
     estado.personaje = p.id;
     guardarAhora();
   };
@@ -188,8 +194,8 @@ async function iniciar() {
   let anguloMenu = 0.6;
   const camaraMenu = (dt) => {
     anguloMenu += dt * 0.08;
-    camara.position.set(Math.sin(anguloMenu) * 85, 42, -10 + Math.cos(anguloMenu) * 85);
-    camara.lookAt(0, 10, -10);
+    camara.position.set(Math.sin(anguloMenu) * 125, 70, -17 + Math.cos(anguloMenu) * 125);
+    camara.lookAt(0, 16, -17);
   };
 
   // ---------- Bucle ----------
@@ -215,10 +221,9 @@ async function iniciar() {
       camaraMenu(dt);
     }
 
-    renderer.render(escena, camara);
-
     // Si la máquina no llega a 40 fps, bajar la resolución de a poco
-    // (se ignoran los primeros segundos, que siempre son lentos).
+    // (se ignoran los primeros segundos, que siempre son lentos). Va antes de dibujar:
+    // cambiar el tamaño del canvas lo borra.
     if (real < 0.25 && reloj.elapsedTime > 4) {
       medida += real;
       cuadros++;
@@ -232,6 +237,8 @@ async function iniciar() {
         cuadros = 0;
       }
     }
+
+    renderer.render(escena, camara);
   };
   bucle();
 }

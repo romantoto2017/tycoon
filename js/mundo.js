@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { caja, aleatorio } from './util.js';
+import { caja, matTex, aleatorio } from './util.js';
 import { TERRENO as T, CALLE_Z } from './constantes.js';
 
 export function crearMundo(escena) {
@@ -23,13 +23,13 @@ export function crearMundo(escena) {
   })));
 
   // Luces: una hemisférica + un sol, sin sombras.
-  escena.add(new THREE.HemisphereLight('#ffffff', '#b9a98f', 1.5));
-  const sol = new THREE.DirectionalLight('#fff4dd', 1.6);
+  escena.add(new THREE.HemisphereLight('#e8f3ff', '#b9a98f', 1.35));
+  const sol = new THREE.DirectionalLight('#ffeed6', 1.9);
   sol.position.set(40, 80, 30);
   escena.add(sol);
 
   // Pasto general (el baseplate del terreno es la primera compra).
-  const pasto = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshLambertMaterial({ color: '#6cc04a' }));
+  const pasto = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), matTex('pastoLibre', '#79b957', 6));
   pasto.rotation.x = -Math.PI / 2;
   escena.add(pasto);
 

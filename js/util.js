@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { texturaMaterial } from './texturas.js';
 
 // Una sola geometría de caja para todo el juego: cada bloque se escala.
 export const GEO_CAJA = new THREE.BoxGeometry(1, 1, 1);
@@ -11,6 +12,42 @@ export function mat(color) {
   if (!m) {
     m = new THREE.MeshLambertMaterial({ color });
     materiales.set(color, m);
+  }
+  return m;
+}
+
+// Material con textura que se repite en coordenadas del mundo (proyección por la cara
+// dominante: paredes en XY o ZY, pisos en XZ). Así un bloque de 40 de largo no estira
+// la textura. tamaño = unidades del mundo que ocupa una repetición de la textura.
+const materialesTex = new Map();
+export function matTex(tipo, color = '#ffffff', tamano = 4) {
+  const clave = `${tipo}|${color}|${tamano}`;
+  let m = materialesTex.get(clave);
+  if (!m) {
+    m = new THREE.MeshLambertMaterial({ color, map: texturaMaterial(tipo) });
+    const escala = { value: 1 / tamano };
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.escalaMundo = escala;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vPosMundo;\nvarying vec3 vNormMundo;')
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+          vec4 pMundo = vec4(transformed, 1.0);
+          vec3 nMundo = objectNormal;
+          #ifdef USE_INSTANCING
+            pMundo = instanceMatrix * pMundo;
+            nMundo = mat3(instanceMatrix) * nMundo;
+          #endif
+          vPosMundo = (modelMatrix * pMundo).xyz;
+          vNormMundo = normalize(mat3(modelMatrix) * nMundo);`);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vPosMundo;\nvarying vec3 vNormMundo;\nuniform float escalaMundo;')
+        .replace('#include <map_fragment>', `
+          vec3 an = abs(vNormMundo);
+          vec2 uvMundo = (an.x > an.y && an.x > an.z) ? vPosMundo.zy : ((an.y > an.z) ? vPosMundo.xz : vPosMundo.xy);
+          diffuseColor *= texture2D(map, uvMundo * escalaMundo);`);
+    };
+    m.customProgramCacheKey = () => 'mundo';
+    materialesTex.set(clave, m);
   }
   return m;
 }

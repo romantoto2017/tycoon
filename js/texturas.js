@@ -484,3 +484,180 @@ export function texturaCuadro(archivo, i) {
   });
   return tex;
 }
+
+// Agua cayendo: celeste con chorros blancos verticales (se repite hacia abajo).
+export function texturaCascada() {
+  const w = 64;
+  const h = 128;
+  const c = nuevoCanvas(w, h);
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(110, 195, 245, 0.8)';
+  g.fillRect(0, 0, w, h);
+  let a = 5;
+  const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = `rgba(255,255,255,${0.25 + rnd() * 0.5})`;
+    const x = rnd() * w;
+    const y = rnd() * h;
+    g.fillRect(x, y, 1 + rnd() * 3, 20 + rnd() * 50);
+    g.fillRect(x, y - h, 1 + rnd() * 3, 20 + rnd() * 50);
+  }
+  const t = texturaDeCanvas(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// ---------- Materiales de construcción ----------
+// Texturas en escala de grises claros (se tiñen con el color del material) que se
+// repiten en coordenadas del mundo: 1 unidad del juego = 1/escala de la textura.
+
+function ruido(g, w, h, cantidad, alfa, semilla) {
+  let a = semilla;
+  const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
+  for (let i = 0; i < cantidad; i++) {
+    const v = rnd() < 0.5 ? 0 : 255;
+    g.fillStyle = `rgba(${v},${v},${v},${alfa * rnd()})`;
+    g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 2, 1 + rnd() * 2);
+  }
+  return rnd;
+}
+
+const DIBUJOS = {
+  // Estuco: casi liso con grano fino.
+  estuco(g, s) {
+    g.fillStyle = '#f4f4f4';
+    g.fillRect(0, 0, s, s);
+    ruido(g, s, s, 2500, 0.08, 1);
+  },
+  // Paneles con juntas verticales.
+  panel(g, s) {
+    g.fillStyle = '#e6e6e6';
+    g.fillRect(0, 0, s, s);
+    ruido(g, s, s, 1500, 0.06, 2);
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.fillRect(0, 0, 3, s);
+    g.fillRect(s / 2, 0, 3, s);
+    g.fillRect(0, 0, s, 2);
+  },
+  // Piedra: hiladas horizontales de piezas de distinto largo y tono.
+  piedra(g, s) {
+    const rnd = ruido(g, s, s, 0, 0, 3);
+    const filas = 6;
+    for (let f = 0; f < filas; f++) {
+      let x = -rnd() * 40;
+      while (x < s) {
+        const w = 40 + rnd() * 70;
+        const t = 175 + Math.floor(rnd() * 70);
+        g.fillStyle = `rgb(${t},${t},${t - 4})`;
+        g.fillRect(x, (f * s) / filas, w, s / filas);
+        g.fillStyle = 'rgba(0,0,0,0.3)';
+        g.fillRect(x, (f * s) / filas, 2, s / filas);
+        x += w;
+      }
+      g.fillStyle = 'rgba(0,0,0,0.3)';
+      g.fillRect(0, (f * s) / filas, s, 2);
+    }
+    ruido(g, s, s, 2000, 0.12, 4);
+  },
+  // Listones verticales de madera.
+  listones(g, s) {
+    const rnd = ruido(g, s, s, 0, 0, 5);
+    const n = 8;
+    for (let i = 0; i < n; i++) {
+      const t = 200 + Math.floor(rnd() * 50);
+      g.fillStyle = `rgb(${t},${t},${t})`;
+      g.fillRect((i * s) / n, 0, s / n, s);
+      g.fillStyle = 'rgba(0,0,0,0.45)';
+      g.fillRect((i * s) / n, 0, 3, s);
+      for (let k = 0; k < 6; k++) {
+        g.fillStyle = 'rgba(0,0,0,0.08)';
+        g.fillRect((i * s) / n + 4 + rnd() * (s / n - 8), 0, 1, s);
+      }
+    }
+  },
+  // Tablas de piso: hileras horizontales con cortes desfasados y veta.
+  tablas(g, s) {
+    const rnd = ruido(g, s, s, 0, 0, 6);
+    const filas = 8;
+    for (let f = 0; f < filas; f++) {
+      const y = (f * s) / filas;
+      let x = -rnd() * s * 0.5;
+      while (x < s) {
+        const w = s * (0.45 + rnd() * 0.5);
+        const t = 200 + Math.floor(rnd() * 55);
+        g.fillStyle = `rgb(${t},${t},${t})`;
+        g.fillRect(x, y, w, s / filas);
+        for (let k = 0; k < 4; k++) {
+          g.fillStyle = 'rgba(0,0,0,0.07)';
+          g.fillRect(x, y + 3 + rnd() * (s / filas - 6), w, 1);
+        }
+        g.fillStyle = 'rgba(0,0,0,0.35)';
+        g.fillRect(x, y, 2, s / filas);
+        x += w;
+      }
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.fillRect(0, y, s, 2);
+    }
+  },
+  // Ladrillo visto.
+  ladrillo(g, s) {
+    const rnd = ruido(g, s, s, 0, 0, 7);
+    g.fillStyle = '#d8d0c8';
+    g.fillRect(0, 0, s, s);
+    const filas = 8;
+    for (let f = 0; f < filas; f++) {
+      const off = f % 2 ? s / 8 : 0;
+      for (let c = -1; c < 4; c++) {
+        const t = 190 + Math.floor(rnd() * 60);
+        g.fillStyle = `rgb(${t},${t},${t})`;
+        g.fillRect(c * (s / 4) + off + 2, f * (s / filas) + 2, s / 4 - 4, s / filas - 4);
+      }
+    }
+    ruido(g, s, s, 1500, 0.1, 8);
+  },
+  // Baldosas grandes.
+  baldosa(g, s) {
+    g.fillStyle = '#f0f0f0';
+    g.fillRect(0, 0, s, s);
+    ruido(g, s, s, 1200, 0.05, 9);
+    g.fillStyle = 'rgba(0,0,0,0.18)';
+    g.fillRect(0, 0, s, 2);
+    g.fillRect(0, 0, 2, s);
+  },
+  // Pasto cortado: franjas anchas claras y oscuras con briznas.
+  pasto(g, s) {
+    g.fillStyle = '#e0e0e0';
+    g.fillRect(0, 0, s, s / 2);
+    g.fillStyle = '#c8c8c8';
+    g.fillRect(0, s / 2, s, s / 2);
+    ruido(g, s, s, 5000, 0.18, 10);
+  },
+  // Pasto sin franjas (afuera del terreno).
+  pastoLibre(g, s) {
+    g.fillStyle = '#d6d6d6';
+    g.fillRect(0, 0, s, s);
+    ruido(g, s, s, 6000, 0.2, 12);
+  },
+  // Hormigón para veredas y canteros.
+  concreto(g, s) {
+    g.fillStyle = '#e4e4e4';
+    g.fillRect(0, 0, s, s);
+    ruido(g, s, s, 3000, 0.1, 11);
+    g.fillStyle = 'rgba(0,0,0,0.15)';
+    g.fillRect(0, 0, s, 2);
+  },
+};
+
+const texturasMaterial = new Map();
+export function texturaMaterial(tipo) {
+  if (!texturasMaterial.has(tipo)) {
+    const s = 256;
+    const c = nuevoCanvas(s);
+    DIBUJOS[tipo](c.getContext('2d'), s);
+    const t = texturaDeCanvas(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 2;
+    texturasMaterial.set(tipo, t);
+  }
+  return texturasMaterial.get(tipo);
+}

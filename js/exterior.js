@@ -1,6 +1,27 @@
 // Piezas del terreno alrededor de la mansión (coordenadas del mundo, piso en y = 0).
 import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G } from './constantes.js';
 
+// Cascadas de la entrada: dos muros de piedra oscura con agua cayendo a una pileta.
+export function cascadas(k, g) {
+  for (const s of [-1, 1]) {
+    const x0 = s > 0 ? 9 : -21;
+    const x1 = s > 0 ? 21 : -9;
+    const xc = (x0 + x1) / 2;
+    g.add(k.cajaDe(x0, 0, 4, x1, 17, 5.2, k.tex('piedra', '#7a7d80', 3)));
+    g.add(k.noSolido(k.cajaDe(x0 - 0.3, 17, 3.8, x1 + 0.3, 17.6, 6.2, '#263238')));
+    const agua = k.cascada(x1 - x0 - 1, 16.4);
+    agua.position.set(xc, 0.9 + 8.2, 5.28);
+    g.add(agua);
+    // Pileta donde cae el agua.
+    const borde = k.tex('concreto', '#a7aaad', 3);
+    g.add(k.cajaDe(x0 - 1, 0, 10.6, x1 + 1, 1.1, 11.2, borde));
+    g.add(k.cajaDe(x0 - 1, 0, 5.2, x0 - 0.4, 1.1, 10.6, borde));
+    g.add(k.cajaDe(x1 + 0.4, 0, 5.2, x1 + 1, 1.1, 10.6, borde));
+    g.add(k.noSolido(k.cajaDe(x0 - 0.4, 0.1, 5.2, x1 + 0.4, 0.9, 10.6, k.agua)));
+    g.add(k.noSolido(k.cajaDe(x0, 0.85, 5.2, x1, 1.05, 6.4, '#e1f5fe')));
+  }
+}
+
 // Baseplate verde con cordón y el contorno de la mansión marcado en el piso.
 export function terreno(k, g) {
   const ancho = T.x1 - T.x0;
@@ -9,10 +30,11 @@ export function terreno(k, g) {
   const cz = (T.z0 + T.z1) / 2;
   g.add(k.baseplate(ancho, largo, cx, cz));
   const borde = (x0, z0, x1, z1, alto, color) => g.add(k.noSolido(k.cajaDe(x0, 0, z0, x1, alto, z1, color)));
-  borde(T.x0 - 0.25, T.z0 - 0.25, T.x1 + 0.25, T.z0 + 0.25, 0.3, '#e8e8e8');
-  borde(T.x0 - 0.25, T.z1 - 0.25, T.x1 + 0.25, T.z1 + 0.25, 0.3, '#e8e8e8');
-  borde(T.x0 - 0.25, T.z0, T.x0 + 0.25, T.z1, 0.3, '#e8e8e8');
-  borde(T.x1 - 0.25, T.z0, T.x1 + 0.25, T.z1, 0.3, '#e8e8e8');
+  const cordon = k.tex('concreto', '#e4e2de', 3);
+  borde(T.x0 - 0.25, T.z0 - 0.25, T.x1 + 0.25, T.z0 + 0.25, 0.3, cordon);
+  borde(T.x0 - 0.25, T.z1 - 0.25, T.x1 + 0.25, T.z1 + 0.25, 0.3, cordon);
+  borde(T.x0 - 0.25, T.z0, T.x0 + 0.25, T.z1, 0.3, cordon);
+  borde(T.x1 - 0.25, T.z0, T.x1 + 0.25, T.z1, 0.3, cordon);
   const l = 0.18;
   borde(M.x0, M.z0 - l, M.x1, M.z0 + l, 0.08, '#ffffff');
   borde(M.x0, M.z1 - l, M.x1, M.z1 + l, 0.08, '#ffffff');
@@ -21,18 +43,20 @@ export function terreno(k, g) {
 }
 
 export function camino(k, g) {
-  g.add(k.noSolido(k.cajaDe(-2.5, 0, 2, 2.5, 0.08, T.z1, '#d6d6d6')));
-  for (let z = 4; z < T.z1; z += 2.5) g.add(k.noSolido(k.cajaDe(-2.5, 0.08, z, 2.5, 0.1, z + 0.15, '#b0b0b0')));
-  g.add(k.noSolido(k.cajaDe(0, 0, -31, 5, 0.08, -28, '#d6d6d6')));
+  const losetas = k.tex('baldosa', '#dcd7cf', 2.5);
+  g.add(k.noSolido(k.cajaDe(-2.5, 0, 3, 2.5, 0.08, T.z1, losetas)));
+  g.add(k.noSolido(k.cajaDe(-2.5, 0, P.z1 + 7, 2.5, 0.08, M.z0, losetas)));
+  // Cercos bajos de arbustos recortados a los costados del camino, con algunas flores.
   [-1, 1].forEach((s) => {
-    for (let z = 6; z < 44; z += 3) {
-      g.add(k.noSolido(k.cajaDe(s * 3 - 0.4, 0, z, s * 3 + 0.4, 0.6, z + 0.8, ['#ef5350', '#ffee58', '#ab47bc'][(z / 3) % 3 | 0])));
+    g.add(k.noSolido(k.cajaDe(s * 3 - 0.45, 0, 13, s * 3 + 0.45, 0.8, 52, '#3c7a3a')));
+    for (let z = 14.5; z < 52; z += 2.5) {
+      g.add(k.noSolido(k.cajaDe(s * 3 - 0.2, 0.8, z - 0.2, s * 3 + 0.2, 1.1, z + 0.2, ['#ffffff', '#f48fb1', '#ffe082'][(z | 0) % 3])));
     }
   });
 }
 
 export function cerca(k, g) {
-  const blanco = '#fafafa';
+  const blanco = '#2b2f33';
   const tramo = (eje, fijo, a0, a1) => {
     for (const y of [0.7, 1.5]) {
       if (eje === 'x') g.add(k.cajaDe(a0, y, fijo - 0.12, a1, y + 0.22, fijo + 0.12, blanco));
@@ -47,11 +71,11 @@ export function cerca(k, g) {
   tramo('z', T.x0, T.z0, T.z1);
   tramo('z', T.x1, T.z0, T.z1);
   tramo('x', T.z1, T.x0, -4.5);
-  tramo('x', T.z1, 4.5, 35.5);
-  tramo('x', T.z1, 44.5, T.x1);
+  tramo('x', T.z1, 4.5, G.x0 + 5.5);
+  tramo('x', T.z1, G.x1 - 5.5, T.x1);
   // Portón de entrada con arco.
   [-5.5, 4.5].forEach((x) => {
-    g.add(k.cajaDe(x, 0, T.z1 - 0.5, x + 1, 6, T.z1 + 0.5, '#e0d4bd'));
+    g.add(k.cajaDe(x, 0, T.z1 - 0.5, x + 1, 6, T.z1 + 0.5, k.tex('piedra', '#9a9590', 2)));
     g.add(k.noSolido(k.cajaDe(x - 0.1, 6, T.z1 - 0.6, x + 1.1, 6.6, T.z1 + 0.6, '#ffc928')));
   });
   g.add(k.noSolido(k.cajaDe(-5.5, 6.6, T.z1 - 0.3, 5.5, 7.6, T.z1 + 0.3, '#c62828')));
@@ -66,32 +90,52 @@ function arbol(k, g, x, z, s = 1) {
   g.add(k.noSolido(k.cajaDe(x - 1.7 * s, 7.6 * s, z - 1.7 * s, x + 1.7 * s, 9.6 * s, z + 1.7 * s, '#43a047')));
 }
 
+// Palmera: tronco de bloques levemente curvo y hojas caídas en abanico.
+function palmera(k, g, x, z, s = 1) {
+  let px = x;
+  let py = 0;
+  for (let i = 0; i < 6; i++) {
+    const h = 1.6 * s;
+    g.add(k.cajaDe(px - 0.45 * s, py, z - 0.45 * s, px + 0.45 * s, py + h, z + 0.45 * s, i % 2 ? '#8d6e4f' : '#7a5c40'));
+    py += h;
+    px += 0.2 * s;
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const hoja = k.noSolido(k.caja(0.7 * s, 0.15 * s, 5 * s, i % 2 ? '#3f8f3a' : '#57b04a', px + Math.sin(a) * 2.2 * s, py, z + Math.cos(a) * 2.2 * s));
+    hoja.rotation.set(0.4, a, 0, 'YXZ');
+    g.add(hoja);
+  }
+}
+
 export function jardin(k, g) {
-  [[-28, 6], [-30, 40], [-17, 42], [27, 40], [55, 38], [54, -4], [26, -7], [-54, -58], [-22, -60], [22, -60], [-28, -32], [24, -31]]
+  [[-24, 9], [24, 9], [46, 8], [-46, 8], [18, -38], [-18, -38]].forEach(([x, z], i) => palmera(k, g, x, z, 0.95 + (i % 2) * 0.15));
+  [[-44, 48], [-24, 50], [40, 48], [68, 40], [66, -20], [36, -40], [-66, -60], [-30, -80], [0, -78], [20, -78], [-48, -60], [-20, -40]]
     .forEach(([x, z], i) => arbol(k, g, x, z, 0.85 + (i % 3) * 0.15));
   // Canteros contra el frente de la casa.
-  [[-20, -6], [6, 20]].forEach(([x0, x1]) => {
-    g.add(k.cajaDe(x0, 0, 0.6, x1, 0.6, 2.4, '#6d4c41'));
+  [[-42, -24], [24, 42]].forEach(([x0, x1]) => {
+    g.add(k.cajaDe(x0, 0, 3.4, x1, 0.6, 5.2, k.tex('concreto', '#b9b6b0', 3)));
     for (let x = x0 + 0.8; x < x1; x += 1.6) {
-      g.add(k.noSolido(k.cajaDe(x - 0.4, 0.6, 1.1, x + 0.4, 1.3, 1.9, ['#e91e63', '#ffeb3b', '#ffffff', '#ff5722'][(x | 0) & 3])));
+      g.add(k.noSolido(k.cajaDe(x - 0.4, 0.6, 3.9, x + 0.4, 1.3, 4.7, ['#e91e63', '#ffeb3b', '#ffffff', '#ff5722'][(x | 0) & 3])));
     }
   });
 }
 
 export function farolas(k, g) {
+  // Farol moderno: poste fino negro con una barra de luz arriba.
   const farola = (x, z) => {
-    g.add(k.cajaDe(x - 0.18, 0, z - 0.18, x + 0.18, 6, z + 0.18, '#37474f'));
-    g.add(k.noSolido(k.cajaDe(x - 0.5, 6, z - 0.5, x + 0.5, 7, z + 0.5, k.brillo('#fff59d'))));
-    g.add(k.noSolido(k.cajaDe(x - 0.65, 7, z - 0.65, x + 0.65, 7.3, z + 0.65, '#263238')));
+    g.add(k.cajaDe(x - 0.12, 0, z - 0.12, x + 0.12, 5.6, z + 0.12, '#24282c'));
+    g.add(k.noSolido(k.cajaDe(x - 0.2, 5.6, z - 0.7, x + 0.2, 5.9, z + 0.7, '#24282c')));
+    g.add(k.noSolido(k.cajaDe(x - 0.14, 5.52, z - 0.6, x + 0.14, 5.6, z + 0.6, k.brillo('#ffe3a8'))));
   };
-  [8, 18, 28, 38].forEach((z) => { farola(-3.9, z); farola(3.9, z); });
-  [24, 34, 44].forEach((z) => farola(45.5, z));
+  [14, 22, 30, 38, 46].forEach((z) => { farola(-3.9, z); farola(3.9, z); });
+  [24, 34, 44].forEach((z) => farola(G.x1 - 3.5, z));
 }
 
 export function fuente(k, g) {
-  const cx = 21;
-  const cz = 30;
-  const piedra = '#cfd8dc';
+  const cx = 30;
+  const cz = 36;
+  const piedra = k.tex('concreto', '#e0ddd8', 3);
   g.add(k.cajaDe(cx - 4, 0, cz - 4, cx + 4, 1, cz - 3.4, piedra));
   g.add(k.cajaDe(cx - 4, 0, cz + 3.4, cx + 4, 1, cz + 4, piedra));
   g.add(k.cajaDe(cx - 4, 0, cz - 3.4, cx - 3.4, 1, cz + 3.4, piedra));
@@ -106,12 +150,12 @@ export function fuente(k, g) {
 
 export function piscina(k, g) {
   const a = P.alto;
-  const borde = '#eceff1';
+  const borde = k.tex('baldosa', '#f1ede6', 2);
   g.add(k.cajaDe(P.x0 - 3, 0, P.z1, P.x1 + 3, a, P.z1 + 3, borde));
   g.add(k.cajaDe(P.x0 - 3, 0, P.z0 - 3, P.x1 + 3, a, P.z0, borde));
   g.add(k.cajaDe(P.x0 - 3, 0, P.z0, P.x0, a, P.z1, borde));
   g.add(k.cajaDe(P.x1, 0, P.z0, P.x1 + 3, a, P.z1, borde));
-  g.add(k.noSolido(k.cajaDe(P.x0, 0, P.z0, P.x1, 0.1, P.z1, '#29b6f6')));
+  g.add(k.noSolido(k.cajaDe(P.x0, 0, P.z0, P.x1, 0.1, P.z1, k.tex('baldosa', '#5ec8f2', 1.5))));
   g.add(k.noSolido(k.cajaDe(P.x0, 0.1, P.z0 + 0.05, P.x1, a - 0.25, P.z1 - 0.05, k.agua)));
   // Escalones para subir al borde (del lado de la casa).
   for (let i = 1; i <= 5; i++) {
@@ -126,14 +170,14 @@ export function piscina(k, g) {
 export function reposeras(k, g) {
   const a = P.alto;
   [[P.x0 - 2.6, P.x0 - 0.4], [P.x1 + 0.4, P.x1 + 2.6]].forEach(([x0, x1], lado) => {
-    [-52, -45].forEach((z, i) => {
+    [P.z0 + 4, P.z0 + 11].forEach((z, i) => {
       g.add(k.cajaDe(x0, a, z, x1, a + 0.6, z + 4, '#ffffff'));
       g.add(k.cajaDe(x0, a + 0.6, z + 3.2, x1, a + 1.8, z + 4, '#ffffff'));
       g.add(k.noSolido(k.cajaDe(x0 + 0.2, a + 0.6, z + 0.6, x1 - 0.2, a + 0.7, z + 3, ['#ff7043', '#29b6f6', '#ffee58', '#ab47bc'][lado * 2 + i])));
     });
     const xc = (x0 + x1) / 2;
-    g.add(k.cajaDe(xc - 0.12, a, -48.6, xc + 0.12, a + 5, -48.4, '#9e9e9e'));
-    g.add(k.cono(2.6, 1.2, lado ? '#ffeb3b' : '#e53935', xc, a + 5.4, -48.5, 8));
+    g.add(k.cajaDe(xc - 0.12, a, P.z0 + 7.4, xc + 0.12, a + 5, P.z0 + 7.6, '#9e9e9e'));
+    g.add(k.cono(2.6, 1.2, lado ? '#ffeb3b' : '#e53935', xc, a + 5.4, P.z0 + 7.5, 8));
   });
 }
 
@@ -143,7 +187,11 @@ export function trampolin(k, g) {
   g.add(k.cajaDe(-0.9, a + 0.8, P.z0 - 2.4, 0.9, a + 1, P.z0 + 4, '#1e88e5'));
 }
 
-export function parrilla(k, g) {
+export function parrilla(k, grupo) {
+  // Diseñada alrededor de (-28, -46); se corre al lugar actual.
+  const g = k.grupo();
+  g.position.set(-6, 0, -10);
+  grupo.add(g);
   g.add(k.noSolido(k.cajaDe(-34, 0, -52, -22, 0.1, -40, '#bcaaa4')));
   g.add(k.cajaDe(-33.5, 0, -51.5, -29.5, 2.2, -49.5, '#b5532f'));
   g.add(k.noSolido(k.cajaDe(-33.3, 2.2, -51.3, -29.7, 2.3, -49.7, '#424242')));
@@ -162,8 +210,7 @@ export function parrilla(k, g) {
 }
 
 export function cancha(k, g) {
-  g.add(k.noSolido(k.cajaDe(C.x0, 0, C.z0, C.x1, 0.06, C.z1, '#2e7d32')));
-  for (let z = C.z0; z < C.z1; z += 8) g.add(k.noSolido(k.cajaDe(C.x0, 0.06, z, C.x1, 0.07, Math.min(z + 4, C.z1), '#388e3c')));
+  g.add(k.noSolido(k.cajaDe(C.x0, 0, C.z0, C.x1, 0.06, C.z1, k.tex('pasto', '#4fa64a', 8))));
   const linea = (x0, z0, x1, z1) => g.add(k.noSolido(k.cajaDe(x0, 0.07, z0, x1, 0.09, z1, '#ffffff')));
   linea(C.x0, C.z0, C.x1, C.z0 + 0.3);
   linea(C.x0, C.z1 - 0.3, C.x1, C.z1);
@@ -185,25 +232,26 @@ export function cancha(k, g) {
 }
 
 export function garage(k, g) {
-  const c = '#e0d4bd';
-  g.add(k.noSolido(k.cajaDe(G.x0, 0, G.z0, G.x1, 0.1, G.z1, '#9e9e9e')));
-  g.add(k.noSolido(k.cajaDe(36, 0, G.z1, 44, 0.08, T.z1, '#9e9e9e')));
+  const c = k.tex('estuco', '#f6f4ef', 3);
+  g.add(k.noSolido(k.cajaDe(G.x0, 0, G.z0, G.x1, 0.1, G.z1, k.tex('concreto', '#cfccc6', 4))));
+  const cx = (G.x0 + G.x1) / 2;
+  g.add(k.noSolido(k.cajaDe(cx - 4, 0, G.z1, cx + 4, 0.08, T.z1, k.tex('concreto', '#d9d6d0', 4))));
   g.add(k.cajaDe(G.x0, 0, G.z0, G.x1, 7, G.z0 + 0.5, c));
   g.add(k.cajaDe(G.x0, 0, G.z0 + 0.5, G.x0 + 0.5, 7, G.z1, c));
   g.add(k.cajaDe(G.x1 - 0.5, 0, G.z0 + 0.5, G.x1, 7, G.z1, c));
-  g.add(k.cajaDe(G.x0 + 0.5, 0, G.z1 - 0.5, 34, 7, G.z1, c));
-  g.add(k.cajaDe(46, 0, G.z1 - 0.5, G.x1 - 0.5, 7, G.z1, c));
-  g.add(k.cajaDe(34, 5.6, G.z1 - 0.5, 46, 7, G.z1, c));
-  g.add(k.noSolido(k.cajaDe(34.2, 5, G.z1 - 0.45, 45.8, 5.6, G.z1 - 0.05, '#90a4ae')));
-  g.add(k.cajaDe(G.x0 - 0.5, 7, G.z0 - 0.5, G.x1 + 0.5, 7.6, G.z1 + 0.5, '#b0453a'));
+  g.add(k.cajaDe(G.x0 + 0.5, 0, G.z1 - 0.5, cx - 6, 7, G.z1, c));
+  g.add(k.cajaDe(cx + 6, 0, G.z1 - 0.5, G.x1 - 0.5, 7, G.z1, c));
+  g.add(k.cajaDe(cx - 6, 5.6, G.z1 - 0.5, cx + 6, 7, G.z1, c));
+  g.add(k.noSolido(k.cajaDe(cx - 5.8, 5, G.z1 - 0.45, cx + 5.8, 5.6, G.z1 - 0.05, k.tex('panel', '#5b636a', 2))));
+  g.add(k.cajaDe(G.x0 - 0.5, 7, G.z0 - 0.5, G.x1 + 0.5, 7.6, G.z1 + 1.5, '#2b2f33'));
   const c2 = k.cartel('GARAGE', 5, 1, '#ffffff', '#455a64');
-  c2.position.set(40, 6.3, G.z1 + 0.02);
+  c2.position.set(cx, 6.3, G.z1 + 0.02);
   g.add(c2);
 }
 
 export function auto(k, g) {
-  const x = 40;
-  const z = 9;
+  const x = (G.x0 + G.x1) / 2;
+  const z = (G.z0 + G.z1) / 2 - 1;
   g.add(k.cajaDe(x - 2.5, 0.6, z - 4, x + 2.5, 2.2, z + 4, '#e53935'));
   g.add(k.cajaDe(x - 2, 2.2, z - 2.6, x + 2, 3.8, z + 1.8, '#e53935'));
   g.add(k.noSolido(k.cajaDe(x - 1.8, 2.3, z + 1.8, x + 1.8, 3.6, z + 1.9, k.vidrio)));

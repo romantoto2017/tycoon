@@ -1,4 +1,9 @@
 :root {
+  /* Paleta cálida de arquitectura (UI/UX Pro Max: Architecture / Interior) + acento dorado. */
+  --panel: rgba(20, 20, 22, 0.62);
+  --panel-borde: rgba(255, 255, 255, 0.14);
+  --oro: #fbbf24;
+  --foco: #fbbf24;
   --amarillo: #ffd23f;
   --verde: #3ccf4e;
   --rojo: #ef3e36;
@@ -52,7 +57,13 @@ html, body {
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
   transition: transform 0.06s;
 }
+.btn:hover { filter: brightness(1.08); }
 .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--borde); }
+.btn, .carta, .btn-config { transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease; }
+.btn:focus-visible, .carta:focus-visible, .btn-config:focus-visible, #btn-saltar:focus-visible, .ajuste input:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 3px;
+}
 .btn.azul { background: var(--azul); }
 .btn.rojo { background: var(--rojo); }
 .btn.verde { background: var(--verde); }
@@ -75,8 +86,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 3px solid rgba(0, 0, 0, 0.5);
+  background: var(--panel);
+  border: 2px solid var(--panel-borde);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
   border-radius: 18px;
   padding: 4px 18px 4px 8px;
 }
@@ -84,9 +96,10 @@ html, body {
 #plata {
   font-size: 34px;
   font-weight: 700;
-  color: var(--amarillo);
+  color: var(--oro);
   text-shadow: 0 3px 0 #000, 2px 0 0 #000, -2px 0 0 #000, 0 -2px 0 #000;
   min-width: 60px;
+  font-variant-numeric: tabular-nums;
 }
 #pps {
   margin-top: 4px;
@@ -111,13 +124,16 @@ html, body {
   padding: 0;
   font-size: 26px;
   line-height: 1;
+  display: grid;
+  place-items: center;
   color: #fff;
-  background: rgba(0, 0, 0, 0.45);
-  border: 3px solid rgba(0, 0, 0, 0.5);
+  background: var(--panel);
+  border: 2px solid var(--panel-borde);
   border-radius: 12px;
   cursor: pointer;
   pointer-events: auto;
 }
+.btn-config:hover { filter: brightness(1.25); }
 .btn-config:active { transform: translateY(2px); }
 
 /* ---------- Pantallas ---------- */
@@ -148,7 +164,7 @@ html, body {
 .btn.grande { font-size: 30px; padding: 12px 48px; }
 .menu-botones { display: flex; flex-direction: column; gap: 14px; align-items: center; margin-top: 18px; }
 .menu-progreso { margin-top: 18px; font-size: 18px; font-weight: 700; color: #fff; text-shadow: 0 2px 0 #000; }
-#menu { background: rgba(20, 60, 120, 0.25); }
+#menu { background: linear-gradient(to bottom, rgba(12, 18, 28, 0.05) 0%, rgba(12, 18, 28, 0.15) 45%, rgba(12, 18, 28, 0.6) 100%); }
 .volver { margin-top: 16px; }
 .modal.config { width: min(420px, 100%); }
 .ajuste {
@@ -281,8 +297,9 @@ html, body {
   border-radius: 50%;
   border: 4px solid rgba(0, 0, 0, 0.35);
   background: rgba(255, 255, 255, 0.55);
-  font-size: 40px;
-  color: #333;
+  display: grid;
+  place-items: center;
+  color: #222;
   pointer-events: auto;
   touch-action: none;
 }
@@ -316,3 +333,10 @@ html, body {
 }
 
 .modal.config h2 { color: var(--azul); }
+
+/* Menos movimiento si el sistema lo pide. */
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+  .btn, .carta, .btn-config { transition: none; }
+  .carta:hover { transform: none; }
+}
