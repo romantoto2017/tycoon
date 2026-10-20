@@ -106,16 +106,95 @@ async function cargarFoto(p) {
   return null;
 }
 
-// Canvas cuadrado con la cara (recortada según p.recorte) o la inicial si no hay foto.
-// p.recorte = [centroX, centroY, tamaño]: centro en fracción del ancho/alto de la foto
-// y tamaño del cuadrado en fracción del lado más corto.
-export function obtenerCara(p) {
+// Promedio de color de una zona de la imagen. oscuros=true usa solo la mitad más oscura
+// (el pelo suele ser más oscuro que la pared de atrás).
+function colorPromedio(img, x, y, w, h, oscuros = false) {
+  const c = nuevoCanvas(16);
+  const g = c.getContext('2d');
+  g.drawImage(img, x, y, Math.max(1, w), Math.max(1, h), 0, 0, 16, 16);
+  const d = g.getImageData(0, 0, 16, 16).data;
+  let px = [];
+  for (let i = 0; i < d.length; i += 4) px.push([d[i], d[i + 1], d[i + 2]]);
+  if (oscuros) px = px.sort((p, q) => (p[0] + p[1] + p[2]) - (q[0] + q[1] + q[2])).slice(0, px.length / 2);
+  const m = [0, 1, 2].map((k) => Math.round(px.reduce((a, p) => a + p[k], 0) / px.length));
+  return `rgb(${m[0]},${m[1]},${m[2]})`;
+}
+
+// Mechones: trazos finos más claros y más oscuros sobre el color del pelo.
+function mechones(g, s, y0, y1, semilla) {
+  let a = semilla;
+  const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
+  g.lineCap = 'round';
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * s;
+    const ya = y0 + rnd() * (y1 - y0) * 0.5;
+    const largo = (y1 - y0) * (0.3 + rnd() * 0.6);
+    g.strokeStyle = rnd() < 0.5 ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.12)';
+    g.lineWidth = 2 + rnd() * 5;
+    g.beginPath();
+    g.moveTo(x, ya);
+    g.quadraticCurveTo(x + (rnd() - 0.5) * 30, ya + largo / 2, x + (rnd() - 0.5) * 20, Math.min(y1, ya + largo));
+    g.stroke();
+  }
+}
+
+// Costado derecho de la cabeza (en la textura, el frente queda a la izquierda).
+function dibujarCostado(g, s, pelo, piel) {
+  g.fillStyle = piel;
+  g.fillRect(0, 0, s, s);
+  g.fillStyle = pelo;
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.lineTo(s, 0);
+  g.lineTo(s, s * 0.82);
+  g.quadraticCurveTo(s * 0.62, s * 0.78, s * 0.6, s * 0.42);
+  g.lineTo(s * 0.34, s * 0.36);
+  g.lineTo(s * 0.3, s * 0.56);
+  g.lineTo(s * 0.22, s * 0.56);
+  g.lineTo(s * 0.2, s * 0.3);
+  g.lineTo(0, s * 0.26);
+  g.closePath();
+  g.fill();
+  mechones(g, s, 0, s * 0.8, 7);
+  // Oreja.
+  g.fillStyle = 'rgba(120,60,40,0.25)';
+  g.beginPath();
+  g.ellipse(s * 0.47, s * 0.56, s * 0.07, s * 0.12, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = piel;
+  g.beginPath();
+  g.ellipse(s * 0.47, s * 0.56, s * 0.045, s * 0.09, 0, 0, Math.PI * 2);
+  g.fill();
+}
+
+function dibujarAtras(g, s, pelo, piel) {
+  g.fillStyle = piel;
+  g.fillRect(0, 0, s, s);
+  g.fillStyle = pelo;
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.lineTo(s, 0);
+  g.lineTo(s, s * 0.84);
+  for (let i = 8; i >= 0; i--) g.lineTo((s * i) / 8, s * (i % 2 ? 0.88 : 0.82));
+  g.closePath();
+  g.fill();
+  mechones(g, s, 0, s * 0.86, 3);
+}
+
+// Las 6 caras de la cabeza: frente con la foto y el resto dibujado con los colores
+// de pelo y piel sacados de la misma foto. Si existe p.fotoAtras, se usa para la nuca.
+export function cargarCabeza(p) {
   if (!caras.has(p.id)) {
     caras.set(p.id, (async () => {
       const img = await cargarFoto(p);
       const s = 256;
-      const c = nuevoCanvas(s);
-      const g = c.getContext('2d');
+      const lienzo = () => {
+        const c = nuevoCanvas(s);
+        return [c, c.getContext('2d')];
+      };
+      const [frente, gf] = lienzo();
+      let pelo = '#3e2723';
+      let piel = p.piel;
       if (img) {
         const [cx, cy, t] = p.recorte || [0.5, 0.5, 1];
         const w = img.naturalWidth;
@@ -123,14 +202,46 @@ export function obtenerCara(p) {
         const lado = Math.min(w, h) * Math.min(1, t);
         const x0 = Math.min(Math.max(cx * w - lado / 2, 0), w - lado);
         const y0 = Math.min(Math.max(cy * h - lado / 2, 0), h - lado);
-        g.drawImage(img, x0, y0, lado, lado, 0, 0, s, s);
+        gf.drawImage(img, x0, y0, lado, lado, 0, 0, s, s);
+        // Pelo: arriba del recorte (o la franja de arriba si el recorte toca el borde).
+        const arribaY = Math.max(0, y0 - lado * 0.3);
+        const altoPelo = Math.max(y0 + lado * 0.06 - arribaY, lado * 0.12);
+        pelo = colorPromedio(img, x0 + lado * 0.25, arribaY, lado * 0.5, altoPelo, true);
+        // Piel: los cachetes.
+        piel = colorPromedio(frente, s * 0.22, s * 0.56, s * 0.56, s * 0.1);
       } else {
-        dibujarCaraPlaceholder(g, s, p);
+        dibujarCaraPlaceholder(gf, s, p);
       }
-      return c;
+      const [der, gd] = lienzo();
+      dibujarCostado(gd, s, pelo, piel);
+      const [izq, gi] = lienzo();
+      gi.translate(s, 0);
+      gi.scale(-1, 1);
+      gi.drawImage(der, 0, 0);
+      const [atras, ga] = lienzo();
+      const imgAtras = p.fotoAtras ? await cargarImagen(`assets/caras/${p.fotoAtras}`) : null;
+      if (imgAtras) {
+        const l = Math.min(imgAtras.naturalWidth, imgAtras.naturalHeight);
+        ga.drawImage(imgAtras, (imgAtras.naturalWidth - l) / 2, (imgAtras.naturalHeight - l) / 2, l, l, 0, 0, s, s);
+      } else {
+        dibujarAtras(ga, s, pelo, piel);
+      }
+      const [arriba, gar] = lienzo();
+      gar.fillStyle = pelo;
+      gar.fillRect(0, 0, s, s);
+      mechones(gar, s, 0, s, 11);
+      const [abajo, gab] = lienzo();
+      gab.fillStyle = piel;
+      gab.fillRect(0, 0, s, s);
+      return { frente, der, izq, atras, arriba, abajo, piel, pelo };
     })());
   }
   return caras.get(p.id);
+}
+
+// Canvas cuadrado con la cara (para la pantalla de selección).
+export async function obtenerCara(p) {
+  return (await cargarCabeza(p)).frente;
 }
 
 // ---------- Etiquetas flotantes ----------

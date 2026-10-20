@@ -5,7 +5,7 @@ import { Jugador } from './jugador.js';
 import { Controles } from './controles.js';
 import { Tycoon } from './tycoon.js';
 import { crearPersonaje } from './personaje.js';
-import { prepararMoneda, obtenerCara } from './texturas.js';
+import { prepararMoneda, cargarCabeza } from './texturas.js';
 import { cargar, guardar, borrar, cargarAjustes, guardarAjustes } from './guardado.js';
 import { iniciarAudio, setVolumenes, pausarAudio, sfx } from './sfx.js';
 import * as UI from './ui.js';
@@ -78,7 +78,7 @@ async function iniciar() {
   };
 
   const ponerPersonaje = async (p) => {
-    jugador.setModelo(crearPersonaje(p, await obtenerCara(p)));
+    jugador.setModelo(crearPersonaje(p, await cargarCabeza(p)));
     estado.personaje = p.id;
     guardarAhora();
   };

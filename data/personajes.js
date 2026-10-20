@@ -3,8 +3,11 @@
 // - recorte:  [centroX, centroY, tamaño] para encuadrar la cara dentro de la foto.
 //             centroX/centroY van de 0 a 1 (0.5 = medio de la foto).
 //             tamaño: 1 = el lado más corto entero; más chico = más zoom.
+// - fotoAtras: (opcional) imagen de la nuca en assets/caras/, por ejemplo 'toto_atras.jpeg'.
+//             Si no está, la nuca, los costados y la parte de arriba se dibujan solos
+//             con el color de pelo y de piel de la foto.
 // - remera / pantalon: color de la ropa
-// - piel: color de los costados de la cabeza y las manos
+// - piel: color de piel si no hay foto
 
 export const PERSONAJES = [
   { id: 'toto',   nombre: 'Toto',   foto: 'toto.jpeg',   recorte: [0.5, 0.53, 0.52],   remera: '#e53935', pantalon: '#1e3a8a', piel: '#e8b48f' },

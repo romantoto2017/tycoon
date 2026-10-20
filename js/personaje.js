@@ -5,8 +5,10 @@ import { texturaDeCanvas } from './texturas.js';
 const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
 
 // Muñeco de bloques. Mira hacia +Z. Los pies están en y = 0 (alto total ~5.4).
-export function crearPersonaje(p, caraCanvas) {
+// cabeza: lo que devuelve cargarCabeza() (las 6 texturas y el color de piel de la foto).
+export function crearPersonaje(p, cabezaTex) {
   const grupo = new THREE.Group();
+  const piel = cabezaTex.piel || p.piel;
 
   const extremidad = (x, y, colorArriba, colorAbajo, largoArriba) => {
     const pivote = new THREE.Group();
@@ -19,15 +21,20 @@ export function crearPersonaje(p, caraCanvas) {
 
   const piernaI = extremidad(-0.5, 2, p.pantalon, null, 2);
   const piernaD = extremidad(0.5, 2, p.pantalon, null, 2);
-  const brazoI = extremidad(-1.5, 4, p.remera, p.piel, 0.8);
-  const brazoD = extremidad(1.5, 4, p.remera, p.piel, 0.8);
+  const brazoI = extremidad(-1.5, 4, p.remera, piel, 0.8);
+  const brazoD = extremidad(1.5, 4, p.remera, piel, 0.8);
   grupo.add(caja(2, 2, 1, p.remera, 0, 3, 0));
 
-  const texCara = texturaDeCanvas(caraCanvas);
-  // Sin iluminación: la foto se ve siempre con sus colores reales.
-  const matCara = new THREE.MeshBasicMaterial({ map: texCara });
-  // La foto va en las 6 caras de la cabeza.
-  const cabeza = new THREE.Mesh(GEO_CABEZA, matCara);
+  // Sin iluminación: la foto se ve siempre con sus colores reales. Los costados y la nuca
+  // van un poco más oscuros para que se note el volumen del bloque.
+  // Orden de caras de BoxGeometry: +x, -x, +y, -y, +z (frente), -z (nuca).
+  const lados = [
+    [cabezaTex.der, '#dddddd'], [cabezaTex.izq, '#dddddd'], [cabezaTex.arriba, '#ffffff'],
+    [cabezaTex.abajo, '#bbbbbb'], [cabezaTex.frente, '#ffffff'], [cabezaTex.atras, '#cccccc'],
+  ];
+  const texturas = lados.map(([c]) => texturaDeCanvas(c));
+  const materiales = lados.map(([, tono], i) => new THREE.MeshBasicMaterial({ map: texturas[i], color: tono }));
+  const cabeza = new THREE.Mesh(GEO_CABEZA, materiales);
   cabeza.position.y = 4.7;
   grupo.add(cabeza);
 
@@ -51,8 +58,8 @@ export function crearPersonaje(p, caraCanvas) {
       brazoD.rotation.z += (abrir - brazoD.rotation.z) * Math.min(1, dt * 10);
     },
     liberar() {
-      texCara.dispose();
-      matCara.dispose();
+      texturas.forEach((t) => t.dispose());
+      materiales.forEach((m) => m.dispose());
     },
   };
 }
