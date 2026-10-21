@@ -33,6 +33,11 @@ export function cascadas(k, g) {
     g.add(k.noSolido(k.cajaDe(x0 + 0.1, 0.85, 8.3, x1 - 0.1, 1.1, 9.6, '#e1f5fe')));
     for (let x = x0 + 1.5; x < x1; x += 3) g.add(k.noSolido(k.cajaDe(x - 0.3, 0.9, 5, x + 0.3, 1, 5.4, k.brillo('#bfe9ff'))));
   }
+  // Cartel de "Se busca" pegado en el pilar de la cascada derecha, mirando al camino.
+  const seBusca = k.imagen('assets/especiales/se_busca.jpg', 1.5, 2);
+  seBusca.position.set(7.77, 3.3, 6.6);
+  seBusca.rotation.set(0, -Math.PI / 2, 0.05);
+  g.add(seBusca);
 }
 
 // Baseplate verde con cordón y el contorno de la mansión marcado en el piso.
@@ -235,6 +240,12 @@ export function cancha(k, g) {
   linea(C.x0, cz - 0.15, C.x1, cz + 0.15);
   g.add(k.noSolido(k.cilindro(4, 4, 0.02, '#ffffff', cx, 0.08, cz, 24)));
   g.add(k.noSolido(k.cilindro(3.7, 3.7, 0.03, '#388e3c', cx, 0.09, cz, 24)));
+  // Escudo de La Dosis pintado en el círculo central (se lee desde las gradas).
+  const escudo = k.imagen('assets/especiales/ladosis_escudo.png', 7, 7);
+  escudo.rotation.order = 'YXZ';
+  escudo.rotation.set(-Math.PI / 2, -Math.PI / 2, 0);
+  escudo.position.set(cx, 0.12, cz);
+  g.add(escudo);
   [C.z0, C.z1].forEach((z, i) => {
     const s = i === 0 ? -1 : 1;
     const zf = z + s * 0.2;
@@ -276,6 +287,12 @@ export function garage(k, g) {
     const t = k.cilindro(1.1, 1.1, 0.75, '#1f2326', cx + 10, 0.4 + i * 0.78, fondo + 2, 16);
     g.add(t);
   }
+  // La Dosis: banderines sobre el taller y el escudo grande en la pared.
+  k.banderines(g, G.x0 + 1, fondo + 0.4, G.x1 - 1, fondo + 0.4, A - 0.4, 17, 1.3);
+  const escudo = k.imagen('assets/especiales/ladosis_escudo.png', 4.6, 4.6);
+  escudo.position.set(G.x0 + 0.52, 4.8, G.z0 + 9);
+  escudo.rotation.y = Math.PI / 2;
+  g.add(escudo);
   const cartel = k.cartel('GARAGE', 6, 1.2, '#ffffff', '#455a64');
   cartel.position.set(cx, 8.2, G.z1 + 0.02);
   g.add(cartel);
@@ -304,7 +321,20 @@ export function gradas(k, g) {
   const cx = (C.x0 + C.x1) / 2;
   [-4, 4].forEach((dx) => g.add(k.cajaDe(cx + dx - 0.2, 0, C.z0 - 2.6, cx + dx + 0.2, 6, C.z0 - 2.2, '#24282c')));
   g.add(k.cajaDe(cx - 5.5, 5.5, C.z0 - 2.7, cx + 5.5, 9.5, C.z0 - 2.3, '#111214'));
-  const marcador = k.cartel('VECIBANDA 3 - 0 VISITA', 10.5, 3.4, '#ffd23f', '#111214');
+  const marcador = k.cartel('LA DOSIS 3 - 0 VISITA', 10.5, 3.4, '#ffd23f', '#111214');
   marcador.position.set(cx, 7.5, C.z0 - 2.28);
   g.add(marcador);
+  [-7.6, 7.6].forEach((dx) => {
+    const e = k.imagen('assets/especiales/ladosis_escudo.png', 3.4, 3.4);
+    e.position.set(cx + dx, 7.5, C.z0 - 2.28);
+    g.add(e);
+  });
+  // La Dosis en las gradas: escudos en la pared del fondo y banderines en el techo.
+  [z0 + 7, z1 - 7].forEach((z) => {
+    const e = k.imagen('assets/especiales/ladosis_escudo.png', 4.4, 4.4);
+    e.position.set(atras + 0.02, 5.1, z);
+    e.rotation.y = Math.PI / 2;
+    g.add(e);
+  });
+  k.banderines(g, C.x0 - 0.5, z0, C.x0 - 0.5, z1, 7.45, 17, 1.25);
 }

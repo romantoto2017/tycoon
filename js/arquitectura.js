@@ -300,4 +300,11 @@ export function terraza(k, g) {
   vidrio(5, -8.1, 6, -7.9);
   for (const [x, z] of [[-6, -29], [6, -29], [-6, -8], [6, -8]]) g.add(k.cajaDe(x - 0.2, y, z - 0.2, x + 0.2, y + h, z + 0.2, COLORES.marco));
   g.add(k.cajaDe(-8, y + h, -31, 8, y + h + 0.6, -6, COLORES.marco));
+  // Mástil con el banderín gigante de La Dosis (se ve desde la calle).
+  g.add(k.cajaDe(41.4, y, -3.6, 42.6, y + 0.5, -2.4, COLORES.marco));
+  g.add(k.cajaDe(41.8, y + 0.5, -3.2, 42.2, y + 17, -2.8, '#cfd4d8'));
+  g.add(k.noSolido(k.cajaDe(36.6, y + 16.5, -3.1, 42, y + 16.75, -2.9, '#cfd4d8')));
+  const banderin = k.imagen('assets/especiales/ladosis_banderin.png', 5.2, 7.4, { dosLados: true });
+  banderin.position.set(39.3, y + 12.8, -3);
+  g.add(banderin);
 }

@@ -8,7 +8,7 @@ import { Fuegos } from './fuegos.js';
 import { Auto } from './auto.js';
 import { crearModelo, medidaModelo } from './modelos.js';
 import {
-  crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro,
+  crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel,
   texturaCascada, obtenerCara, cargarImagen,
 } from './texturas.js';
 import { sfx } from './sfx.js';
@@ -30,6 +30,7 @@ const MAT_HAZ = new THREE.MeshBasicMaterial({ color: '#7dff6a', transparent: tru
 
 function crearKit() {
   const brillos = new Map();
+  const imagenes = new Map();
   const material = (c) => (c instanceof THREE.Material ? c : mat(c));
   const malla = (geo, c, x, y, z) => {
     const m = new THREE.Mesh(geo, material(c));
@@ -69,10 +70,6 @@ function crearKit() {
         new THREE.MeshBasicMaterial({ map: texturaDeCanvas(canvasCartel(texto, ancho, alto, color, fondo)) }));
       return kit.noSolido(m);
     },
-    lamina(archivo, i, ancho, alto) {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: texturaCuadro(archivo, i) }));
-      return kit.noSolido(m);
-    },
     tex: (tipo, color, tamano) => matTex(tipo, color, tamano),
     // Mueble 3D (ver modelos.js): origen en el centro de la base, frente hacia +z.
     modelo: (nombre, opts = {}) => crearModelo(nombre, { vidrio: kit.vidrio, luz: kit.brillo('#fff3d6'), ...opts, material: mat }),
@@ -94,34 +91,78 @@ function crearKit() {
       });
       return kit.noSolido(new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), mat));
     },
-    // Pintura con marco dorado; toma la proporción de la imagen cuando termina de cargar.
-    pintura(archivo, alto) {
+    // Pintura con marco (dorado salvo que se pida otro); toma la proporción de la imagen
+    // cuando termina de cargar. Un .mp4 se ve como cuadro animado (en loop, sin sonido).
+    pintura(archivo, alto, { carpeta = 'pinturas', marco = '#a8842c' } = {}) {
       const g = new THREE.Group();
-      const marco = new THREE.Mesh(GEO_CAJA, mat('#a8842c'));
+      const borde = new THREE.Mesh(GEO_CAJA, mat(marco));
       const lienzoMat = new THREE.MeshBasicMaterial({ color: '#d9d4c7' });
       const lienzo = new THREE.Mesh(GEO_PLANO, lienzoMat);
       lienzo.position.z = 0.07;
       const ajustar = (proporcion) => {
         const ancho = alto * proporcion;
         lienzo.scale.set(ancho, alto, 1);
-        marco.scale.set(ancho + 0.36, alto + 0.36, 0.12);
+        borde.scale.set(ancho + 0.36, alto + 0.36, 0.12);
       };
       ajustar(0.8);
-      cargarImagen(`assets/pinturas/${archivo}`).then((img) => {
-        if (!img) return;
-        const tex = new THREE.Texture(img);
+      const ponerTextura = (tex, proporcion) => {
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.needsUpdate = true;
         lienzoMat.map = tex;
         lienzoMat.color.set('#ffffff');
         lienzoMat.needsUpdate = true;
-        ajustar(img.naturalWidth / img.naturalHeight);
-      });
-      marco.userData.noSolido = true;
+        ajustar(proporcion);
+      };
+      const ruta = `assets/${carpeta}/${archivo}`;
+      if (archivo.endsWith('.mp4')) {
+        const video = document.createElement('video');
+        Object.assign(video, { muted: true, loop: true, playsInline: true, autoplay: true });
+        // WebM primero (anda en todos los Chrome); el .mp4 queda de respaldo.
+        for (const src of [ruta.replace(/\.mp4$/, '.webm'), ruta]) {
+          const fuente = document.createElement('source');
+          fuente.src = src;
+          video.appendChild(fuente);
+        }
+        video.addEventListener('loadedmetadata', () => ponerTextura(new THREE.VideoTexture(video), video.videoWidth / video.videoHeight));
+        video.play().catch(() => window.addEventListener('pointerdown', () => video.play(), { once: true }));
+      } else {
+        cargarImagen(ruta).then((img) => {
+          if (!img) return;
+          const tex = new THREE.Texture(img);
+          tex.needsUpdate = true;
+          ponerTextura(tex, img.naturalWidth / img.naturalHeight);
+        });
+      }
+      borde.userData.noSolido = true;
       lienzo.userData.noSolido = true;
       g.userData.dinamico = true;
-      g.add(marco, lienzo);
+      g.add(borde, lienzo);
       return g;
+    },
+    // Lámina con una imagen (PNG con transparencia recortada). Misma imagen y medida
+    // comparten geometría y material, así muchas (banderines) se dibujan juntas.
+    imagen(ruta, ancho, alto, { dosLados = false } = {}) {
+      const clave = `${ruta}|${dosLados}`;
+      if (!imagenes.has(clave)) {
+        const tex = new THREE.TextureLoader().load(ruta);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        imagenes.set(clave, new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: dosLados ? THREE.DoubleSide : THREE.FrontSide }));
+      }
+      const m = new THREE.Mesh(geo(`p${ancho}|${alto}`, () => new THREE.PlaneGeometry(ancho, alto)), imagenes.get(clave));
+      return kit.noSolido(m);
+    },
+    // Guirnalda de banderines de La Dosis colgando de una soga entre (x0,z0) y (x1,z1).
+    banderines(g, x0, z0, x1, z1, y, n, tam = 1) {
+      const largo = Math.hypot(x1 - x0, z1 - z0);
+      const soga = kit.noSolido(caja(largo, 0.06, 0.06, '#1b1d1f', (x0 + x1) / 2, y, (z0 + z1) / 2));
+      soga.rotation.y = -Math.atan2(z1 - z0, x1 - x0);
+      g.add(soga);
+      for (let i = 0; i < n; i++) {
+        const t = (i + 0.5) / n;
+        const b = kit.imagen('assets/especiales/ladosis_banderin.png', 0.75 * tam, 1.1 * tam, { dosLados: true });
+        b.position.set(x0 + (x1 - x0) * t, y - 0.55 * tam, z0 + (z1 - z0) * t);
+        b.rotation.y = soga.rotation.y;
+        g.add(b);
+      }
     },
     // Lámina de agua cayendo (la textura se mueve sola en actualizar()).
     cascada(ancho, alto) {

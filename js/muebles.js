@@ -293,7 +293,9 @@ const cocina = [
   M('isla', 'Isla', -1.4, -0.6, (k, s) => {
     const isla = pieza(s, -1.4, -0.6, '+z');
     for (const u of [-2.4, 0, 2.4]) isla.modelo('kitchenBar', u, 0, { ancho: 2.41 });
-    isla.modelo('plantSmall1', 0, 0, { y: isla.medida('kitchenBar', { ancho: 2.41 }).y, solido: false, escala: 1.5 });
+    const arriba = isla.medida('kitchenBar', { ancho: 2.41 }).y;
+    isla.modelo('plantSmall1', 0, 0, { y: arriba, solido: false, escala: 1.5 });
+    estatuilla(s, 0.4, arriba, -0.5);
   }),
   M('banquetas', 'Banquetas', -1.4, 1.6, (k, s) => {
     const isla = pieza(s, -1.4, -0.6, '+z');
@@ -401,6 +403,29 @@ const arcade = [
     s.b(-8.4, 4.6, 0, -6.4, 5, 2, '#ffeb3b');
   }),
 ];
+
+// Estatuilla verde de juguete (unos 15 cm), escondida arriba de la isla de la cocina.
+// Pies descalzos enormes, piernas largas, cara marrón con nariz grande y gorro verde.
+function estatuilla(s, x, y, z) {
+  const verde = '#3fbf3a';
+  const piel = '#a8764e';
+  const b = (x0, y0, z0, x1, y1, z1, c) => s.d(x + x0, y + y0, z + z0, x + x1, y + y1, z + z1, c);
+  for (const lado of [-1, 1]) {
+    const px = lado * 0.065;
+    b(px - 0.05, 0, -0.04, px + 0.05, 0.035, 0.09, piel);
+    for (let i = 0; i < 4; i++) b(px - 0.045 + i * 0.024, 0, 0.09, px - 0.03 + i * 0.024, 0.03, 0.11, '#c48d63');
+    b(px - 0.04, 0.035, -0.035, px + 0.04, 0.12, 0.04, verde);
+    b(px - 0.032, 0.12, -0.03, px + 0.032, 0.27, 0.03, verde);
+    b(lado * 0.1 - 0.016, 0.21, -0.016, lado * 0.1 + 0.016, 0.4, 0.016, verde);
+    b(lado * 0.1 - 0.02, 0.19, -0.02, lado * 0.1 + 0.02, 0.215, 0.02, verde);
+  }
+  b(-0.085, 0.27, -0.045, 0.085, 0.41, 0.045, verde);
+  b(-0.07, 0.41, -0.05, 0.07, 0.54, 0.05, piel);
+  b(-0.02, 0.43, 0.05, 0.02, 0.5, 0.085, '#b07d55');
+  b(-0.045, 0.495, 0.05, -0.02, 0.51, 0.055, '#2b2b2b');
+  b(0.02, 0.495, 0.05, 0.045, 0.51, 0.055, '#2b2b2b');
+  b(-0.078, 0.53, -0.058, 0.078, 0.575, 0.058, verde);
+}
 
 function maquinas(k, s, cuales) {
   const colores = ['#e53935', '#43a047', '#1e88e5', '#fdd835'];
@@ -561,7 +586,10 @@ const cine = [
 ];
 
 const gimnasio = [
-  LUZ(0, 4, (k, s) => s.cartel('VECIBANDA FIT', 6, 1.2, -1, 5.5, -6.55, 0, '#ffeb3b', '#212121')),
+  LUZ(0, 4, (k, s) => {
+    s.cartel('VECIBANDA FIT', 6, 1.2, -1, 5.5, -6.55, 0, '#ffeb3b', '#212121');
+    s.plano(k.imagen('assets/especiales/ladosis_banderin.png', 2.4, 3.5, { dosLados: true }), 8.6, 5, -3, -Math.PI / 2);
+  }),
   M('piso', 'Piso de goma', 0, -1.5, (k, s) => s.d(-8, 0, -6.6, 8, 0.06, 3, '#263238')),
   M('cinta', 'Cinta de correr', -6.5, -4.4, (k, s) => {
     s.b(-8, 0, -6.4, -5, 1, -2.4, '#333333');
@@ -749,6 +777,8 @@ const salaTrofeos = [
   LUZ(0, 3, (k, s) => {
     s.cil(0.25, 0.06, '#212121', -2, 4, -6.55, 16).rotation.x = Math.PI / 2;
     s.cartel('SALA DE TROFEOS', 6, 1.2, 3, 5.6, -6.55, 0, '#ffd54f', '#3e2723');
+    s.plano(k.imagen('assets/especiales/ladosis_banderin.png', 2.4, 3.5, { dosLados: true }), 8.6, 5.2, 3.8, -Math.PI / 2);
+    s.plano(k.imagen('assets/especiales/ladosis_escudo.png', 2.6, 2.6), 8.6, 5.4, -1.8, -Math.PI / 2);
   }),
   M('alfombra', 'Alfombra roja', 0.25, -2.5, (k, s) => s.d(-1, 0, -6.6, 1.5, 0.08, 6.6, '#c62828')),
   M('vitrinas1', 'Vitrinas', -7, -3, (k, s) => vitrinas(k, s, [[-7, -5], [-7, -1]])),

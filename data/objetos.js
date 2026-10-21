@@ -44,17 +44,19 @@ export const OBJETOS_VECIBANDA = [
   { nombre: 'Objeto Vecibanda 8', precio: 4.7e9,    etapa: 10, descripcion: 'Descripción corta 8' },
 ];
 
-// Cuadros: la imagen se busca en assets/cuadros/<archivo>.
-// Van de a dos por piso en las paredes del pasillo (1-2 planta baja, 3-4 primer piso, etc.).
+// Cuadros: la imagen se busca en assets/cuadros/<archivo> (un .mp4 se ve animado).
+// Van en las paredes del hall: dos por piso (1-2 planta baja, 3-4 primer piso, etc.)
+// y del noveno en adelante, otra fila más adentro del hall, empezando de nuevo en planta baja.
 export const CUADROS = [
-  { nombre: 'Cuadro 1', precio: 1700,  archivo: 'cuadro1.jpg' },
-  { nombre: 'Cuadro 2', precio: 1800,  archivo: 'cuadro2.jpg' },
-  { nombre: 'Cuadro 3', precio: 370000, archivo: 'cuadro3.jpg' },
-  { nombre: 'Cuadro 4', precio: 390000, archivo: 'cuadro4.jpg' },
-  { nombre: 'Cuadro 5', precio: 25e6,   archivo: 'cuadro5.jpg' },
-  { nombre: 'Cuadro 6', precio: 26e6,   archivo: 'cuadro6.jpg' },
-  { nombre: 'Cuadro 7', precio: 3e9, archivo: 'cuadro7.jpg' },
-  { nombre: 'Cuadro 8', precio: 3.1e9, archivo: 'cuadro8.jpg' },
+  { nombre: 'Puede ser', precio: 1700, archivo: 'puedeser.jpg' },
+  { nombre: 'Tosi', precio: 1800, archivo: 'tosi.jpg' },
+  { nombre: 'Samu Barber', precio: 370000, archivo: 'samubarber.jpg' },
+  { nombre: 'Grefg', precio: 390000, archivo: 'grefg.jpg' },
+  { nombre: 'Bauti pateado', precio: 25e6, archivo: 'bautipateado.jpg' },
+  { nombre: 'Nico Pereira', precio: 26e6, archivo: 'nicopereira.jpg' },
+  { nombre: 'Kirk', precio: 3e9, archivo: 'kirk.jpg' },
+  { nombre: 'Alonso', precio: 3.1e9, archivo: 'alonso.jpg' },
+  { nombre: 'Momo (animado)', precio: 2500, archivo: 'momo.mp4' },
 ];
 
 // Obras de arte famosas (dominio público) que se compran y se cuelgan en los pasillos.
@@ -75,6 +77,7 @@ export const OBRAS_DE_ARTE = [
 //   por ejemplo el helicóptero siempre espera a la terraza).
 export const LUJOS = [
   { id: 'estatuas',   nombre: 'Estatuas Griegas',      precio: 3000,  etapa: 6 },
+  { id: 'nico_carton', nombre: 'Nico de Cartón',       precio: 2200,  etapa: 5 },
   { id: 'piano',      nombre: 'Piano de Cola',         precio: 4e4,   etapa: 7 },
   { id: 'trex',       nombre: 'Esqueleto de T-Rex',    precio: 7.2e6, etapa: 8 },
   { id: 'boveda',     nombre: 'Bóveda de Oro',         precio: 5.4e9, etapa: 9 },

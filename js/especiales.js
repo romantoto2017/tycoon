@@ -5,9 +5,9 @@ import { nivel, PASILLO, GARAGE as G } from './constantes.js';
 // Pedestales a los costados del camino de entrada: [x, z].
 export const SLOTS_ESPECIALES = [[-8, 18], [8, 18], [-8, 26], [8, 26], [-8, 34], [8, 34], [-8, 42], [8, 42]];
 
-// Cuadros: dos por piso, en las paredes del pasillo.
+// Cuadros: dos por piso en las paredes del hall; del noveno en adelante, otra fila más adentro.
 export function slotCuadro(i) {
-  return { piso: Math.floor(i / 2) % 4, lado: i % 2 === 0 ? -1 : 1 };
+  return { piso: Math.floor(i / 2) % 4, lado: i % 2 === 0 ? -1 : 1, z: i < 8 ? -6 : -10.5 };
 }
 
 const FORMAS = [trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete];
@@ -92,15 +92,15 @@ function cohete(k, p) {
 }
 
 export function cuadro(k, g, i, datos) {
-  const { piso, lado } = slotCuadro(i);
-  const y = nivel(piso) + 4.5;
-  const x = lado * 7.8;
-  const z = -6;
-  g.add(k.noSolido(k.cajaDe(Math.min(x, x - lado * 0.18), y - 1.45, z - 1.9, Math.max(x, x - lado * 0.18), y + 1.45, z + 1.9, '#6d4c41')));
-  const lamina = k.lamina(datos.archivo, i, 3.4, 2.55);
-  lamina.position.set(x - lado * 0.2, y, z);
-  lamina.rotation.y = -lado * Math.PI / 2;
-  g.add(lamina);
+  const { piso, lado, z } = slotCuadro(i);
+  const p = k.pintura(datos.archivo, 2.6, { carpeta: 'cuadros', marco: '#1d1f22' });
+  p.position.set(lado * 7.72, nivel(piso) + 4.7, z);
+  p.rotation.y = -lado * Math.PI / 2;
+  g.add(p);
+  const cartel = k.cartel(datos.nombre, 2.6, 0.4, '#ffffff', '#24282c');
+  cartel.position.set(lado * 7.7, nivel(piso) + 2.75, z);
+  cartel.rotation.y = -lado * Math.PI / 2;
+  g.add(cartel);
 }
 
 export function cartelFinal(k, g) {
@@ -138,6 +138,24 @@ export function obra(k, g, i, datos) {
 }
 
 // ---------- Lujos ----------
+
+// Nico de cartón en tamaño real, en el hall, mirando hacia la puerta. Atrás: cartón y una pata.
+export function nicoCarton(k, g) {
+  const alto = 5.4;
+  const ancho = alto * 516 / 610;
+  const p = k.grupo();
+  const frente = k.imagen('assets/especiales/nico_frente.png', ancho, alto);
+  frente.position.set(0, alto / 2 + 0.05, 0.02);
+  const dorso = k.imagen('assets/especiales/nico_dorso.png', ancho, alto);
+  dorso.position.set(0, alto / 2 + 0.05, -0.02);
+  dorso.rotation.y = Math.PI;
+  const pata = k.noSolido(k.caja(0.6, 2.8, 0.05, '#b0885c', 0, 1.3, -0.6));
+  pata.rotation.x = 0.45;
+  p.add(frente, dorso, pata);
+  p.position.set(4.6, nivel(0), -2.8);
+  p.rotation.y = -0.45;
+  g.add(p);
+}
 
 const MARMOL = '#f1efe9';
 

@@ -451,40 +451,6 @@ export function canvasCartel(texto, ancho, alto, color, fondo) {
   return c;
 }
 
-// Cuadro: placeholder colorido y, si existe, la imagen de assets/cuadros/ recortada a 4:3.
-export function texturaCuadro(archivo, i) {
-  const w = 256;
-  const h = 192;
-  const c = nuevoCanvas(w, h);
-  const g = c.getContext('2d');
-  const fondos = ['#ff7043', '#29b6f6', '#ab47bc', '#66bb6a', '#ffca28', '#ec407a', '#26c6da', '#8d6e63'];
-  g.fillStyle = fondos[i % fondos.length];
-  g.fillRect(0, 0, w, h);
-  g.fillStyle = 'rgba(255,255,255,0.25)';
-  for (let k = 0; k < 6; k++) g.fillRect((k * 53) % w, (k * 37) % h, 40, 40);
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.font = `700 34px ${FUENTE}`;
-  g.lineWidth = 6;
-  g.strokeStyle = '#000';
-  g.strokeText('VECIBANDA', w / 2, h * 0.42);
-  g.fillStyle = '#fff';
-  g.fillText('VECIBANDA', w / 2, h * 0.42);
-  g.font = `700 28px ${FUENTE}`;
-  g.strokeText(`Cuadro ${i + 1}`, w / 2, h * 0.68);
-  g.fillText(`Cuadro ${i + 1}`, w / 2, h * 0.68);
-  const tex = texturaDeCanvas(c);
-  cargarImagen(`assets/cuadros/${archivo}`).then((img) => {
-    if (!img) return;
-    const iw = img.naturalWidth;
-    const ih = img.naturalHeight;
-    const k = Math.min(iw / w, ih / h);
-    g.drawImage(img, (iw - w * k) / 2, (ih - h * k) / 2, w * k, h * k, 0, 0, w, h);
-    tex.needsUpdate = true;
-  });
-  return tex;
-}
-
 // Agua cayendo: celeste con chorros blancos verticales (se repite hacia abajo).
 export function texturaCascada() {
   const w = 64;

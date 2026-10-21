@@ -223,12 +223,12 @@ OBJETOS_VECIBANDA.forEach((obj, i) => {
   });
 });
 
-CUADROS.slice(0, 8).forEach((c, i) => {
-  const { piso, lado } = Es.slotCuadro(i);
+CUADROS.forEach((c, i) => {
+  const { piso, lado, z } = Es.slotCuadro(i);
   const previo = `paredes_int_${SUF[piso]}`;
   insertarDespues(previo, {
     id: `cuadro${i + 1}`, nombre: c.nombre, precio: c.precio, tipo: 'construccion', especial: true,
-    requiere: [previo], boton: en(piso, [lado * 5.5, -6]),
+    requiere: [previo], boton: en(piso, [lado * 5.5, z]),
     construir: (k, g) => Es.cuadro(k, g, i, c),
   });
 });
@@ -247,6 +247,7 @@ OBRAS_DE_ARTE.slice(0, 8).forEach((o, i) => {
 // Lujos: cada uno en su lugar fijo, que además tiene que existir.
 const LUGAR_LUJO = {
   estatuas: { base: ['ventanas_pb'], boton: suelo(-5.5, 6), construir: Es.estatuas },
+  nico_carton: { base: ['paredes_int_pb'], boton: en(0, [3.5, -1.6]), construir: Es.nicoCarton },
   piano: { base: ['paredes_int_pb'], boton: en(0, [5.5, -31.5]), construir: Es.piano },
   trex: { base: ['jardin'], boton: suelo(-34, 42), construir: Es.trex },
   boveda: { base: ['garage'], boton: suelo(50, -3), construir: Es.boveda },
