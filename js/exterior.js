@@ -1,24 +1,37 @@
 // Piezas del terreno alrededor de la mansión (coordenadas del mundo, piso en y = 0).
 import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G } from './constantes.js';
 
-// Cascadas de la entrada: dos muros de piedra oscura con agua cayendo a una pileta.
+// Cascadas de la entrada: el agua sale de un canal de piedra que se apoya en dos pilares,
+// cae separada del muro (se ve el muro atrás) y llega a una pileta con espuma.
 export function cascadas(k, g) {
+  const piedra = k.tex('piedra', '#7a7d80', 3);
+  const oscuro = k.tex('panel', '#3a3f44', 3);
+  const borde = k.tex('concreto', '#a7aaad', 3);
+  const lomo = 17.4;
   for (const s of [-1, 1]) {
     const x0 = s > 0 ? 9 : -21;
     const x1 = s > 0 ? 21 : -9;
     const xc = (x0 + x1) / 2;
-    g.add(k.cajaDe(x0, 0, 4, x1, 17, 5.2, k.tex('piedra', '#7a7d80', 3)));
-    g.add(k.noSolido(k.cajaDe(x0 - 0.3, 17, 3.8, x1 + 0.3, 17.6, 6.2, '#263238')));
-    const agua = k.cascada(x1 - x0 - 1, 16.4);
-    agua.position.set(xc, 0.9 + 8.2, 5.28);
+    // Muro de fondo y pilares.
+    g.add(k.cajaDe(x0, 0, 4, x1, lomo, 4.8, piedra));
+    g.add(k.cajaDe(x0 - 1.2, 0, 4, x0, lomo + 2, 8.6, oscuro));
+    g.add(k.cajaDe(x1, 0, 4, x1 + 1.2, lomo + 2, 8.6, oscuro));
+    // Canal que lleva el agua arriba (con el agua visible) y su labio.
+    g.add(k.cajaDe(x0, lomo, 4, x1, lomo + 0.6, 8.6, oscuro));
+    g.add(k.cajaDe(x0, lomo + 0.6, 4, x1, lomo + 2, 4.5, oscuro));
+    g.add(k.noSolido(k.cajaDe(x0, lomo + 0.6, 4.5, x1, lomo + 1.5, 8.2, k.agua)));
+    g.add(k.noSolido(k.cajaDe(x0, lomo - 0.25, 8.2, x1, lomo + 1.55, 8.6, oscuro)));
+    // Lámina de agua que cae desde el labio.
+    const agua = k.cascada(x1 - x0, lomo - 1.1);
+    agua.position.set(xc, 0.9 + (lomo - 1.1) / 2, 8.75);
     g.add(agua);
-    // Pileta donde cae el agua.
-    const borde = k.tex('concreto', '#a7aaad', 3);
-    g.add(k.cajaDe(x0 - 1, 0, 10.6, x1 + 1, 1.1, 11.2, borde));
-    g.add(k.cajaDe(x0 - 1, 0, 5.2, x0 - 0.4, 1.1, 10.6, borde));
-    g.add(k.cajaDe(x1 + 0.4, 0, 5.2, x1 + 1, 1.1, 10.6, borde));
-    g.add(k.noSolido(k.cajaDe(x0 - 0.4, 0.1, 5.2, x1 + 0.4, 0.9, 10.6, k.agua)));
-    g.add(k.noSolido(k.cajaDe(x0, 0.85, 5.2, x1, 1.05, 6.4, '#e1f5fe')));
+    // Pileta, espuma y luces al pie.
+    g.add(k.cajaDe(x0 - 1.2, 0, 10.6, x1 + 1.2, 1.1, 11.2, borde));
+    g.add(k.cajaDe(x0 - 1.2, 0, 8.6, x0 - 0.6, 1.1, 10.6, borde));
+    g.add(k.cajaDe(x1 + 0.6, 0, 8.6, x1 + 1.2, 1.1, 10.6, borde));
+    g.add(k.noSolido(k.cajaDe(x0, 0.1, 4.8, x1, 0.9, 10.6, k.agua)));
+    g.add(k.noSolido(k.cajaDe(x0 + 0.1, 0.85, 8.3, x1 - 0.1, 1.1, 9.6, '#e1f5fe')));
+    for (let x = x0 + 1.5; x < x1; x += 3) g.add(k.noSolido(k.cajaDe(x - 0.3, 0.9, 5, x + 0.3, 1, 5.4, k.brillo('#bfe9ff'))));
   }
 }
 
@@ -110,7 +123,7 @@ function palmera(k, g, x, z, s = 1) {
 
 export function jardin(k, g) {
   [[-24, 9], [24, 9], [46, 8], [-46, 8], [18, -38], [-18, -38]].forEach(([x, z], i) => palmera(k, g, x, z, 0.95 + (i % 2) * 0.15));
-  [[-44, 48], [-24, 50], [40, 48], [68, 40], [66, -20], [36, -40], [-66, -60], [-30, -80], [0, -78], [20, -78], [-48, -60], [-20, -40]]
+  [[-44, 48], [-24, 50], [40, 48], [68, 40], [66, -20], [36, -40], [-66, -60], [-30, -80], [0, -78], [12, -80], [-48, -60], [-20, -40]]
     .forEach(([x, z], i) => arbol(k, g, x, z, 0.85 + (i % 3) * 0.15));
   // Canteros contra el frente de la casa.
   [[-42, -24], [24, 42]].forEach(([x0, x1]) => {
@@ -249,20 +262,30 @@ export function garage(k, g) {
   g.add(c2);
 }
 
-export function auto(k, g) {
-  const x = (G.x0 + G.x1) / 2;
-  const z = (G.z0 + G.z1) / 2 - 1;
-  g.add(k.cajaDe(x - 2.5, 0.6, z - 4, x + 2.5, 2.2, z + 4, '#e53935'));
-  g.add(k.cajaDe(x - 2, 2.2, z - 2.6, x + 2, 3.8, z + 1.8, '#e53935'));
-  g.add(k.noSolido(k.cajaDe(x - 1.8, 2.3, z + 1.8, x + 1.8, 3.6, z + 1.9, k.vidrio)));
-  g.add(k.noSolido(k.cajaDe(x - 1.8, 2.3, z - 2.7, x + 1.8, 3.6, z - 2.6, k.vidrio)));
-  g.add(k.noSolido(k.cajaDe(x - 2.05, 2.4, z - 2.3, x + 2.05, 3.5, z + 1.5, k.vidrio)));
-  [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]].forEach(([dx, dz]) => {
-    const r = k.cilindro(0.75, 0.75, 0.6, '#212121', x + dx, 0.75, z + dz, 12);
-    r.rotation.z = Math.PI / 2;
-    g.add(r);
-  });
-  g.add(k.noSolido(k.cajaDe(x - 2.2, 1.4, z + 4, x - 1.2, 1.9, z + 4.1, k.brillo('#fff9c4'))));
-  g.add(k.noSolido(k.cajaDe(x + 1.2, 1.4, z + 4, x + 2.2, 1.9, z + 4.1, k.brillo('#fff9c4'))));
-  g.add(k.noSolido(k.cajaDe(x - 0.8, 1.2, z + 4, x + 0.8, 1.6, z + 4.12, '#fafafa')));
+
+// Gradas de cemento con asientos de colores, techo y un marcador.
+export function gradas(k, g) {
+  const cemento = k.tex('concreto', '#cfccc6', 3);
+  const z0 = C.z0 + 4;
+  const z1 = C.z1 - 4;
+  const colores = ['#e53935', '#1e88e5', '#fdd835', '#43a047'];
+  for (let i = 0; i < 4; i++) {
+    const x1 = C.x0 - 1 - i * 1.6;
+    const x0 = x1 - 1.6;
+    g.add(k.cajaDe(x0, 0, z0, x1, 0.7 * (i + 1), z1, cemento));
+    for (let z = z0 + 0.4; z < z1 - 0.8; z += 1.2) {
+      g.add(k.noSolido(k.cajaDe(x1 - 0.9, 0.7 * (i + 1), z, x1 - 0.2, 0.7 * (i + 1) + 0.35, z + 0.9, colores[i])));
+    }
+  }
+  const atras = C.x0 - 1 - 4 * 1.6;
+  g.add(k.cajaDe(atras - 0.4, 0, z0, atras, 7.5, z1, cemento));
+  for (let z = z0; z <= z1; z += (z1 - z0) / 3) g.add(k.cajaDe(atras - 0.4, 0, z - 0.2, atras, 7.5, z + 0.2, '#24282c'));
+  g.add(k.noSolido(k.cajaDe(atras - 0.6, 7.5, z0 - 0.5, C.x0 - 0.4, 7.9, z1 + 0.5, '#24282c')));
+  // Marcador detrás del arco del fondo.
+  const cx = (C.x0 + C.x1) / 2;
+  [-4, 4].forEach((dx) => g.add(k.cajaDe(cx + dx - 0.2, 0, C.z0 - 2.6, cx + dx + 0.2, 6, C.z0 - 2.2, '#24282c')));
+  g.add(k.cajaDe(cx - 5.5, 5.5, C.z0 - 2.7, cx + 5.5, 9.5, C.z0 - 2.3, '#111214'));
+  const marcador = k.cartel('VECIBANDA 3 - 0 VISITA', 10.5, 3.4, '#ffd23f', '#111214');
+  marcador.position.set(cx, 7.5, C.z0 - 2.28);
+  g.add(marcador);
 }

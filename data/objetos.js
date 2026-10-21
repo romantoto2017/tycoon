@@ -56,3 +56,28 @@ export const CUADROS = [
   { nombre: 'Cuadro 7', precio: 3e9, archivo: 'cuadro7.jpg' },
   { nombre: 'Cuadro 8', precio: 3.1e9, archivo: 'cuadro8.jpg' },
 ];
+
+// Obras de arte famosas (dominio público) que se compran y se cuelgan en los pasillos.
+// Van de a dos por piso: 1-2 planta baja, 3-4 primer piso, etc. Imagen en assets/pinturas/.
+export const OBRAS_DE_ARTE = [
+  { nombre: 'La noche estrellada (Van Gogh)',  precio: 1600,  archivo: 'noche_estrellada.jpg' },
+  { nombre: 'La joven de la perla (Vermeer)',  precio: 1700,  archivo: 'joven_perla.jpg' },
+  { nombre: 'La gran ola (Hokusai)',           precio: 3.4e5, archivo: 'gran_ola.jpg' },
+  { nombre: 'Los girasoles (Van Gogh)',        precio: 3.5e5, archivo: 'girasoles.jpg' },
+  { nombre: 'La Gioconda (Da Vinci)',          precio: 2.6e7, archivo: 'mona_lisa.jpg' },
+  { nombre: 'El grito (Munch)',                precio: 2.7e7, archivo: 'el_grito.jpg' },
+  { nombre: 'El nacimiento de Venus (Botticelli)', precio: 3e9, archivo: 'venus.jpg' },
+  { nombre: 'El beso (Klimt)',                 precio: 3.1e9, archivo: 'el_beso.jpg' },
+];
+
+// Lujos de millonario. Cada uno tiene su lugar fijo (no cambies el id).
+// - etapa: igual que en OBJETOS_VECIBANDA (algunos además necesitan que exista su lugar,
+//   por ejemplo el helicóptero siempre espera a la terraza).
+export const LUJOS = [
+  { id: 'estatuas',   nombre: 'Estatuas Griegas',      precio: 3000,  etapa: 6 },
+  { id: 'piano',      nombre: 'Piano de Cola',         precio: 4e4,   etapa: 7 },
+  { id: 'trex',       nombre: 'Esqueleto de T-Rex',    precio: 7.2e6, etapa: 8 },
+  { id: 'boveda',     nombre: 'Bóveda de Oro',         precio: 5.4e9, etapa: 9 },
+  { id: 'piscina_inf', nombre: 'Piscina Infinita',     precio: 5.9e9, etapa: 10 },
+  { id: 'helicoptero', nombre: 'Helicóptero Privado',  precio: 6e9,   etapa: 10 },
+];

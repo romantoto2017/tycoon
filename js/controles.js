@@ -120,6 +120,16 @@ export class Controles {
     return this.activo && (this.tecla('saltar') || this.saltoTactil);
   }
 
+  // Ejes crudos (para manejar): x = doblar (+ derecha), y = acelerar (+ adelante).
+  ejes(salida) {
+    salida.x = 0;
+    salida.y = 0;
+    if (!this.activo) return salida;
+    salida.x = THREE.MathUtils.clamp(this.joy.x + (this.tecla('derecha') ? 1 : 0) - (this.tecla('izquierda') ? 1 : 0), -1, 1);
+    salida.y = THREE.MathUtils.clamp(this.joy.y + (this.tecla('adelante') ? 1 : 0) - (this.tecla('atras') ? 1 : 0), -1, 1);
+    return salida;
+  }
+
   // Dirección de movimiento en el mundo (XZ), relativa a hacia dónde mira la cámara.
   direccion(salida) {
     salida.set(0, 0, 0);

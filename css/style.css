@@ -340,3 +340,14 @@ html, body {
   .btn, .carta, .btn-config { transition: none; }
   .carta:hover { transform: none; }
 }
+
+.btn-manejar {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  font-size: 20px;
+  min-height: 48px;
+}
+.btn-manejar:active { transform: translateX(-50%) translateY(4px); }

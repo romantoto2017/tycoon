@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GEO_CAJA } from './util.js';
 
-// Junta todos los bloques quietos en pocos InstancedMesh: los de color liso van todos
-// juntos (con color por instancia); vidrio, agua, etc. van aparte por material.
+// Junta todas las piezas quietas en pocos InstancedMesh: por forma, y dentro de cada forma
+// las de color liso van juntas (con color por instancia); vidrio, agua, etc. van aparte.
 // Con cientos de piezas compradas, la placa de video dibuja unas pocas cosas en vez de miles.
 const LAMBERT = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 const BASICO = new THREE.MeshBasicMaterial({ color: '#ffffff' });
@@ -17,25 +17,28 @@ function claveDe(material) {
 export class Lote {
   constructor(escena) {
     this.escena = escena;
-    this.grupos = new Map(); // material del lote -> { matrices, colores, malla }
+    this.grupos = new Map(); // 'forma|material' -> { matrices, colores, malla, geometria, material }
   }
 
-  // Pasa los bloques del grupo al lote (los saca del grupo). Ignora lo marcado como dinámico.
+  // Pasa las piezas del grupo al lote (las saca del grupo): bloques y también cilindros,
+  // conos y esferas de geometría compartida. Ignora lo dinámico y lo que gira.
   absorber(grupo) {
     grupo.updateMatrixWorld(true);
     const bloques = [];
     const recorrer = (o) => {
-      if (o.userData.dinamico) return;
-      if (o.isMesh && !o.isInstancedMesh && o.geometry === GEO_CAJA && !Array.isArray(o.material)) bloques.push(o);
+      if (o.userData.dinamico || o.userData.girar) return;
+      const forma = o.isMesh && !o.isInstancedMesh && (o.geometry === GEO_CAJA || o.geometry.userData.loteable);
+      if (forma && !Array.isArray(o.material)) bloques.push(o);
       o.children.forEach(recorrer);
     };
     recorrer(grupo);
     const tocados = new Set();
     for (const b of bloques) {
-      const clave = claveDe(b.material);
+      const material = claveDe(b.material);
+      const clave = `${b.geometry.uuid}|${material.uuid}`;
       let e = this.grupos.get(clave);
       if (!e) {
-        e = { matrices: [], colores: [], malla: null };
+        e = { matrices: [], colores: [], malla: null, geometria: b.geometry, material };
         this.grupos.set(clave, e);
       }
       e.matrices.push(b.matrixWorld.clone());
@@ -46,8 +49,9 @@ export class Lote {
     for (const m of tocados) this.reconstruir(m);
   }
 
-  reconstruir(material) {
-    const e = this.grupos.get(material);
+  reconstruir(clave) {
+    const e = this.grupos.get(clave);
+    const { material } = e;
     const n = e.matrices.length;
     const conColor = material === LAMBERT || material === BASICO;
     if (!e.malla || e.malla.instanceMatrix.count < n) {
@@ -55,7 +59,7 @@ export class Lote {
         this.escena.remove(e.malla);
         e.malla.dispose();
       }
-      e.malla = new THREE.InstancedMesh(GEO_CAJA, material, Math.ceil(n * 1.5) + 16);
+      e.malla = new THREE.InstancedMesh(e.geometria, material, Math.ceil(n * 1.5) + 16);
       e.malla.frustumCulled = false;
       if (material.transparent) e.malla.renderOrder = 1;
       this.escena.add(e.malla);

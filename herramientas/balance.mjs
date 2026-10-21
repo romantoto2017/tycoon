@@ -6,7 +6,7 @@ import { DROPPERS } from '../data/objetos.js';
 import { ITEMS } from '../js/progresion.js';
 
 const T0 = 8;          // segundos de espera para las primeras compras
-const T1 = 185;        // segundos extra hacia el final
+const T1 = 150;        // segundos extra hacia el final
 const CURVA = 1.2;
 let eficiencia = 0.85;    // se pierde algo de tiempo yendo a cobrar (hasta el cobrador automático)
 const CAMINAR = 15;    // segundos promedio para llegar a cada botón

@@ -63,7 +63,39 @@ async function iniciar() {
   // ---------- Pantallas ----------
   // 'menu' | 'seleccion' | 'juego'
   let modo = 'menu';
+  // ---------- Auto ----------
+  let conduciendo = false;
+  const ejes = { x: 0, y: 0 };
+  const tmpBajada = new THREE.Vector3();
+  const btnManejar = document.getElementById('btn-manejar');
+  let textoManejar = '';
+  const cercaDelAuto = () => {
+    const a = tycoon.auto;
+    return a && jugador.pos.y < 2 && Math.hypot(jugador.pos.x - a.pos.x, jugador.pos.z - a.pos.z) < 6;
+  };
+  const subirOBajar = () => {
+    const a = tycoon.auto;
+    if (!a) return;
+    if (conduciendo) {
+      conduciendo = false;
+      jugador.pos.copy(a.puntoBajada(tmpBajada));
+      jugador.vel.set(0, 0, 0);
+    } else if (cercaDelAuto()) {
+      conduciendo = true;
+      a.vel = 0;
+      controles.yaw = a.angulo + Math.PI;
+    }
+    jugador.conduciendo = conduciendo;
+    jugador.contenedor.visible = !conduciendo;
+    jugador.sombra.visible = !conduciendo;
+  };
+  btnManejar.addEventListener('click', subirOBajar);
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyE' && modo === 'juego' && controles.activo) subirOBajar();
+  });
+
   const ir = (nuevo) => {
+    if (nuevo !== 'juego' && conduciendo) subirOBajar();
     modo = nuevo;
     UI.mostrar('menu', nuevo === 'menu');
     UI.mostrar('seleccion', nuevo === 'seleccion');
@@ -178,6 +210,12 @@ async function iniciar() {
   };
 
   const camaraJuego = (dt) => {
+    if (conduciendo) {
+      // La cámara se acomoda sola detrás del auto.
+      let d = tycoon.auto.angulo + Math.PI - controles.yaw;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      controles.yaw += d * Math.min(1, dt * 3);
+    }
     objetivo.lerp(jugador.pos, Math.min(1, dt * 12));
     const cabeza = new THREE.Vector3(objetivo.x, objetivo.y + 4, objetivo.z);
     const cp = Math.cos(controles.pitch);
@@ -209,8 +247,19 @@ async function iniciar() {
     const real = reloj.getDelta();
     const dt = Math.min(real, 0.05);
 
-    controles.direccion(dir);
-    if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
+    if (conduciendo) {
+      tycoon.auto.actualizar(dt, controles.ejes(ejes), colisiones);
+      jugador.pos.copy(tycoon.auto.pos);
+    } else {
+      controles.direccion(dir);
+      if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
+    }
+    const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : '';
+    if (texto !== textoManejar) {
+      textoManejar = texto;
+      btnManejar.textContent = texto;
+      btnManejar.classList.toggle('oculto', !texto);
+    }
     tycoon.actualizar(dt, jugador);
     mundo.actualizar(dt);
     if (modo === 'juego') {

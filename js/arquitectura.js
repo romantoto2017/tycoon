@@ -217,10 +217,11 @@ export function paredesInteriores(k, g, n) {
 }
 
 // Lámpara colgante: cable, pantalla negra y luz cálida abajo.
+// Cuelga poco (queda por encima de la cabeza y de la cámara).
 export function colgante(k, g, x, techo, z) {
-  g.add(k.noSolido(k.cajaDe(x - 0.04, techo - 2.6, z - 0.04, x + 0.04, techo, z + 0.04, COLORES.marco)));
-  g.add(k.noSolido(k.cajaDe(x - 0.7, techo - 3.2, z - 0.7, x + 0.7, techo - 2.6, z + 0.7, COLORES.marco)));
-  g.add(k.noSolido(k.cajaDe(x - 0.55, techo - 3.25, z - 0.55, x + 0.55, techo - 3.2, z + 0.55, k.brillo(COLORES.luz))));
+  g.add(k.noSolido(k.cajaDe(x - 0.04, techo - 1.5, z - 0.04, x + 0.04, techo, z + 0.04, COLORES.marco)));
+  g.add(k.noSolido(k.cajaDe(x - 0.45, techo - 1.9, z - 0.45, x + 0.45, techo - 1.5, z + 0.45, COLORES.marco)));
+  g.add(k.noSolido(k.cajaDe(x - 0.35, techo - 1.95, z - 0.35, x + 0.35, techo - 1.9, z + 0.35, k.brillo(COLORES.luz))));
 }
 
 // Vidrios con parantes negros y, en planta baja, las puertas de entrada.

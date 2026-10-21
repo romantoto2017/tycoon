@@ -6,7 +6,7 @@
 // Los precios salen de js/precios.js (generado con herramientas/balance.mjs),
 // salvo los objetos especiales y cuadros, que están en data/objetos.js.
 // Este archivo no importa three: lo usa también la simulación de balance.
-import { DROPPERS, MEJORAS_VALOR, MEJORAS_VELOCIDAD, OBJETOS_VECIBANDA, CUADROS } from '../data/objetos.js';
+import { DROPPERS, MEJORAS_VALOR, MEJORAS_VELOCIDAD, OBJETOS_VECIBANDA, CUADROS, OBRAS_DE_ARTE, LUJOS } from '../data/objetos.js';
 import { PERSONAJES } from '../data/personajes.js';
 import { SLOTS_DROPPER, ASCENSOR, PASILLO, nivel } from './constantes.js';
 import { PRECIOS } from './precios.js';
@@ -114,7 +114,7 @@ sala('banio_pb', 'Baño y Lavadero', 0, 'WOB', 'banioPB');
 sala('sala_juegos', 'Sala de Juegos', 0, 'EIF', 'salaJuegos');
 dropper(3, ['dropper3', 'cocina']);
 sala('arcade', 'Arcade', 0, 'EIB', 'arcade');
-sala('galeria', 'Galería de Arte', 0, 'EOF', 'galeria');
+sala('playroom', 'Playroom', 0, 'EOF', 'playroom');
 sala('spa', 'Spa', 0, 'EOB', 'spa');
 obra('camino', 'Camino de Entrada', ['ventanas_pb'], suelo(-30, 14), Ex.camino);
 obra('cascadas', 'Cascadas de la Entrada', ['camino'], suelo(-38, 14), Ex.cascadas);
@@ -173,8 +173,9 @@ sala('trofeos', 'Sala de Trofeos', 3, 'EIB', 'salaTrofeos');
 sala('streaming', 'Estudio de Streaming', 3, 'EOF', 'streaming');
 sala('suite_vip', 'Suite VIP', 3, 'EOB', 'dormitorio1');
 obra('garage', 'Garage', ['piso_3', 'camino'], suelo(59, 24), Ex.garage);
-obra('auto', 'Auto de la Vecibanda', ['garage'], suelo(59, 30), Ex.auto);
+agregar({ id: 'auto', nombre: 'Auto Deportivo (manejable)', tipo: 'construccion', requiere: ['garage'], boton: suelo(59, 30) });
 obra('cancha', 'Cancha de Fútbol', ['piso_3'], suelo(24, -60), Ex.cancha);
+obra('gradas', 'Gradas y Marcador', ['cancha'], suelo(24, -44), Ex.gradas);
 obra('farolas', 'Farolas', ['jardin', 'piso_3'], suelo(-30, 30), Ex.farolas);
 obra('fuente', 'Fuente', ['farolas'], suelo(-38, 30), Ex.fuente);
 
@@ -216,6 +217,38 @@ CUADROS.slice(0, 8).forEach((c, i) => {
     id: `cuadro${i + 1}`, nombre: c.nombre, precio: c.precio, tipo: 'construccion', especial: true,
     requiere: [previo], boton: en(piso, [lado * 5.5, -6]),
     construir: (k, g) => Es.cuadro(k, g, i, c),
+  });
+});
+
+// Obras de arte famosas: dos por piso en las paredes de los pasillos.
+OBRAS_DE_ARTE.slice(0, 8).forEach((o, i) => {
+  const { piso, lado } = Es.slotObra(i);
+  const previo = `paredes_int_${SUF[piso]}`;
+  insertarDespues(previo, {
+    id: `obra${i + 1}`, nombre: o.nombre, precio: o.precio, tipo: 'construccion', especial: true,
+    requiere: [previo], boton: en(piso, [lado * 26, -17.2]),
+    construir: (k, g) => Es.obra(k, g, i, o),
+  });
+});
+
+// Lujos: cada uno en su lugar fijo, que además tiene que existir.
+const LUGAR_LUJO = {
+  estatuas: { base: ['ventanas_pb'], boton: suelo(-5.5, 6), construir: Es.estatuas },
+  piano: { base: ['paredes_int_pb'], boton: en(0, [5.5, -31.5]), construir: Es.piano },
+  trex: { base: ['jardin'], boton: suelo(-34, 42), construir: Es.trex },
+  boveda: { base: ['garage'], boton: suelo(52, 11), construir: Es.boveda },
+  piscina_inf: { base: ['techo'], boton: en(4, [14, -17]), construir: Es.piscinaInfinita },
+  helicoptero: { base: ['techo'], boton: en(4, [32, -20]), construir: Es.helicoptero },
+};
+LUJOS.forEach((l) => {
+  const lugar = LUGAR_LUJO[l.id];
+  if (!lugar) return;
+  const etapa = Math.min(10, Math.max(1, Math.round(l.etapa) || 1));
+  const requiere = [ETAPAS[etapa], ...lugar.base];
+  const ultimo = requiere.reduce((a, id) => (lista.findIndex((x) => x.id === id) > lista.findIndex((x) => x.id === a) ? id : a));
+  insertarDespues(ultimo, {
+    id: `lujo_${l.id}`, nombre: l.nombre, precio: l.precio, tipo: 'construccion', especial: true,
+    requiere, boton: lugar.boton, construir: lugar.construir,
   });
 });
 

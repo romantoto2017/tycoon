@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { DROPPERS } from '../data/objetos.js';
 import { ITEMS, ITEMS_POR_ID } from './progresion.js';
-import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA, ASCENSOR, nivel } from './constantes.js';
-import { caja, mat, matTex, formato } from './util.js';
+import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA, ASCENSOR, GARAGE, nivel } from './constantes.js';
+import { caja, mat, matTex, formato, GEO_CAJA } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
+import { Auto } from './auto.js';
 import {
   crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro,
-  texturaCascada, obtenerCara,
+  texturaCascada, obtenerCara, cargarImagen,
 } from './texturas.js';
 import { sfx } from './sfx.js';
 
@@ -17,6 +18,7 @@ const ALTURA_CAIDA = 14;
 
 const GEO_BOTON = new THREE.CylinderGeometry(1.4, 1.4, 0.3, 20);
 const GEO_ARO = new THREE.CylinderGeometry(1.75, 1.75, 0.16, 20);
+const GEO_PLANO = new THREE.PlaneGeometry(1, 1);
 const GEO_HAZ = new THREE.CylinderGeometry(0.5, 0.5, 40, 8, 1, true);
 const MAT_VERDE = new THREE.MeshLambertMaterial({ color: '#2fd14a', emissive: '#0b4a14' });
 const MAT_ROJO = new THREE.MeshLambertMaterial({ color: '#e53935', emissive: '#3a0a0a' });
@@ -33,14 +35,32 @@ function crearKit() {
     m.position.set(x, y, z);
     return m;
   };
+  // Geometrías compartidas (altura 1, se escalan): así el lote las puede agrupar.
+  const geos = new Map();
+  const geo = (clave, crear) => {
+    if (!geos.has(clave)) {
+      const g = crear();
+      g.userData.loteable = true;
+      geos.set(clave, g);
+    }
+    return geos.get(clave);
+  };
   const kit = {
     THREE,
     caja,
     cajaDe: (x0, y0, z0, x1, y1, z1, c) => caja(x1 - x0, y1 - y0, z1 - z0, c, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2),
     noSolido: (m) => { m.userData.noSolido = true; return m; },
-    cilindro: (rArriba, rAbajo, h, c, x, y, z, seg = 12) => malla(new THREE.CylinderGeometry(rArriba, rAbajo, h, seg), c, x, y, z),
-    cono: (r, h, c, x, y, z, seg = 8) => malla(new THREE.ConeGeometry(r, h, seg), c, x, y, z),
-    esfera: (r, c, x, y, z) => malla(new THREE.SphereGeometry(r, 14, 10), c, x, y, z),
+    cilindro(rArriba, rAbajo, h, c, x, y, z, seg = 12) {
+      const m = malla(geo(`c${rArriba}|${rAbajo}|${seg}`, () => new THREE.CylinderGeometry(rArriba, rAbajo, 1, seg)), c, x, y, z);
+      m.scale.y = h;
+      return m;
+    },
+    cono(r, h, c, x, y, z, seg = 8) {
+      const m = malla(geo(`k${r}|${seg}`, () => new THREE.ConeGeometry(r, 1, seg)), c, x, y, z);
+      m.scale.y = h;
+      return m;
+    },
+    esfera: (r, c, x, y, z) => malla(geo(`e${r}`, () => new THREE.SphereGeometry(r, 14, 10)), c, x, y, z),
     grupo: () => new THREE.Group(),
     etiqueta: (lineas, ancho) => crearEtiqueta(lineas, ancho).sprite,
     cartel(texto, ancho, alto, color, fondo) {
@@ -69,6 +89,35 @@ function crearKit() {
         mat.needsUpdate = true;
       });
       return kit.noSolido(new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), mat));
+    },
+    // Pintura con marco dorado; toma la proporción de la imagen cuando termina de cargar.
+    pintura(archivo, alto) {
+      const g = new THREE.Group();
+      const marco = new THREE.Mesh(GEO_CAJA, mat('#a8842c'));
+      const lienzoMat = new THREE.MeshBasicMaterial({ color: '#d9d4c7' });
+      const lienzo = new THREE.Mesh(GEO_PLANO, lienzoMat);
+      lienzo.position.z = 0.07;
+      const ajustar = (proporcion) => {
+        const ancho = alto * proporcion;
+        lienzo.scale.set(ancho, alto, 1);
+        marco.scale.set(ancho + 0.36, alto + 0.36, 0.12);
+      };
+      ajustar(0.8);
+      cargarImagen(`assets/pinturas/${archivo}`).then((img) => {
+        if (!img) return;
+        const tex = new THREE.Texture(img);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
+        lienzoMat.map = tex;
+        lienzoMat.color.set('#ffffff');
+        lienzoMat.needsUpdate = true;
+        ajustar(img.naturalWidth / img.naturalHeight);
+      });
+      marco.userData.noSolido = true;
+      lienzo.userData.noSolido = true;
+      g.userData.dinamico = true;
+      g.add(marco, lienzo);
+      return g;
     },
     // Lámina de agua cayendo (la textura se mueve sola en actualizar()).
     cascada(ancho, alto) {
@@ -186,6 +235,10 @@ export class Tycoon {
     }
     if (item.id === 'cancha') this.crearPelota();
     if (item.id === 'auto_cobro') this.autoCobro = true;
+    if (item.id === 'auto' && !this.auto) {
+      this.auto = new Auto(this.escena, (GARAGE.x0 + GARAGE.x1) / 2, (GARAGE.z0 + GARAGE.z1) / 2 - 1, 0);
+      this.colisiones.push(this.auto.caja);
+    }
     if (item.id === 'ascensor') this.ascensor = true;
     if ((this.ascensor && PISOS_ASCENSOR.includes(item.id)) || item.id === 'ascensor') this.actualizarAscensor();
     if (item.final) this.fuegos.activo = true;
@@ -431,10 +484,11 @@ export class Tycoon {
   actualizar(dt, jugador) {
     this.tiempo += dt;
     this.actualizarAnimaciones(dt);
-    this.actualizarBotones(dt, jugador);
+    // Manejando no se compra ni se cobra al pasar por encima de los botones.
+    if (!jugador.conduciendo) this.actualizarBotones(dt, jugador);
     for (const o of this.giratorios) o.rotation.y += o.userData.girar * dt;
     for (const t of this.cascadas) t.offset.y = (t.offset.y + dt * 0.9) % 1;
-    this.actualizarPads(jugador);
+    if (!jugador.conduciendo) this.actualizarPads(jugador);
     this.fuegos.actualizar(dt);
     if (this.pelota) this.actualizarPelota(dt, jugador);
     if (!this.fabrica) return;
@@ -560,7 +614,7 @@ export class Tycoon {
     }
     const dx = jugador.pos.x - COBRAR.x;
     const dz = jugador.pos.z - COBRAR.z;
-    const encima = dx * dx + dz * dz < 1.7 * 1.7 && jugador.pos.y < 1;
+    const encima = !jugador.conduciendo && dx * dx + dz * dz < 1.7 * 1.7 && jugador.pos.y < 1;
     const c = this.cobrar;
     c.espera -= dt;
     if (encima && this.estado.banco >= 1 && (!c.pisado || c.espera <= 0)) {
