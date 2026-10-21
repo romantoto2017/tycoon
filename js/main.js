@@ -12,6 +12,7 @@ import * as UI from './ui.js';
 import { formato } from './util.js';
 import { cargarModelos, MODELOS } from './modelos.js';
 import { ITEMS } from './progresion.js';
+import { Ladron } from './ladron.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -54,6 +55,7 @@ async function iniciar() {
   tycoon.reconstruir();
   tycoon.lote.absorber(mundo.estaticos);
   UI.prepararHUD();
+  const ladron = new Ladron(escena, tycoon, UI);
 
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
@@ -214,7 +216,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -315,6 +317,7 @@ async function iniciar() {
       btnManejar.classList.toggle('oculto', !texto);
     }
     tycoon.actualizar(dt, jugador);
+    ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
     mundo.actualizar(dt);
     if (modo === 'juego') {
       estado.tiempoJugado += dt;

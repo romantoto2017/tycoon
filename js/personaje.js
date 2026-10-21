@@ -32,21 +32,38 @@ export function crearPersonaje(p, cabezaTex) {
     panzaFrente = [tela, tela, tela, tela, frentePanza, tela];
     remera = tela;
   }
-  const extremidad = (x, y, colorArriba, colorAbajo, largoArriba, grosor = 0.95) => {
+  // El cuerpo cuelga de la cadera (y = 2) para poder inclinarlo al agacharse.
+  const cuerpo = new THREE.Group();
+  cuerpo.position.y = 2;
+  grupo.add(cuerpo);
+  const CADERA = 2;
+  const extremidad = (padre, x, y, colorArriba, colorAbajo, largoArriba, grosor = 0.95) => {
     const pivote = new THREE.Group();
     pivote.position.set(x, y, 0);
     pivote.add(caja(grosor, largoArriba, grosor, colorArriba, 0, -largoArriba / 2, 0));
     if (colorAbajo) pivote.add(caja(grosor, 2 - largoArriba, grosor, colorAbajo, 0, -largoArriba - (2 - largoArriba) / 2, 0));
-    grupo.add(pivote);
+    padre.add(pivote);
     return pivote;
+  };
+  // Pierna con rodilla: muslo desde la cadera y la parte de abajo desde la rodilla.
+  const pierna = (x, grosor) => {
+    const muslo = new THREE.Group();
+    muslo.position.set(x, CADERA, 0);
+    muslo.add(caja(grosor, 1, grosor, p.pantalon, 0, -0.5, 0));
+    const rodilla = new THREE.Group();
+    rodilla.position.y = -1;
+    rodilla.add(caja(grosor * 0.98, 1, grosor * 0.98, p.pantalon, 0, -0.5, 0));
+    muslo.add(rodilla);
+    grupo.add(muslo);
+    return { muslo, rodilla };
   };
 
   // Cuerpo normal o 'gordo' (torso más ancho y profundo, panza, extremidades más gruesas).
   const xBrazo = anchoTorso / 2 + (gordo ? 0.55 : 0.5);
-  const piernaI = extremidad(gordo ? -0.65 : -0.5, 2, p.pantalon, null, 2, gordo ? 1.25 : 0.95);
-  const piernaD = extremidad(gordo ? 0.65 : 0.5, 2, p.pantalon, null, 2, gordo ? 1.25 : 0.95);
-  const brazoI = extremidad(-xBrazo, 4, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
-  const brazoD = extremidad(xBrazo, 4, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
+  const piernaI = pierna(gordo ? -0.65 : -0.5, gordo ? 1.25 : 0.95);
+  const piernaD = pierna(gordo ? 0.65 : 0.5, gordo ? 1.25 : 0.95);
+  const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
+  const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
   const bloque = (w, h, d, material, x, y, z) => {
     if (!Array.isArray(material)) return caja(w, h, d, material, x, y, z);
     const m = new THREE.Mesh(GEO_CAJA, material);
@@ -54,8 +71,8 @@ export function crearPersonaje(p, cabezaTex) {
     m.position.set(x, y, z);
     return m;
   };
-  grupo.add(bloque(anchoTorso, 2, fondoTorso, torso || p.remera, 0, 3, 0));
-  if (gordo) grupo.add(bloque(2.2, 1.4, 0.45, panzaFrente || p.remera, 0, 2.75, fondoTorso / 2 + 0.2));
+  cuerpo.add(bloque(anchoTorso, 2, fondoTorso, torso || p.remera, 0, 3 - CADERA, 0));
+  if (gordo) cuerpo.add(bloque(2.2, 1.4, 0.45, panzaFrente || p.remera, 0, 2.75 - CADERA, fondoTorso / 2 + 0.2));
 
   // Sin iluminación: la foto se ve siempre con sus colores reales. Los costados y la nuca
   // van un poco más oscuros para que se note el volumen del bloque.
@@ -67,24 +84,48 @@ export function crearPersonaje(p, cabezaTex) {
   const texturas = lados.map(([c]) => texturaDeCanvas(c));
   const materiales = lados.map(([, tono], i) => new THREE.MeshBasicMaterial({ map: texturas[i], color: tono }));
   const cabeza = new THREE.Mesh(GEO_CABEZA, materiales);
-  cabeza.position.y = 4.7;
-  grupo.add(cabeza);
+  cabeza.position.y = 4.7 - CADERA;
+  cuerpo.add(cabeza);
 
   let fase = 0;
   let balanceo = 0;
+  let agache = 0; // 0 = parado, 1 = agachado del todo
 
   return {
     grupo,
     // velocidad: unidades/seg en el plano. enSuelo: para la pose de salto.
-    animar(dt, velocidad, enSuelo) {
+    // agachado: rodillas dobladas, cadera abajo, torso hacia adelante y brazos al frente.
+    // sentado: arriba de una moto (piernas dobladas hacia adelante, manos al manubrio).
+    animar(dt, velocidad, enSuelo, agachado = false, sentado = false) {
       const objetivo = enSuelo ? Math.min(velocidad / 12, 1) : 0.35;
       balanceo += (objetivo - balanceo) * Math.min(1, dt * 10);
-      fase += dt * (enSuelo ? velocidad * 0.75 : 4);
-      const a = Math.sin(fase) * 0.85 * balanceo;
-      piernaI.rotation.x = a;
-      piernaD.rotation.x = -a;
-      brazoI.rotation.x = -a;
-      brazoD.rotation.x = a;
+      agache += ((agachado ? 1 : 0) - agache) * Math.min(1, dt * 12);
+      fase += dt * (enSuelo ? velocidad * (agachado ? 1.1 : 0.75) : 4);
+      const a = Math.sin(fase) * 0.85 * balanceo * (1 - agache * 0.55);
+      // Piernas: el muslo sube hacia adelante y la rodilla se dobla para atrás.
+      const muslo = -1.35 * agache;
+      const rodilla = 2.3 * agache;
+      for (const [pi, signo] of [[piernaI, 1], [piernaD, -1]]) {
+        pi.muslo.rotation.x = muslo + signo * a;
+        pi.rodilla.rotation.x = rodilla + Math.max(0, -signo * a) * 0.6;
+      }
+      // La cadera baja lo que suben los pies (para que sigan apoyados en el piso).
+      const alturaCadera = Math.cos(muslo) + Math.cos(muslo + rodilla);
+      let yCadera = Math.min(CADERA, alturaCadera);
+      if (sentado) {
+        for (const pi of [piernaI, piernaD]) {
+          pi.muslo.rotation.x = -1.45;
+          pi.rodilla.rotation.x = 1.25;
+        }
+        yCadera = CADERA;
+      }
+      piernaI.muslo.position.y = yCadera;
+      piernaD.muslo.position.y = yCadera;
+      cuerpo.position.y = yCadera;
+      cuerpo.rotation.x = 0.5 * agache;
+      brazoI.rotation.x = sentado ? -1.2 : -a - 0.7 * agache;
+      brazoD.rotation.x = sentado ? -1.2 : a - 0.7 * agache;
+      if (sentado) cuerpo.rotation.x = 0.2;
       const abrir = enSuelo ? 0 : 0.5;
       brazoI.rotation.z += (-abrir - brazoI.rotation.z) * Math.min(1, dt * 10);
       brazoD.rotation.z += (abrir - brazoD.rotation.z) * Math.min(1, dt * 10);

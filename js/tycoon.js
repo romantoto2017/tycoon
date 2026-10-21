@@ -649,7 +649,8 @@ export class Tycoon {
   }
 
   actualizarCobrar(dt, jugador) {
-    if (this.autoCobro) {
+    // pausaCobro: la Schwepa está en el terreno (ver ladron.js).
+    if (this.autoCobro && !this.pausaCobro) {
       this.esperaAuto -= dt;
       if (this.esperaAuto <= 0 && this.estado.banco >= 1) {
         this.esperaAuto = 1;

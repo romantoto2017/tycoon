@@ -4,7 +4,7 @@ import { SPAWN } from './constantes.js';
 
 const RADIO = 0.75;
 const ALTO = 5.3;
-const AGACHADO = 0.6;   // alto agachado (proporción)
+const AGACHADO = 0.72;  // alto agachado (proporción; coincide con la pose del muñeco)
 const PASO = 0.75;      // escalón que se sube caminando
 // Como en Roblox (1 unidad ≈ 1 stud): camina a 16, gravedad 196,2 y salto de 50
 // (sube unas 6,4 unidades, más alto que la cabeza, y dura medio segundo).
@@ -50,7 +50,6 @@ export class Jugador {
     this.escala = e;
     this.agachado = false;
     this.quiereAgacharse = false;
-    this.contenedor.scale.y = 1;
     if (this.modelo) this.modelo.grupo.scale.setScalar(e);
   }
 
@@ -67,7 +66,6 @@ export class Jugador {
       if (choca) return;
     }
     this.agachado = this.quiereAgacharse;
-    this.contenedor.scale.y = this.agachado ? AGACHADO : 1;
   }
 
   setModelo(modelo) {
@@ -113,7 +111,7 @@ export class Jugador {
     this.contenedor.position.copy(this.pos);
     this.contenedor.rotation.y = this.angulo;
     this.sombra.position.set(this.pos.x, this.suelo + 0.06, this.pos.z);
-    if (this.modelo) this.modelo.animar(dt, velPlano, this.enSuelo || this.enAgua);
+    if (this.modelo) this.modelo.animar(dt, velPlano, this.enSuelo || this.enAgua, this.agachado);
     return salto;
   }
 
