@@ -13,6 +13,7 @@ import { formato } from './util.js';
 import { cargarModelos, MODELOS } from './modelos.js';
 import { ITEMS } from './progresion.js';
 import { Ladron } from './ladron.js';
+import { crearAK } from './arma.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -88,6 +89,7 @@ async function iniciar() {
       jugador.pos.copy(a.puntoBajada(tmpBajada));
       jugador.vel.set(0, 0, 0);
     } else if (cercaDelAuto()) {
+      sacarArma(false);
       conduciendo = true;
       a.vel = 0;
       controles.yaw = a.angulo + Math.PI;
@@ -130,8 +132,104 @@ async function iniciar() {
     controles.agacharse = !controles.agacharse;
   });
 
+  // ---------- AK-47 (para echar a la Schwepa) ----------
+  // Como una herramienta de Roblox: se saca y se guarda con el slot de abajo o la tecla 1.
+  // Con el arma en la mano el personaje mira hacia la cámara; clic izquierdo (o el botón
+  // rojo en el celu) dispara ráfagas hacia donde apunta el mouse (o el centro de la pantalla).
+  const btnArma = document.getElementById('btn-arma');
+  const btnDisparar = document.getElementById('btn-disparar');
+  const mira = document.getElementById('mira');
+  const ak = crearAK();
+  ak.position.set(0, -1.9, 0);
+  ak.rotation.x = Math.PI / 2;
+  let armaEnMano = false;
+  let cadencia = 0;
+  let ultimoArma = null;
+  const sacarArma = (v) => {
+    armaEnMano = v && tycoon.tieneArma && !conduciendo;
+    if (armaEnMano) jugador.modelo.manoD.add(ak);
+    else ak.parent?.remove(ak);
+    jugador.modelo.apuntar = armaEnMano;
+    controles.armado = armaEnMano;
+    if (!armaEnMano) controles.disparando = false;
+  };
+  btnArma.addEventListener('pointerdown', (e) => { e.preventDefault(); sacarArma(!armaEnMano); });
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Digit1' && modo === 'juego' && controles.activo && tycoon.tieneArma) sacarArma(!armaEnMano);
+  });
+  const trazadoras = Array.from({ length: 6 }, () => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 1), new THREE.MeshBasicMaterial({ color: '#ffe082' }));
+    m.visible = false;
+    m.userData.vida = 0;
+    escena.add(m);
+    return m;
+  });
+  let proxima = 0;
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const boca = new THREE.Vector3();
+  const blanco = new THREE.Vector3();
+  const tmpPunto = new THREE.Vector3();
+  const disparar = () => {
+    if (controles.esTactil || controles.shiftLock || controles.primeraPersona) ndc.set(0, 0);
+    else ndc.set((controles.apunte.x / window.innerWidth) * 2 - 1, -(controles.apunte.y / window.innerHeight) * 2 + 1);
+    raycaster.setFromCamera(ndc, camara);
+    const rayo = raycaster.ray;
+    let dist = 160;
+    for (const b of colisiones) {
+      if (b.containsPoint(rayo.origin)) continue;
+      if (rayo.intersectBox(b, tmpPunto)) dist = Math.min(dist, tmpPunto.distanceTo(rayo.origin));
+    }
+    let pego = false;
+    if (ladron.posicion(blanco)) {
+      const t = blanco.clone().sub(rayo.origin).dot(rayo.direction);
+      if (t > 0 && t < dist && rayo.distanceSqToPoint(blanco) < 2.6 * 2.6) {
+        dist = t;
+        pego = ladron.herir(20);
+      }
+    }
+    const fin = rayo.at(dist, tmpPunto);
+    ak.userData.boca.getWorldPosition(boca);
+    const tr = trazadoras[proxima++ % trazadoras.length];
+    tr.position.copy(boca).lerp(fin, 0.5);
+    tr.scale.z = Math.max(0.1, boca.distanceTo(fin));
+    tr.lookAt(fin);
+    tr.visible = true;
+    tr.userData.vida = 0.05;
+    tr.material.color.set(pego ? '#ff5252' : '#ffe082');
+    ak.userData.fogonazo.visible = true;
+    ak.userData.fogonazoVida = 0.04;
+    controles.pitch = Math.min(1.4, controles.pitch + 0.006);
+    sfx.disparo();
+  };
+  const actualizarArma = (dt) => {
+    const ver = modo === 'juego' && tycoon.tieneArma && !conduciendo;
+    if (!ver && armaEnMano) sacarArma(false);
+    const estado = ver ? String(armaEnMano) : '';
+    if (estado !== ultimoArma) {
+      ultimoArma = estado;
+      btnArma.classList.toggle('oculto', !ver);
+      btnArma.setAttribute('aria-pressed', String(armaEnMano));
+      btnDisparar.classList.toggle('oculto', !armaEnMano);
+      canvas.classList.toggle('armado', armaEnMano);
+    }
+    mira.classList.toggle('oculto', !(controles.shiftLock || (armaEnMano && (controles.esTactil || controles.primeraPersona))));
+    cadencia -= dt;
+    if (armaEnMano && controles.disparando && cadencia <= 0) {
+      cadencia = 0.11;
+      disparar();
+    }
+    for (const tr of trazadoras) {
+      if (tr.visible && (tr.userData.vida -= dt) <= 0) tr.visible = false;
+    }
+    if (ak.userData.fogonazo.visible && (ak.userData.fogonazoVida -= dt) <= 0) ak.userData.fogonazo.visible = false;
+  };
+
   const ponerPersonaje = async (p) => {
+    const enMano = armaEnMano;
+    if (enMano) sacarArma(false);
     jugador.setModelo(crearPersonaje(p, await cargarCabeza(p)));
+    if (enMano) sacarArma(true);
     jugador.factorVel = p.velocidad || 1;
     jugador.setEscala(p.alto || 1);
     puedeAgacharse = (p.alto || 1) > 1;
@@ -249,11 +347,11 @@ async function iniciar() {
     }
     // Como en Roblox: en primera persona o con Shift Lock el personaje mira hacia donde mira la cámara.
     const primera = controles.primeraPersona && !conduciendo;
-    jugador.mirarA = (primera || controles.shiftLock) && !conduciendo ? controles.yaw + Math.PI : null;
+    jugador.mirarA = (primera || controles.shiftLock || armaEnMano) && !conduciendo ? controles.yaw + Math.PI : null;
     objetivo.lerp(jugador.pos, Math.min(1, dt * 14));
     const cabeza = new THREE.Vector3(objetivo.x, objetivo.y + jugador.alto * 0.85, objetivo.z);
-    if (controles.shiftLock && !primera) {
-      // Shift Lock: la cámara va un poco a la derecha, por encima del hombro.
+    if ((controles.shiftLock || armaEnMano) && !primera) {
+      // Shift Lock o arma en la mano: la cámara va un poco a la derecha, por encima del hombro.
       derecha.set(Math.cos(controles.yaw), 0, -Math.sin(controles.yaw));
       cabeza.addScaledVector(derecha, 1.75);
     }
@@ -318,6 +416,7 @@ async function iniciar() {
     }
     tycoon.actualizar(dt, jugador);
     ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
+    actualizarArma(dt);
     mundo.actualizar(dt);
     if (modo === 'juego') {
       estado.tiempoJugado += dt;

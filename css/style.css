@@ -355,6 +355,52 @@ html, body {
 .btn-agachar[aria-pressed="true"] span { text-shadow: none; }
 .btn-agachar:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
 
+/* Barra de herramientas (como el hotbar de Roblox): por ahora, el AK-47. */
+.slot {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: 86px;
+  height: 70px;
+  border-radius: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 18, 24, 0.55);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: var(--fuente);
+  touch-action: none;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.slot-num { position: absolute; top: 2px; left: 6px; font-size: 13px; font-weight: 700; opacity: 0.85; }
+.slot-nombre { font-size: 12px; font-weight: 700; margin-top: 2px; }
+.slot[aria-pressed="true"] { border-color: #ffffff; background: rgba(60, 130, 255, 0.55); }
+.slot:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
+#hud .btn-manejar { bottom: calc(96px + env(safe-area-inset-bottom)); }
+#btn-disparar {
+  position: absolute;
+  right: calc(140px + env(safe-area-inset-right));
+  bottom: calc(52px + env(safe-area-inset-bottom));
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  background: rgba(198, 40, 40, 0.6);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  touch-action: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.06s ease;
+}
+#btn-disparar.apretado { transform: scale(0.9); background: rgba(255, 82, 82, 0.85); }
+#juego.armado { cursor: crosshair; }
+
 /* Mira del Shift Lock. */
 #mira {
   position: fixed;
@@ -451,6 +497,9 @@ html, body {
   #stick-knob { width: 54px; height: 54px; }
   #btn-saltar { width: 80px; height: 80px; right: calc(26px + env(safe-area-inset-right)); bottom: 26px; }
   .btn-agachar { width: 64px; height: 64px; right: calc(34px + env(safe-area-inset-right)); bottom: 118px; }
+  #btn-disparar { width: 70px; height: 70px; right: calc(122px + env(safe-area-inset-right)); bottom: 36px; }
+  .slot { width: 72px; height: 56px; bottom: 8px; }
+  #hud .btn-manejar { bottom: 74px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

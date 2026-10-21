@@ -136,6 +136,22 @@ export function obra(k, g, i, datos) {
 
 // ---------- Lujos ----------
 
+// Armero en la pared del garage con el AK-47 colgado.
+export function armero(k, g) {
+  const x = G.x1 - 0.5;
+  const z = G.z0 + 14;
+  g.add(k.cajaDe(x - 0.15, 2.6, z - 2.2, x, 6.2, z + 2.2, '#4a5056'));
+  g.add(k.noSolido(k.cajaDe(x - 0.45, 3.6, z - 1.6, x - 0.15, 3.8, z - 1.2, '#24282c')));
+  g.add(k.noSolido(k.cajaDe(x - 0.45, 3.6, z + 1.2, x - 0.15, 3.8, z + 1.6, '#24282c')));
+  const ak = k.ak47();
+  ak.position.set(x - 0.4, 4.1, z - 0.3);
+  g.add(ak);
+  const cartel = k.cartel('ANTI SCHWEPA', 3.6, 0.6, '#ffffff', '#b71c1c');
+  cartel.position.set(x - 0.17, 5.6, z);
+  cartel.rotation.y = -Math.PI / 2;
+  g.add(cartel);
+}
+
 // Nico de cartón en tamaño real, en el hall, mirando hacia la puerta. Atrás: cartón y una pata.
 export function nicoCarton(k, g) {
   const alto = 5.4;

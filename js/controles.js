@@ -21,7 +21,8 @@ export class Controles {
   constructor(canvas) {
     this.canvas = canvas;
     this._activo = false;
-    this.esTactil = false;
+    // Celu/tablet: los controles táctiles aparecen desde el arranque (no recién al primer toque).
+    this.esTactil = matchMedia('(pointer: coarse)').matches;
     this.sensibilidad = 1;
     this.teclas = new Set();
     this.yaw = 0;
@@ -29,6 +30,9 @@ export class Controles {
     this.dist = ZOOM.inicial;
     this.shiftLock = false;
     this.agacharse = false; // solo cuenta si el personaje puede (Jeipi)
+    this.armado = false; // con el AK en la mano: clic izquierdo dispara (la cámara, con el derecho)
+    this.disparando = false;
+    this.apunte = { x: 0, y: 0 }; // dónde está el mouse (en el celu se apunta al centro)
     this.joy = { x: 0, y: 0 };
     this.saltoTactil = false;
     this.punteros = new Map(); // pointerId -> { tipo: 'camara'|'stick', x, y, x0, y0 }
@@ -49,6 +53,9 @@ export class Controles {
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     canvas.addEventListener('pointerdown', (e) => this.alApretar(e));
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse') { this.apunte.x = e.clientX; this.apunte.y = e.clientY; }
+    });
     canvas.addEventListener('pointermove', (e) => this.alMover(e));
     canvas.addEventListener('pointerup', (e) => this.alSoltar(e));
     canvas.addEventListener('pointercancel', (e) => this.alSoltar(e));
@@ -78,6 +85,20 @@ export class Controles {
     btnSaltar.addEventListener('pointerup', soltarSalto);
     btnSaltar.addEventListener('pointercancel', soltarSalto);
     btnSaltar.addEventListener('pointerleave', soltarSalto);
+
+    const btnDisparar = document.getElementById('btn-disparar');
+    btnDisparar.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.disparando = true;
+      btnDisparar.classList.add('apretado');
+    });
+    const soltarDisparo = () => {
+      this.disparando = false;
+      btnDisparar.classList.remove('apretado');
+    };
+    btnDisparar.addEventListener('pointerup', soltarDisparo);
+    btnDisparar.addEventListener('pointercancel', soltarDisparo);
+    btnDisparar.addEventListener('pointerleave', soltarDisparo);
   }
 
   // Al desactivar (menús abiertos) se sueltan las teclas y se ocultan los controles táctiles.
@@ -87,6 +108,7 @@ export class Controles {
     if (!v) {
       this.teclas.clear();
       this.saltoTactil = false;
+      this.disparando = false;
       for (const id of [...this.punteros.keys()]) this.alSoltar({ pointerId: id });
       if (this.shiftLock) this.ponerShiftLock(false);
     }
@@ -108,7 +130,6 @@ export class Controles {
     this.shiftLock = v && !this.esTactil;
     if (this.shiftLock && document.pointerLockElement !== this.canvas) this.canvas.requestPointerLock?.();
     if (!this.shiftLock && document.pointerLockElement === this.canvas) document.exitPointerLock?.();
-    this.mira.classList.toggle('oculto', !this.shiftLock);
   }
 
   zoom(delta) {
@@ -136,6 +157,13 @@ export class Controles {
     }
     if (!this.activo) return;
     e.target.setPointerCapture?.(e.pointerId);
+    if (e.pointerType === 'mouse' && e.button === 0 && this.armado) {
+      this.punteros.set(e.pointerId, { tipo: 'disparo' });
+      this.apunte.x = e.clientX;
+      this.apunte.y = e.clientY;
+      this.disparando = true;
+      return;
+    }
     const hayStick = [...this.punteros.values()].some((p) => p.tipo === 'stick');
     if (e.pointerType === 'touch' && !hayStick && this.enZonaStick(e.clientX, e.clientY)) {
       this.punteros.set(e.pointerId, { tipo: 'stick', x0: e.clientX, y0: e.clientY });
@@ -154,7 +182,7 @@ export class Controles {
 
   alMover(e) {
     const p = this.punteros.get(e.pointerId);
-    if (!p) return;
+    if (!p || p.tipo === 'disparo') return;
     if (p.tipo === 'camara') {
       const dedos = this.dedosCamara();
       if (dedos.length >= 2) {
@@ -188,6 +216,7 @@ export class Controles {
     const p = this.punteros.get(e.pointerId);
     if (!p) return;
     this.punteros.delete(e.pointerId);
+    if (p.tipo === 'disparo') this.disparando = false;
     if (p.tipo === 'stick') {
       this.joy.x = this.joy.y = 0;
       this.knob.style.transform = '';

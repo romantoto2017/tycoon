@@ -6,6 +6,7 @@ import { caja, mat, matTex, formato, GEO_CAJA } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
 import { Auto } from './auto.js';
+import { crearAK } from './arma.js';
 import { crearModelo, medidaModelo } from './modelos.js';
 import {
   crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel,
@@ -74,6 +75,7 @@ function crearKit() {
     // Mueble 3D (ver modelos.js): origen en el centro de la base, frente hacia +z.
     modelo: (nombre, opts = {}) => crearModelo(nombre, { vidrio: kit.vidrio, luz: kit.brillo('#fff3d6'), ...opts, material: mat }),
     medida: medidaModelo,
+    ak47: crearAK,
     // Césped del terreno con franjas de cortadora.
     baseplate(ancho, largo, x, z) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), matTex('pasto', '#86c95f', 8));
@@ -281,6 +283,7 @@ export class Tycoon {
     }
     if (item.id === 'cancha') this.crearPelota();
     if (item.id === 'auto_cobro') this.autoCobro = true;
+    if (item.id === 'ak47') this.tieneArma = true;
     if (item.id === 'auto' && !this.auto) {
       this.auto = new Auto(this.escena, (GARAGE.x0 + GARAGE.x1) / 2, (GARAGE.z0 + GARAGE.z1) / 2 - 1, 0);
       this.colisiones.push(this.auto.caja);

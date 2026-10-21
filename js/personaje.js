@@ -91,8 +91,10 @@ export function crearPersonaje(p, cabezaTex) {
   let balanceo = 0;
   let agache = 0; // 0 = parado, 1 = agachado del todo
 
-  return {
+  const modelo = {
     grupo,
+    manoD: brazoD, // para colgarle el arma (la mano está en y = -1.9)
+    apuntar: false, // con el arma en la mano: brazos al frente
     // velocidad: unidades/seg en el plano. enSuelo: para la pose de salto.
     // agachado: rodillas dobladas, cadera abajo, torso hacia adelante y brazos al frente.
     // sentado: arriba de una moto (piernas dobladas hacia adelante, manos al manubrio).
@@ -129,6 +131,12 @@ export function crearPersonaje(p, cabezaTex) {
       const abrir = enSuelo ? 0 : 0.5;
       brazoI.rotation.z += (-abrir - brazoI.rotation.z) * Math.min(1, dt * 10);
       brazoD.rotation.z += (abrir - brazoD.rotation.z) * Math.min(1, dt * 10);
+      if (modelo.apuntar) {
+        brazoD.rotation.x = -1.5;
+        brazoI.rotation.x = -1.4;
+        brazoI.rotation.z = 0.5;
+        brazoD.rotation.z = 0;
+      }
     },
     liberar() {
       texturas.forEach((t) => t.dispose());
@@ -137,4 +145,5 @@ export function crearPersonaje(p, cabezaTex) {
       extras.forEach((e) => e.dispose());
     },
   };
+  return modelo;
 }

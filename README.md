@@ -48,6 +48,8 @@ Para cambiar algo: editá el archivo en GitHub (ícono del lápiz), guardá con 
 
 Cada minuto de juego hay un 5% de chance de que la Schwepa llegue en su Zanella Zapucai, entre por el portón, se baje al lado del cobrador y se lleve el 30% de lo que está esperando ahí. Mientras está en el terreno el cobrador automático se frena: cobrá rápido. Todo está en `js/ladron.js` (probabilidad, porcentaje, recorrido y la moto).
 
+A mitad de partida, en el garage, se compra el **AK-47**: aparece un slot abajo (tecla `1`) para sacarla. Con el arma en la mano se dispara con clic izquierdo (la cámara gira con el derecho) o con el botón rojo en el celu. Cuando a la Schwepa se le acaba la vida sale rajando, te devuelve lo que robó y no vuelve por 15 minutos de juego.
+
 ## Moneda
 
 Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (en el HUD y en los bloques).

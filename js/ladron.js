@@ -7,7 +7,8 @@ import { sfx } from './sfx.js';
 
 // La Schwepa: cada tanto (5% por minuto jugado) llega por la calle en su Zanella Zapucai,
 // entra por el portón, estaciona cerca del cobrador, se baja, camina hasta el botón de cobrar
-// y se lleva el 30% de lo que está esperando ahí. Mientras está en el terreno el cobrador
+// y se lleva el 30% de lo que está esperando ahí. Con el AK-47 se la echa: cuando se le
+// acaba la vida sale rajando en la moto, devuelve lo robado y no vuelve por 15 minutos. Mientras está en el terreno el cobrador
 // automático no anda (si no, nunca habría nada para robar).
 const SCHWEPA = {
   id: 'schwepa', nombre: 'Schwepa', foto: 'schwepa.png', recorte: [0.52, 0.44, 0.46],
@@ -22,6 +23,8 @@ const VEL_PIE = 9;
 // Recorrido de la moto (x, z): por la calle desde el oeste, portón, borde del jardín y al cobrador.
 const RUTA = [[-120, CALLE_Z - 2], [0, CALLE_Z - 2], [0, 53.5], [-48, 53.5], [-49, 36]];
 const SALIDA = [[-49, 36], [-48, 53.5], [0, 53.5], [0, CALLE_Z - 2], [130, CALLE_Z - 2]];
+const VIDA = 100;
+const BLOQUEO = 15 * 60; // segundos de juego sin que vuelva después de echarla
 const A_PIE = [[-50.5, 34], [COBRAR.x + 1.6, COBRAR.z + 1.6]];
 
 // Zanella Zapucai: moto chica tipo cub, roja con escudo delantero y parrilla atrás. Mira hacia +z.
@@ -94,9 +97,9 @@ export class Ladron {
     this.estado = 'cargando';
     if (!this.bot) {
       this.bot = crearPersonaje(SCHWEPA, await cargarCabeza(SCHWEPA));
-      const etiqueta = crearEtiqueta([{ texto: 'Schwepa', tam: 64, color: '#ff5252' }], 4);
-      etiqueta.sprite.position.y = 6.3;
-      this.bot.grupo.add(etiqueta.sprite);
+      this.etiqueta = crearEtiqueta([{ texto: 'Schwepa', tam: 64, color: '#ff5252' }], 4);
+      this.etiqueta.sprite.position.y = 6.3;
+      this.bot.grupo.add(this.etiqueta.sprite);
       this.moto = crearMoto();
     }
     this.moto.grupo.add(this.bot.grupo);
@@ -107,6 +110,10 @@ export class Ladron {
     this.moto.grupo.position.copy(this.camino[0]);
     this.tramo = 1;
     this.avisado = false;
+    this.vida = VIDA;
+    this.robado = 0;
+    this.huyendo = false;
+    this.mostrarVida();
     this.estado = 'llegando';
     sfx.moto();
   }
@@ -144,7 +151,8 @@ export class Ladron {
 
   actualizar(dt, jugando) {
     if (this.estado === 'fuera') {
-      if (!jugando || !this.tycoon.estado.compras.includes('piso_pb')) return;
+      const e = this.tycoon.estado;
+      if (!jugando || !e.compras.includes('piso_pb') || (e.schwepaVuelve || 0) > e.tiempoJugado) return;
       this.reloj += dt;
       if (this.reloj >= CADA) {
         this.reloj = 0;
@@ -156,7 +164,8 @@ export class Ladron {
     const moto = this.moto.grupo;
     const bot = this.bot.grupo;
     const enMoto = this.estado === 'llegando' || this.estado === 'yendo';
-    const vel = enMoto ? (this.enTerreno(moto.position) ? VEL_TERRENO : VEL_CALLE) : VEL_PIE;
+    const rapido = this.huyendo ? 1.7 : 1;
+    const vel = (enMoto ? (this.enTerreno(moto.position) ? VEL_TERRENO : VEL_CALLE) : VEL_PIE) * rapido;
     this.moto.ruedas.forEach((r) => { if (enMoto) r.rotation.x += (vel / 0.85) * dt; });
     this.tycoon.pausaCobro = this.estado !== 'yendo' && this.enTerreno(moto.position);
 
@@ -169,8 +178,8 @@ export class Ladron {
       }
       if (this.avanzar(moto, dt, vel)) this.bajarse();
     } else if (this.estado === 'caminando' || this.estado === 'volviendo') {
-      this.bot.animar(dt, VEL_PIE, true);
-      if (this.avanzar(bot, dt, VEL_PIE)) {
+      this.bot.animar(dt, vel, true);
+      if (this.avanzar(bot, dt, vel)) {
         if (this.estado === 'caminando') this.robar();
         else this.subirse();
       }
@@ -201,11 +210,63 @@ export class Ladron {
     this.estado = 'caminando';
   }
 
+  mostrarVida() {
+    const n = Math.max(0, Math.ceil(this.vida / 25));
+    this.etiqueta.actualizar([
+      { texto: 'Schwepa', tam: 60, color: '#ff5252' },
+      { texto: `${'|'.repeat(n * 3)}${'.'.repeat((4 - n) * 3)} ${Math.max(0, this.vida)}%`, tam: 44, color: n > 1 ? '#8dff6a' : '#ffb74d' },
+    ]);
+  }
+
+  // Centro del cuerpo (para apuntarle), o null si no está.
+  posicion(salida) {
+    if (this.estado === 'fuera' || this.estado === 'cargando') return null;
+    const enMoto = this.bot.grupo.parent === this.moto.grupo;
+    const obj = enMoto ? this.moto.grupo : this.bot.grupo;
+    salida.copy(obj.position);
+    salida.y += enMoto ? 3.6 : 3;
+    return salida;
+  }
+
+  // Un tiro del AK-47. Devuelve true si le pegó.
+  herir(danio) {
+    if (this.huyendo || !this.posicion(new THREE.Vector3())) return false;
+    this.vida -= danio;
+    this.mostrarVida();
+    if (this.vida <= 0) this.huir();
+    return true;
+  }
+
+  huir() {
+    this.huyendo = true;
+    const e = this.tycoon.estado;
+    e.schwepaVuelve = e.tiempoJugado + BLOQUEO;
+    if (this.robado > 0) {
+      e.plata += this.robado;
+      this.ui.toast(`¡Recuperaste ${formato(this.robado)}!`, 'plata');
+      this.robado = 0;
+    }
+    this.ui.toast('¡La Schwepa salió rajando! No vuelve por 15 minutos', 'ok');
+    sfx.moto();
+    const bot = this.bot.grupo;
+    if (this.estado === 'llegando') {
+      // Pega la vuelta por donde vino.
+      this.camino = [this.moto.grupo.position.clone(), ...RUTA.slice(0, this.tramo).reverse().map(([x, z]) => new THREE.Vector3(x, 0, z))];
+      this.tramo = 1;
+      this.estado = 'yendo';
+    } else if (this.estado === 'caminando' || this.estado === 'robando') {
+      this.camino = [bot.position.clone(), this.moto.grupo.position.clone()];
+      this.tramo = 1;
+      this.estado = 'volviendo';
+    }
+  }
+
   robar() {
     const banco = this.tycoon.estado.banco;
     const robo = Math.floor(banco * ROBO);
     if (robo >= 1) {
       this.tycoon.estado.banco -= robo;
+      this.robado = robo;
       this.ui.toast(`¡La Schwepa te robó ${formato(robo)} del cobrador!`, 'error');
       sfx.robo();
     } else {
