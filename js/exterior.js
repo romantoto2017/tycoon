@@ -321,7 +321,7 @@ export function gradas(k, g) {
   const cx = (C.x0 + C.x1) / 2;
   [-4, 4].forEach((dx) => g.add(k.cajaDe(cx + dx - 0.2, 0, C.z0 - 2.6, cx + dx + 0.2, 6, C.z0 - 2.2, '#24282c')));
   g.add(k.cajaDe(cx - 5.5, 5.5, C.z0 - 2.7, cx + 5.5, 9.5, C.z0 - 2.3, '#111214'));
-  const marcador = k.cartel('LA DOSIS 3 - 0 VISITA', 10.5, 3.4, '#ffd23f', '#111214');
+  const marcador = k.cartel('LA DOSIS 3 - 0 COCA', 10.5, 3.4, '#ffd23f', '#111214');
   marcador.position.set(cx, 7.5, C.z0 - 2.28);
   g.add(marcador);
   [-7.6, 7.6].forEach((dx) => {

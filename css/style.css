@@ -73,7 +73,7 @@ html, body {
 #hud {
   position: fixed;
   top: 0; left: 0; right: 0;
-  padding: 10px 12px;
+  padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 10px calc(12px + env(safe-area-inset-left));
   pointer-events: none;
   z-index: 5;
 }
@@ -117,8 +117,8 @@ html, body {
 }
 .btn-config {
   position: absolute;
-  top: 10px;
-  left: 12px;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left));
   width: 44px;
   height: 44px;
   padding: 0;
@@ -148,6 +148,7 @@ html, body {
   padding: 16px;
   background: rgba(20, 60, 120, 0.55);
   overflow-y: auto;
+  justify-content: safe center;
 }
 #cargando { background: linear-gradient(#4aa8ff, #9fdcff); z-index: 30; }
 .titulo {
@@ -271,37 +272,92 @@ html, body {
   100% { opacity: 0; transform: translateY(-20px); }
 }
 
-/* ---------- Controles táctiles ---------- */
+/* ---------- Controles táctiles (estilo Roblox) ---------- */
 #tactil { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+/* Joystick dinámico: descansa abajo a la izquierda y aparece donde se apoya el pulgar. */
 #stick-base {
   position: absolute;
-  left: 30px; bottom: 30px;
-  width: 130px; height: 130px;
+  left: calc(110px + env(safe-area-inset-left));
+  top: calc(100% - 110px - env(safe-area-inset-bottom));
+  width: 136px;
+  height: 136px;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-  border: 4px solid rgba(255, 255, 255, 0.5);
+  background: radial-gradient(circle, rgba(15, 18, 24, 0.12) 0%, rgba(15, 18, 24, 0.38) 100%);
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25), inset 0 0 0 8px rgba(255, 255, 255, 0.06);
+  opacity: 0.45;
+  transition: opacity 0.2s ease;
 }
+#stick-base.activo { opacity: 1; transition: none; }
 #stick-knob {
   position: absolute;
-  left: 50%; top: 50%;
-  width: 60px; height: 60px;
-  margin: -30px 0 0 -30px;
+  left: 50%;
+  top: 50%;
+  width: 62px;
+  height: 62px;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.7);
-  border: 3px solid rgba(0, 0, 0, 0.3);
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e4e7eb 55%, #c3c8cf 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 #btn-saltar {
   position: absolute;
-  right: 36px; bottom: 50px;
-  width: 92px; height: 92px;
+  right: calc(34px + env(safe-area-inset-right));
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
-  border: 4px solid rgba(0, 0, 0, 0.35);
-  background: rgba(255, 255, 255, 0.55);
+  border: 3px solid rgba(255, 255, 255, 0.6);
+  background: rgba(15, 18, 24, 0.35);
+  color: #ffffff;
   display: grid;
   place-items: center;
-  color: #222;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
   pointer-events: auto;
   touch-action: none;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  transition: transform 0.08s ease, background 0.08s ease;
+}
+#btn-saltar svg { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4)); }
+#btn-saltar.apretado { transform: scale(0.9); background: rgba(255, 255, 255, 0.35); }
+
+/* Mira del Shift Lock. */
+#mira {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* Celu en vertical: pedir que lo giren. */
+#girar {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #14161a;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+#girar svg { animation: girar 1.8s ease-in-out infinite; }
+@keyframes girar { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) and (pointer: coarse) and (max-width: 600px) {
+  #girar { display: flex; }
 }
 
 /* ---------- Errores ---------- */
@@ -335,7 +391,37 @@ html, body {
 .modal.config h2 { color: var(--azul); }
 
 /* Menos movimiento si el sistema lo pide. */
+/* Celu acostado (pantalla baja): todo más compacto para ver el juego. */
+@media (max-height: 500px) {
+  #plata { font-size: 22px; min-width: 40px; }
+  #icono-moneda { width: 26px; height: 26px; }
+  .caja-plata { padding: 2px 12px 2px 6px; border-radius: 14px; }
+  #pps { font-size: 13px; margin-top: 2px; }
+  #progreso { font-size: 11px; }
+  .btn-config { width: 38px; height: 38px; }
+  #toasts { top: 70px; }
+  .toast { font-size: 15px; padding: 4px 12px; }
+  .toast.info { font-size: 14px; }
+  .titulo { font-size: 34px; }
+  .titulo.chico { font-size: 24px; }
+  .subtitulo { font-size: 16px; margin: 6px 0; }
+  .btn.grande { font-size: 24px; padding: 8px 36px; }
+  .menu-botones { gap: 10px; margin-top: 8px; }
+  #grilla-personajes { grid-template-columns: repeat(5, minmax(0, 110px)); gap: 8px; }
+  .carta { padding: 6px 4px; }
+  .carta canvas { width: 44px; height: 44px; }
+  .carta span { font-size: 14px; margin-top: 3px; }
+  .modal { padding: 12px 18px; }
+  .modal h2 { font-size: 20px; }
+  .ajuste { font-size: 14px; margin-bottom: 6px; }
+  .btn-manejar { bottom: 18px; font-size: 16px; min-height: 40px; }
+  #stick-base { width: 120px; height: 120px; left: calc(90px + env(safe-area-inset-left)); top: calc(100% - 90px); }
+  #stick-knob { width: 54px; height: 54px; }
+  #btn-saltar { width: 80px; height: 80px; right: calc(26px + env(safe-area-inset-right)); bottom: 26px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  #girar svg { animation: none; }
   .toast { animation: none; }
   .btn, .carta, .btn-config { transition: none; }
   .carta:hover { transform: none; }

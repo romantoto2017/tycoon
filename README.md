@@ -10,7 +10,9 @@ Tycoon 3D de bloques para el navegador. Es un sitio 100% estático (HTML + JS + 
 
 > No se puede abrir con doble clic en `index.html` (el navegador bloquea los módulos). Usá el link de Pages.
 
-**Controles:** WASD / flechas para moverse, espacio para saltar, arrastrar el mouse para girar la cámara, rueda para zoom, `Esc` para la configuración. En pantalla táctil aparece un joystick y un botón de salto.
+**Controles (al estilo Roblox):**
+- PC: WASD / flechas para moverse, espacio para saltar, arrastrar el mouse para girar la cámara, rueda o `I`/`O` para el zoom (al máximo entra en primera persona), `,`/`.` para girar la cámara, `Shift` para el Shift Lock y `Esc` para la configuración.
+- Celu (acostado): el joystick aparece donde apoyás el pulgar izquierdo, arrastrás el resto de la pantalla para mirar, pellizcás para el zoom y el botón de la flecha salta (si lo mantenés, salta seguido; también salta solo al chocar con algo bajo). En Android se pone en pantalla completa y horizontal al tocar Jugar; en iPhone conviene agregarlo a la pantalla de inicio.
 
 ## Ver la mansión terminada
 

@@ -7,28 +7,39 @@ const TECLAS = {
   derecha: ['KeyD', 'ArrowRight'],
   saltar: ['Space'],
 };
-const RADIO_STICK = 55;
+const RADIO_STICK = 60;
+// Distancias de cámara como en Roblox: arranca a 12,5 y con zoom va de primera persona a lejos.
+export const ZOOM = { inicial: 12.5, min: 0.5, max: 40, primeraPersona: 1.2 };
 
-// Teclado + mouse (arrastrar para girar la cámara) + táctil (joystick y botón de salto).
+// Controles al estilo Roblox.
+// PC: WASD/flechas, espacio, arrastrar con el mouse (botón derecho o izquierdo) para girar la
+// cámara, rueda o I/O para el zoom, coma/punto para girar de a poco y Shift para el Shift Lock.
+// Celu: joystick que aparece donde apoyás el pulgar izquierdo, arrastrar el resto de la
+// pantalla para girar, pellizcar para el zoom y el botón de salto (mantenerlo salta seguido).
 export class Controles {
   constructor(canvas) {
+    this.canvas = canvas;
     this._activo = false;
     this.esTactil = false;
     this.sensibilidad = 1;
     this.teclas = new Set();
     this.yaw = 0;
-    this.pitch = 0.42;
-    this.dist = 18;
+    this.pitch = 0.35;
+    this.dist = ZOOM.inicial;
+    this.shiftLock = false;
     this.joy = { x: 0, y: 0 };
     this.saltoTactil = false;
-    this.punteros = new Map(); // pointerId -> { tipo: 'camara'|'stick', x, y }
+    this.punteros = new Map(); // pointerId -> { tipo: 'camara'|'stick', x, y, x0, y0 }
+    this.pellizco = 0; // distancia entre dos dedos de cámara
 
     this.tactil = document.getElementById('tactil');
     this.base = document.getElementById('stick-base');
     this.knob = document.getElementById('stick-knob');
+    this.mira = document.getElementById('mira');
 
     window.addEventListener('keydown', (e) => {
       if (Object.values(TECLAS).some((t) => t.includes(e.code))) e.preventDefault();
+      if (!e.repeat && this.activo) this.atajo(e.code);
       this.teclas.add(e.code);
     });
     window.addEventListener('keyup', (e) => this.teclas.delete(e.code));
@@ -41,12 +52,27 @@ export class Controles {
     canvas.addEventListener('pointercancel', (e) => this.alSoltar(e));
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.dist = THREE.MathUtils.clamp(this.dist + Math.sign(e.deltaY) * 1.5, 8, 34);
+      if (this.activo) this.zoom(Math.sign(e.deltaY) * Math.max(1, this.dist * 0.12));
     }, { passive: false });
+    // Shift Lock: el mouse queda trabado y mueve la cámara.
+    document.addEventListener('mousemove', (e) => {
+      if (document.pointerLockElement !== canvas) return;
+      this.girar(e.movementX, e.movementY, 0.0035);
+    });
+    document.addEventListener('pointerlockchange', () => {
+      if (document.pointerLockElement !== canvas && this.shiftLock) this.ponerShiftLock(false);
+    });
 
     const btnSaltar = document.getElementById('btn-saltar');
-    btnSaltar.addEventListener('pointerdown', (e) => { e.preventDefault(); this.saltoTactil = true; });
-    const soltarSalto = () => { this.saltoTactil = false; };
+    btnSaltar.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.saltoTactil = true;
+      btnSaltar.classList.add('apretado');
+    });
+    const soltarSalto = () => {
+      this.saltoTactil = false;
+      btnSaltar.classList.remove('apretado');
+    };
     btnSaltar.addEventListener('pointerup', soltarSalto);
     btnSaltar.addEventListener('pointercancel', soltarSalto);
     btnSaltar.addEventListener('pointerleave', soltarSalto);
@@ -60,8 +86,44 @@ export class Controles {
       this.teclas.clear();
       this.saltoTactil = false;
       for (const id of [...this.punteros.keys()]) this.alSoltar({ pointerId: id });
+      if (this.shiftLock) this.ponerShiftLock(false);
     }
     this.tactil.classList.toggle('oculto', !(v && this.esTactil));
+  }
+
+  get primeraPersona() { return this.dist <= ZOOM.primeraPersona; }
+
+  atajo(code) {
+    if (code === 'ShiftLeft' || code === 'ShiftRight') this.ponerShiftLock(!this.shiftLock);
+    else if (code === 'KeyI') this.zoom(-Math.max(1, this.dist * 0.2));
+    else if (code === 'KeyO') this.zoom(Math.max(1, this.dist * 0.2));
+    else if (code === 'Comma') this.yaw += Math.PI / 4;
+    else if (code === 'Period') this.yaw -= Math.PI / 4;
+  }
+
+  ponerShiftLock(v) {
+    this.shiftLock = v && !this.esTactil;
+    if (this.shiftLock && document.pointerLockElement !== this.canvas) this.canvas.requestPointerLock?.();
+    if (!this.shiftLock && document.pointerLockElement === this.canvas) document.exitPointerLock?.();
+    this.mira.classList.toggle('oculto', !this.shiftLock);
+  }
+
+  zoom(delta) {
+    let d = this.dist + delta;
+    // Como en Roblox: cerca de la cabeza salta directo a primera persona.
+    if (d < ZOOM.primeraPersona + 0.4) d = delta < 0 ? ZOOM.min : ZOOM.primeraPersona + 0.8;
+    this.dist = THREE.MathUtils.clamp(d, ZOOM.min, ZOOM.max);
+  }
+
+  girar(dx, dy, k) {
+    this.yaw -= dx * k * this.sensibilidad;
+    const min = this.primeraPersona ? -1.4 : -0.9;
+    this.pitch = THREE.MathUtils.clamp(this.pitch + dy * k * this.sensibilidad, min, 1.4);
+  }
+
+  // Zona del joystick: mitad izquierda, parte de abajo (como el thumbstick dinámico de Roblox).
+  enZonaStick(x, y) {
+    return x < window.innerWidth * 0.4 && y > window.innerHeight * 0.35;
   }
 
   alApretar(e) {
@@ -70,34 +132,52 @@ export class Controles {
       this.activo = this._activo;
     }
     if (!this.activo) return;
-    e.target.setPointerCapture(e.pointerId);
-    if (e.pointerType === 'touch' && e.clientX < window.innerWidth * 0.45 && ![...this.punteros.values()].some((p) => p.tipo === 'stick')) {
-      this.punteros.set(e.pointerId, { tipo: 'stick', x: e.clientX, y: e.clientY });
-      this.base.style.left = `${e.clientX - 65}px`;
-      this.base.style.top = `${e.clientY - 65}px`;
-      this.base.style.bottom = 'auto';
+    e.target.setPointerCapture?.(e.pointerId);
+    const hayStick = [...this.punteros.values()].some((p) => p.tipo === 'stick');
+    if (e.pointerType === 'touch' && !hayStick && this.enZonaStick(e.clientX, e.clientY)) {
+      this.punteros.set(e.pointerId, { tipo: 'stick', x0: e.clientX, y0: e.clientY });
+      this.base.style.left = `${e.clientX}px`;
+      this.base.style.top = `${e.clientY}px`;
+      this.base.classList.add('activo');
     } else {
       this.punteros.set(e.pointerId, { tipo: 'camara', x: e.clientX, y: e.clientY });
+      this.pellizco = 0;
     }
+  }
+
+  dedosCamara() {
+    return [...this.punteros.values()].filter((p) => p.tipo === 'camara');
   }
 
   alMover(e) {
     const p = this.punteros.get(e.pointerId);
     if (!p) return;
     if (p.tipo === 'camara') {
-      const k = (e.pointerType === 'touch' ? 0.008 : 0.006) * this.sensibilidad;
-      this.yaw -= (e.clientX - p.x) * k;
-      this.pitch = THREE.MathUtils.clamp(this.pitch + (e.clientY - p.y) * k, 0.05, 1.35);
+      const dedos = this.dedosCamara();
+      if (dedos.length >= 2) {
+        // Pellizco: zoom.
+        p.x = e.clientX;
+        p.y = e.clientY;
+        const d = Math.hypot(dedos[0].x - dedos[1].x, dedos[0].y - dedos[1].y);
+        if (this.pellizco) this.zoom((this.pellizco - d) * 0.06);
+        this.pellizco = d;
+        return;
+      }
+      if (document.pointerLockElement !== this.canvas) {
+        this.girar(e.clientX - p.x, e.clientY - p.y, e.pointerType === 'touch' ? 0.009 : 0.006);
+      }
       p.x = e.clientX;
       p.y = e.clientY;
     } else {
-      let dx = e.clientX - p.x;
-      let dy = e.clientY - p.y;
+      let dx = e.clientX - p.x0;
+      let dy = e.clientY - p.y0;
       const largo = Math.hypot(dx, dy);
       if (largo > RADIO_STICK) { dx *= RADIO_STICK / largo; dy *= RADIO_STICK / largo; }
-      this.knob.style.transform = `translate(${dx}px, ${dy}px)`;
-      this.joy.x = dx / RADIO_STICK;
-      this.joy.y = -dy / RADIO_STICK;
+      this.knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      // Zona muerta chica y respuesta completa antes del borde.
+      const f = largo < 6 ? 0 : 1 / (RADIO_STICK * 0.85);
+      this.joy.x = THREE.MathUtils.clamp(dx * f, -1, 1);
+      this.joy.y = THREE.MathUtils.clamp(-dy * f, -1, 1);
     }
   }
 
@@ -108,7 +188,10 @@ export class Controles {
     if (p.tipo === 'stick') {
       this.joy.x = this.joy.y = 0;
       this.knob.style.transform = '';
-      this.base.style.left = this.base.style.top = this.base.style.bottom = '';
+      this.base.style.left = this.base.style.top = '';
+      this.base.classList.remove('activo');
+    } else {
+      this.pellizco = 0;
     }
   }
 

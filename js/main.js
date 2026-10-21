@@ -27,7 +27,7 @@ async function iniciar() {
   renderer.setPixelRatio(pixelRatio);
 
   const escena = new THREE.Scene();
-  const camara = new THREE.PerspectiveCamera(65, 1, 0.3, 900);
+  const camara = new THREE.PerspectiveCamera(70, 1, 0.2, 900);
   const ajustar = () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     camara.aspect = window.innerWidth / window.innerHeight;
@@ -129,6 +129,7 @@ async function iniciar() {
 
   const abrirSeleccion = async () => {
     await UI.armarSeleccion(PERSONAJES, estado.personaje, async (p) => {
+      pantallaCompleta();
       iniciarAudio();
       await ponerPersonaje(p);
       ir('juego');
@@ -136,8 +137,18 @@ async function iniciar() {
     ir('seleccion');
   };
 
+  // En el celu: pantalla completa y trabada en horizontal (Android; en iPhone no se puede,
+  // ahí se juega agregándolo a la pantalla de inicio y aparece el aviso para girarlo).
+  const pantallaCompleta = () => {
+    if (!matchMedia('(pointer: coarse)').matches || document.fullscreenElement) return;
+    document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
+      .then(() => screen.orientation?.lock?.('landscape'))
+      .catch(() => {});
+  };
+
   const $ = (id) => document.getElementById(id);
   $('btn-jugar').addEventListener('click', () => {
+    pantallaCompleta();
     iniciarAudio();
     if (personajeGuardado()) ir('juego');
     else abrirSeleccion();
@@ -211,9 +222,10 @@ async function iniciar() {
         if (dist < d) d = dist;
       }
     }
-    return Math.max(1.5, d - 0.6);
+    return Math.max(0.5, d - 0.5);
   };
 
+  const derecha = new THREE.Vector3();
   const camaraJuego = (dt) => {
     if (conduciendo) {
       // La cámara se acomoda sola detrás del auto.
@@ -221,21 +233,38 @@ async function iniciar() {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       controles.yaw += d * Math.min(1, dt * 3);
     }
-    objetivo.lerp(jugador.pos, Math.min(1, dt * 12));
-    const cabeza = new THREE.Vector3(objetivo.x, objetivo.y + 4, objetivo.z);
+    // Como en Roblox: en primera persona o con Shift Lock el personaje mira hacia donde mira la cámara.
+    const primera = controles.primeraPersona && !conduciendo;
+    jugador.mirarA = (primera || controles.shiftLock) && !conduciendo ? controles.yaw + Math.PI : null;
+    objetivo.lerp(jugador.pos, Math.min(1, dt * 14));
+    const cabeza = new THREE.Vector3(objetivo.x, objetivo.y + 4.5, objetivo.z);
+    if (controles.shiftLock && !primera) {
+      // Shift Lock: la cámara va un poco a la derecha, por encima del hombro.
+      derecha.set(Math.cos(controles.yaw), 0, -Math.sin(controles.yaw));
+      cabeza.addScaledVector(derecha, 1.75);
+    }
     const cp = Math.cos(controles.pitch);
     const dir = new THREE.Vector3(Math.sin(controles.yaw) * cp, Math.sin(controles.pitch), Math.cos(controles.yaw) * cp);
-    const libre = distanciaLibre(cabeza, dir, controles.dist);
-    // Acercarse rápido, alejarse suave.
-    distActual = libre < distActual ? libre : distActual + (libre - distActual) * Math.min(1, dt * 4);
-    deseada.copy(cabeza).addScaledVector(dir, distActual);
-    if (deseada.y < 0.8) deseada.y = 0.8;
-    camara.position.copy(deseada);
-    camara.lookAt(cabeza);
+    if (primera) {
+      distActual = 0;
+      camara.position.copy(cabeza);
+      camara.lookAt(cabeza.x - dir.x, cabeza.y - dir.y, cabeza.z - dir.z);
+    } else {
+      const libre = distanciaLibre(cabeza, dir, controles.dist);
+      // Acercarse al toque si hay una pared; alejarse suave.
+      distActual = libre < distActual ? libre : distActual + (libre - distActual) * Math.min(1, dt * 5);
+      deseada.copy(cabeza).addScaledVector(dir, distActual);
+      if (deseada.y < 0.6) deseada.y = 0.6; // el pasto no choca: que no se meta abajo
+      camara.position.copy(deseada);
+      camara.lookAt(cabeza);
+    }
+    // Con la cámara pegada al personaje, se oculta (si no, tapa toda la pantalla).
+    if (jugador.modelo) jugador.modelo.grupo.visible = distActual > 2.2;
   };
 
   let anguloMenu = 0.6;
   const camaraMenu = (dt) => {
+    if (jugador.modelo) jugador.modelo.grupo.visible = true;
     anguloMenu += dt * 0.08;
     camara.position.set(Math.sin(anguloMenu) * 125, 70, -17 + Math.cos(anguloMenu) * 125);
     camara.lookAt(0, 16, -17);
@@ -257,6 +286,7 @@ async function iniciar() {
       jugador.pos.copy(tycoon.auto.pos);
     } else {
       controles.direccion(dir);
+      jugador.autoSalto = controles.esTactil;
       if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
     }
     const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : '';
