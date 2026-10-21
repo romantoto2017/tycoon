@@ -1,6 +1,6 @@
 // Objetos especiales de la Vecibanda (pedestales en el camino de entrada),
 // cuadros en los pasillos y el cartel final.
-import { nivel, PASILLO } from './constantes.js';
+import { nivel, PASILLO, GARAGE as G } from './constantes.js';
 
 // Pedestales a los costados del camino de entrada: [x, z].
 export const SLOTS_ESPECIALES = [[-8, 18], [8, 18], [-8, 26], [8, 26], [-8, 34], [8, 34], [-8, 42], [8, 42]];
@@ -240,7 +240,11 @@ export function trex(k, g) {
 }
 
 // Bóveda con lingotes en el garage.
-export function boveda(k, g) {
+export function boveda(k, gg) {
+  // Dibujada para un garage que empezaba en (49, 2): se corre con el garage.
+  const g = k.grupo();
+  g.position.set(G.x0 - 49, 0, G.z0 - 2);
+  gg.add(g);
   const acero = '#7d868c';
   g.add(k.cajaDe(50, 0, 2.6, 54.2, 4.6, 6.4, acero));
   const puerta = k.cilindro(1.5, 1.5, 0.3, '#aab3b9', 52.1, 2.3, 6.55, 16);

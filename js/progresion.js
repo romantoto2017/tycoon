@@ -236,7 +236,7 @@ const LUGAR_LUJO = {
   estatuas: { base: ['ventanas_pb'], boton: suelo(-5.5, 6), construir: Es.estatuas },
   piano: { base: ['paredes_int_pb'], boton: en(0, [5.5, -31.5]), construir: Es.piano },
   trex: { base: ['jardin'], boton: suelo(-34, 42), construir: Es.trex },
-  boveda: { base: ['garage'], boton: suelo(52, 11), construir: Es.boveda },
+  boveda: { base: ['garage'], boton: suelo(50, -3), construir: Es.boveda },
   piscina_inf: { base: ['techo'], boton: en(4, [14, -17]), construir: Es.piscinaInfinita },
   helicoptero: { base: ['techo'], boton: en(4, [32, -20]), construir: Es.helicoptero },
 };

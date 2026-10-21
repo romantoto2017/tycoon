@@ -10,6 +10,7 @@ import { cargar, guardar, borrar, cargarAjustes, guardarAjustes } from './guarda
 import { iniciarAudio, setVolumenes, pausarAudio, sfx } from './sfx.js';
 import * as UI from './ui.js';
 import { formato } from './util.js';
+import { cargarModelos, MODELOS } from './modelos.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -17,7 +18,7 @@ async function iniciar() {
     document.fonts ? document.fonts.load('700 40px Fredoka') : null,
     new Promise((r) => setTimeout(r, 2000)),
   ]).catch(() => {});
-  await prepararMoneda();
+  await Promise.all([prepararMoneda(), cargarModelos(MODELOS)]);
 
   const canvas = document.getElementById('juego');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });

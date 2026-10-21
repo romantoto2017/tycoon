@@ -84,8 +84,9 @@ export function cerca(k, g) {
   tramo('z', T.x0, T.z0, T.z1);
   tramo('z', T.x1, T.z0, T.z1);
   tramo('x', T.z1, T.x0, -4.5);
-  tramo('x', T.z1, 4.5, G.x0 + 5.5);
-  tramo('x', T.z1, G.x1 - 5.5, T.x1);
+  const cg = (G.x0 + G.x1) / 2;
+  tramo('x', T.z1, 4.5, cg - 7.5);
+  tramo('x', T.z1, cg + 7.5, T.x1);
   // Portón de entrada con arco.
   [-5.5, 4.5].forEach((x) => {
     g.add(k.cajaDe(x, 0, T.z1 - 0.5, x + 1, 6, T.z1 + 0.5, k.tex('piedra', '#9a9590', 2)));
@@ -122,7 +123,7 @@ function palmera(k, g, x, z, s = 1) {
 }
 
 export function jardin(k, g) {
-  [[-24, 9], [24, 9], [46, 8], [-46, 8], [18, -38], [-18, -38]].forEach(([x, z], i) => palmera(k, g, x, z, 0.95 + (i % 2) * 0.15));
+  [[-24, 9], [24, 9], [45.5, 27], [-46, 8], [18, -38], [-18, -38]].forEach(([x, z], i) => palmera(k, g, x, z, 0.95 + (i % 2) * 0.15));
   [[-44, 48], [-24, 50], [40, 48], [68, 40], [66, -20], [36, -40], [-66, -60], [-30, -80], [0, -78], [12, -80], [-48, -60], [-20, -40]]
     .forEach(([x, z], i) => arbol(k, g, x, z, 0.85 + (i % 3) * 0.15));
   // Canteros contra el frente de la casa.
@@ -244,22 +245,40 @@ export function cancha(k, g) {
   });
 }
 
+// Garage grande para el auto y la bóveda: piso de resina, luces en el techo y un taller.
 export function garage(k, g) {
   const c = k.tex('estuco', '#f6f4ef', 3);
-  g.add(k.noSolido(k.cajaDe(G.x0, 0, G.z0, G.x1, 0.1, G.z1, k.tex('concreto', '#cfccc6', 4))));
+  const A = G.alto;
   const cx = (G.x0 + G.x1) / 2;
-  g.add(k.noSolido(k.cajaDe(cx - 4, 0, G.z1, cx + 4, 0.08, T.z1, k.tex('concreto', '#d9d6d0', 4))));
-  g.add(k.cajaDe(G.x0, 0, G.z0, G.x1, 7, G.z0 + 0.5, c));
-  g.add(k.cajaDe(G.x0, 0, G.z0 + 0.5, G.x0 + 0.5, 7, G.z1, c));
-  g.add(k.cajaDe(G.x1 - 0.5, 0, G.z0 + 0.5, G.x1, 7, G.z1, c));
-  g.add(k.cajaDe(G.x0 + 0.5, 0, G.z1 - 0.5, cx - 6, 7, G.z1, c));
-  g.add(k.cajaDe(cx + 6, 0, G.z1 - 0.5, G.x1 - 0.5, 7, G.z1, c));
-  g.add(k.cajaDe(cx - 6, 5.6, G.z1 - 0.5, cx + 6, 7, G.z1, c));
-  g.add(k.noSolido(k.cajaDe(cx - 5.8, 5, G.z1 - 0.45, cx + 5.8, 5.6, G.z1 - 0.05, k.tex('panel', '#5b636a', 2))));
-  g.add(k.cajaDe(G.x0 - 0.5, 7, G.z0 - 0.5, G.x1 + 0.5, 7.6, G.z1 + 1.5, '#2b2f33'));
-  const c2 = k.cartel('GARAGE', 5, 1, '#ffffff', '#455a64');
-  c2.position.set(cx, 6.3, G.z1 + 0.02);
-  g.add(c2);
+  const P = 7; // medio ancho del portón
+  g.add(k.noSolido(k.cajaDe(G.x0, 0, G.z0, G.x1, 0.1, G.z1, k.tex('concreto', '#9aa1a7', 5))));
+  g.add(k.noSolido(k.cajaDe(cx - P, 0, G.z1, cx + P, 0.08, T.z1, k.tex('concreto', '#d9d6d0', 4))));
+  g.add(k.cajaDe(G.x0, 0, G.z0, G.x1, A, G.z0 + 0.5, c));
+  g.add(k.cajaDe(G.x0, 0, G.z0 + 0.5, G.x0 + 0.5, A, G.z1, c));
+  g.add(k.cajaDe(G.x1 - 0.5, 0, G.z0 + 0.5, G.x1, A, G.z1, c));
+  g.add(k.cajaDe(G.x0 + 0.5, 0, G.z1 - 0.5, cx - P, A, G.z1, c));
+  g.add(k.cajaDe(cx + P, 0, G.z1 - 0.5, G.x1 - 0.5, A, G.z1, c));
+  g.add(k.cajaDe(cx - P, 7.4, G.z1 - 0.5, cx + P, A, G.z1, c));
+  // Portón levantado y techo.
+  g.add(k.noSolido(k.cajaDe(cx - P + 0.2, 6.8, G.z1 - 0.45, cx + P - 0.2, 7.4, G.z1 - 0.05, k.tex('panel', '#5b636a', 2))));
+  g.add(k.cajaDe(G.x0 - 0.5, A, G.z0 - 0.5, G.x1 + 0.5, A + 0.6, G.z1 + 1.5, '#2b2f33'));
+  // Tiras de luz y franjas de estacionamiento.
+  for (let z = G.z0 + 4; z < G.z1 - 2; z += 6) g.add(k.noSolido(k.cajaDe(G.x0 + 3, A - 0.15, z, G.x1 - 3, A - 0.05, z + 0.4, k.brillo('#f4f8ff'))));
+  [cx - 6, cx + 6].forEach((x) => g.add(k.noSolido(k.cajaDe(x - 0.15, 0.1, 2, x + 0.15, 0.13, G.z1 - 2, '#f2c230'))));
+  // Taller en la pared del fondo: mesa, herramientas, estantes y cubiertas apiladas.
+  const fondo = G.z0 + 0.5;
+  g.add(k.cajaDe(cx - 2, 0, fondo, cx + 6, 2.4, fondo + 1.6, '#4a5056'));
+  g.add(k.noSolido(k.cajaDe(cx - 2.1, 2.4, fondo, cx + 6.1, 2.6, fondo + 1.7, '#8d6e4f')));
+  g.add(k.noSolido(k.cajaDe(cx - 2, 3.4, fondo, cx + 6, 6.4, fondo + 0.08, '#c62828')));
+  [[-1, '#ffc928'], [0.6, '#9e9e9e'], [2.2, '#1e88e5'], [3.8, '#9e9e9e'], [5, '#43a047']].forEach(([dx, col]) =>
+    g.add(k.noSolido(k.cajaDe(cx + dx, 4, fondo + 0.08, cx + dx + 0.3, 5.8, fondo + 0.2, col))));
+  for (let i = 0; i < 4; i++) {
+    const t = k.cilindro(1.1, 1.1, 0.75, '#1f2326', cx + 10, 0.4 + i * 0.78, fondo + 2, 16);
+    g.add(t);
+  }
+  const cartel = k.cartel('GARAGE', 6, 1.2, '#ffffff', '#455a64');
+  cartel.position.set(cx, 8.2, G.z1 + 0.02);
+  g.add(cartel);
 }
 
 

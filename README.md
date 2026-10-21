@@ -45,3 +45,8 @@ Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (
 Los precios de la mansión están en `js/precios.js` y se calculan con `herramientas/balance.mjs`, que simula una partida completa (unas 3 horas). Los precios de los objetos especiales y los cuadros se editan directo en `data/objetos.js`.
 
 El progreso se guarda solo en el navegador (localStorage). "Reiniciar partida" en la configuración lo borra.
+
+## Muebles y pinturas (créditos)
+
+- Los muebles son modelos 3D del **Furniture Kit de Kenney** (kenney.nl), licencia CC0 (dominio público). Están en `assets/muebles/` y se cargan al empezar (`js/modelos.js`): ahí se cambian los colores (madera, metal, tapizados) y qué modelos se usan. Cada habitación los acomoda en `js/muebles.js`.
+- Las pinturas famosas son obras de dominio público tomadas de Wikimedia Commons; la lista está en `assets/pinturas/CREDITOS.md`.

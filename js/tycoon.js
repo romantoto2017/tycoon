@@ -6,6 +6,7 @@ import { caja, mat, matTex, formato, GEO_CAJA } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
 import { Auto } from './auto.js';
+import { crearModelo, medidaModelo } from './modelos.js';
 import {
   crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel, texturaCuadro,
   texturaCascada, obtenerCara, cargarImagen,
@@ -73,6 +74,9 @@ function crearKit() {
       return kit.noSolido(m);
     },
     tex: (tipo, color, tamano) => matTex(tipo, color, tamano),
+    // Mueble 3D (ver modelos.js): origen en el centro de la base, frente hacia +z.
+    modelo: (nombre, opts = {}) => crearModelo(nombre, { ...opts, material: mat, vidrio: kit.vidrio, luz: kit.brillo('#fff3d6') }),
+    medida: medidaModelo,
     // Césped del terreno con franjas de cortadora.
     baseplate(ancho, largo, x, z) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), matTex('pasto', '#86c95f', 8));

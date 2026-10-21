@@ -57,6 +57,11 @@ function sala(k, g, lugar, piso, nativo) {
     cartel(texto, ancho, alto, x, y0, z, rotY, color, fondo) {
       return s.plano(k.cartel(texto, ancho, alto, color, fondo), x, y0, z, rotY);
     },
+    // Mueble 3D (ver kit.modelo) con el frente hacia rotY.
+    modelo(nombre, x, y0, z, rotY = 0, opts = {}) {
+      return s.plano(k.modelo(nombre, opts), x, y0, z, rotY);
+    },
+    medida: (nombre, opts) => k.medida(nombre, opts),
   };
   return s;
 }
@@ -65,10 +70,6 @@ function sala(k, g, lugar, piso, nativo) {
 // pieza(s, X, Z, mira) arma un mueble en su propio marco: u = ancho (de izquierda a derecha),
 // v = profundidad con el frente hacia +v, y lo ubica en (X, Z) mirando hacia 'mira'
 // ('+x', '-x', '+z' o '-z', en coordenadas de la habitación).
-const C = {
-  roble: '#b08560', nogal: '#5d4030', blanco: '#f4f4f2', lino: '#e9e2d6', gris: '#8a8f94',
-  carbon: '#3a3f44', cromo: '#c9ced3', negro: '#24282c', inox: '#b9bfc4',
-};
 
 function pieza(s, X, Z, mira) {
   const map = {
@@ -89,222 +90,147 @@ function pieza(s, X, Z, mira) {
     cil(r, h, c, u, y0, v, seg) { const [x, z] = map(u, v); return s.cil(r, h, c, x, y0, z, seg); },
     esf(r, c, u, y0, v) { const [x, z] = map(u, v); return s.esf(r, c, x, y0, z); },
     plano(m, u, y0, v, rotLocal = 0) { const [x, z] = map(u, v); return s.plano(m, x, y0, z, rot + rotLocal); },
+    // Mueble 3D en (u, v) mirando hacia +v. Con `atras` se apoya el fondo en v = atras;
+    // `y` lo sube (por ejemplo, arriba de una mesa) y `rot` lo gira dentro del marco.
+    modelo(nombre, u, v, opts = {}) {
+      const vv = opts.atras === undefined ? v : opts.atras + s.medida(nombre, opts).z / 2;
+      const [x, z] = map(u, vv);
+      return s.modelo(nombre, x, opts.y || 0, z, rot + (opts.rot || 0), opts);
+    },
+    medida: (nombre, opts) => s.medida(nombre, opts),
   };
 }
 
-function cama(k, p, ancho, largo, color, acento = C.lino) {
-  const W = ancho / 2;
-  const L = largo / 2;
-  p.b(-W - 0.15, 0, -L - 0.35, W + 0.15, 3.6, -L, C.nogal);
-  p.d(-W + 0.1, 1.9, -L - 0.02, W - 0.1, 3.3, -L + 0.12, acento);
-  p.b(-W, 0.35, -L, W, 0.95, L, C.nogal);
-  for (const u of [-W + 0.2, W - 0.2]) p.d(u - 0.12, 0, L - 0.32, u + 0.12, 0.35, L - 0.08, C.negro);
-  p.b(-W + 0.08, 0.95, -L + 0.05, W - 0.08, 1.7, L - 0.05, C.blanco);
-  p.d(-W - 0.02, 1.0, -L + 1.8, W + 0.02, 1.88, L + 0.03, color);
-  p.d(-W, 1.88, -L + 1.8, W, 1.98, -L + 2.4, C.blanco);
-  p.d(-W - 0.04, 1.4, L - 1.5, W + 0.04, 1.95, L - 0.6, acento);
-  const n = ancho > 3.2 ? 2 : 1;
-  for (let i = 0; i < n; i++) {
-    const u = n === 1 ? 0 : (i ? W / 2 : -W / 2);
-    const m = n === 1 ? W * 0.75 : W * 0.44;
-    p.d(u - m, 1.7, -L + 0.25, u + m, 2.3, -L + 1.25, C.blanco);
-  }
-  p.d(-0.55, 1.75, -L + 1.1, 0.55, 2.3, -L + 1.45, acento);
+// Los muebles son modelos 3D; acá solo se eligen, se miden y se acomodan.
+function cama(k, p, ancho, largo, color) {
+  p.modelo(ancho > 3.2 ? 'bedDouble' : 'bedSingle', 0, 0, { ancho: ancho + 0.3, atras: -largo / 2 - 0.35, tela: color });
 }
 
 function mesaLuz(k, p, u, v) {
-  p.b(u - 0.7, 0, v - 0.6, u + 0.7, 1.5, v + 0.6, C.roble);
-  p.d(u - 0.6, 0.74, v + 0.6, u + 0.6, 0.78, v + 0.62, C.nogal);
-  p.d(u - 0.08, 1.12, v + 0.6, u + 0.08, 1.2, v + 0.66, C.cromo);
-  p.cil(0.12, 0.6, C.cromo, u, 1.5, v, 8);
-  p.d(u - 0.38, 2.1, v - 0.38, u + 0.38, 2.7, v + 0.38, k.brillo('#fff3d6'));
+  p.modelo('cabinetBedDrawerTable', u, v, {});
+  p.modelo('lampRoundTable', u, v, { y: p.medida('cabinetBedDrawerTable').y, solido: false });
 }
 
 function inodoro(k, p) {
-  p.cil(0.38, 0.9, C.blanco, 0, 0, 0.2, 12);
-  p.cil(0.6, 0.35, C.blanco, 0, 0.9, 0.3, 14);
-  p.cil(0.63, 0.06, '#ffffff', 0, 1.25, 0.3, 14);
-  p.b(-0.75, 0.9, -0.75, 0.75, 2.1, -0.3, C.blanco);
-  p.d(-0.8, 2.1, -0.8, 0.8, 2.2, -0.26, '#ffffff');
-  p.d(-0.12, 2.2, -0.6, 0.12, 2.26, -0.45, C.cromo);
+  p.modelo('toiletSquare', 0, 0, { atras: -0.8 });
 }
 
 function lavatorio(k, p, ancho) {
-  const W = ancho / 2;
-  p.b(-W, 0.3, -0.55, W, 1.8, 0.55, C.roble);
-  p.d(-W + 0.1, 0, -0.45, W - 0.1, 0.3, 0.45, C.negro);
-  p.d(-W + 0.1, 1.05, 0.55, W - 0.1, 1.08, 0.57, C.nogal);
-  p.d(-0.5, 1.4, 0.55, 0.5, 1.46, 0.62, C.cromo);
-  p.b(-W - 0.05, 1.8, -0.6, W + 0.05, 1.95, 0.6, k.tex('baldosa', '#f2f2f0', 1.2));
-  const piletas = ancho > 3.5 ? [-W / 2, W / 2] : [0];
-  for (const u of piletas) {
-    p.cil(0.45, 0.3, C.blanco, u, 1.95, 0.05, 14);
-    p.d(u - 0.06, 1.95, -0.5, u + 0.06, 2.6, -0.4, C.cromo);
-    p.d(u - 0.06, 2.5, -0.45, u + 0.06, 2.6, -0.12, C.cromo);
+  const n = ancho > 3.5 ? 2 : 1;
+  const w = ancho / n;
+  for (let i = 0; i < n; i++) {
+    const u = -ancho / 2 + w * (i + 0.5);
+    p.modelo('bathroomCabinetDrawer', u, 0, { ancho: w - 0.1, atras: -0.66 });
+    p.modelo('bathroomMirror', u, 0, { alto: 2.6, atras: -0.68, y: 3.3, solido: false });
   }
-  p.d(-W + 0.1, 2.9, -0.66, W - 0.1, 5.5, -0.62, C.negro);
-  p.d(-W + 0.2, 3, -0.62, W - 0.2, 5.4, -0.58, '#d6e6ee');
-  p.d(-W + 0.5, 5.6, -0.62, W - 0.5, 5.75, -0.5, k.brillo('#fff3d6'));
+  p.d(-ancho / 2 + 0.3, 6.1, -0.62, ancho / 2 - 0.3, 6.25, -0.5, k.brillo('#fff3d6'));
 }
 
-// Ducha en esquina: pared de azulejos atrás (v-) y a la izquierda (u-), mampara de vidrio.
+// Ducha en esquina: pared de azulejos atrás (v-) y a la izquierda (u-), cabina de vidrio.
 function ducha(k, p, ancho, fondo) {
   const W = ancho / 2;
   const F = fondo / 2;
   const azulejo = k.tex('baldosa', '#dfe8ec', 0.8);
   p.d(-W, 0, -F, W, 7.5, -F + 0.08, azulejo);
   p.d(-W, 0, -F, -W + 0.08, 7.5, F, azulejo);
-  p.d(-W, 0, -F, W, 0.15, F, '#d0d6d9');
-  p.d(-0.15, 0.15, -0.15, 0.15, 0.17, 0.15, C.cromo);
-  p.b(W - 0.06, 0, -F, W, 6.6, F, k.vidrio);
-  p.b(0, 0, F - 0.06, W, 6.6, F, k.vidrio);
-  p.d(-W, 6.6, F - 0.08, W, 6.7, F, C.negro);
-  p.d(W - 0.08, 6.6, -F, W, 6.7, F, C.negro);
-  p.d(-0.05, 6.1, -F, 0.05, 6.2, -F + 1.3, C.cromo);
-  p.d(-0.55, 6.0, -F + 0.9, 0.55, 6.1, -F + 1.9, C.cromo);
-  p.d(-0.15, 3.2, -F + 0.08, 0.15, 3.6, -F + 0.16, C.cromo);
-  p.d(-W + 0.6, 1, -F + 0.08, -W + 1.4, 1.1, -F + 0.4, C.cromo);
+  p.modelo('shower', 0, 0, { ancho: ancho - 0.3, fondo: fondo - 0.3, alto: 6.8 });
 }
 
 function banera(k, p, largo) {
-  const L = largo / 2;
-  p.b(-L, 0, -1.1, L, 1.7, -0.9, C.blanco);
-  p.b(-L, 0, 0.9, L, 1.7, 1.1, C.blanco);
-  p.b(-L, 0, -0.9, -L + 0.2, 1.7, 0.9, C.blanco);
-  p.b(L - 0.2, 0, -0.9, L, 1.7, 0.9, C.blanco);
-  p.d(-L + 0.2, 0, -0.9, L - 0.2, 0.3, 0.9, C.blanco);
-  p.d(-L + 0.2, 0.3, -0.9, L - 0.2, 1.4, 0.9, k.agua);
-  p.d(L - 0.6, 1.7, -0.15, L - 0.45, 2.6, 0.15, C.cromo);
-  p.d(L - 1.1, 2.45, -0.1, L - 0.45, 2.6, 0.1, C.cromo);
+  p.modelo('bathtub', 0, 0, { ancho: largo, atras: -1.2 });
+  p.modelo('trashcan', largo / 2 + 0.7, -0.6, { solido: false, escala: 0.8 });
 }
 
 function heladera(k, p) {
-  p.b(-1.3, 0, -0.9, 1.3, 6, 0.9, C.inox);
-  p.d(-0.02, 2.1, 0.9, 0.02, 6, 0.92, C.negro);
-  p.d(-1.3, 2.05, 0.9, 1.3, 2.1, 0.92, C.negro);
-  p.d(-0.28, 2.6, 0.92, -0.14, 5.4, 1.06, C.cromo);
-  p.d(0.14, 2.6, 0.92, 0.28, 5.4, 1.06, C.cromo);
-  p.d(-0.8, 1.7, 0.92, 0.8, 1.82, 1.06, C.cromo);
-  p.d(-1.05, 3.4, 0.92, -0.45, 4.5, 0.94, '#263238');
+  p.modelo('kitchenFridgeLarge', 0, 0, { ancho: 2.7, atras: -0.9 });
 }
 
-// Mesada con muebles bajos, alacenas, salpicadero y (opcional) bacha y anafe con campana.
+// Mesada: muebles bajos (con bacha y anafe donde se pidan), alacenas, campana y algunos
+// electrodomésticos chicos arriba.
 function mesada(k, p, largo, bacha, anafe) {
   const L = largo / 2;
-  const marmol = k.tex('baldosa', '#f1f1ef', 1.2);
-  p.b(-L, 0.25, -0.65, L, 1.95, 0.65, C.blanco);
-  p.d(-L, 0, -0.55, L, 0.25, 0.55, C.negro);
-  for (let u = -L + 1.3; u < L; u += 1.3) p.d(u - 0.02, 0.35, 0.65, u + 0.02, 1.85, 0.67, '#cfcfcf');
-  for (let u = -L + 0.65; u < L; u += 1.3) p.d(u - 0.35, 1.6, 0.65, u + 0.35, 1.66, 0.72, C.cromo);
-  p.b(-L - 0.05, 1.95, -0.7, L + 0.05, 2.12, 0.7, marmol);
-  p.d(-L, 2.12, -0.68, L, 4.4, -0.62, k.tex('baldosa', '#e9e4dc', 0.6));
-  p.b(-L, 4.4, -0.66, L, 6.2, -0.05, C.blanco);
-  for (let u = -L + 1.3; u < L; u += 1.3) p.d(u - 0.02, 4.5, -0.05, u + 0.02, 6.1, -0.03, '#cfcfcf');
-  if (bacha !== undefined) {
-    p.d(bacha - 0.8, 2.0, -0.4, bacha + 0.8, 2.13, 0.4, '#8d969c');
-    p.d(bacha - 0.06, 2.12, -0.6, bacha + 0.06, 2.9, -0.5, C.cromo);
-    p.d(bacha - 0.06, 2.8, -0.55, bacha + 0.06, 2.9, -0.2, C.cromo);
+  const n = Math.max(1, Math.round(largo / 2.4));
+  const w = largo / n;
+  const cerca = (u, x) => x !== undefined && Math.abs(u - x) < w / 2;
+  let alto = 0;
+  for (let i = 0; i < n; i++) {
+    const u = -L + w * (i + 0.5);
+    const tipo = cerca(u, bacha) ? 'kitchenSink' : cerca(u, anafe) ? 'kitchenStove' : i % 2 ? 'kitchenCabinetDrawer' : 'kitchenCabinet';
+    p.modelo(tipo, u, 0, { ancho: w + 0.01, atras: -0.68 });
+    alto = p.medida(tipo, { ancho: w }).y;
+    if (cerca(u, anafe)) p.modelo('hoodModern', u, 0, { ancho: w * 0.9, atras: -0.68, y: alto + 2.3, solido: false });
+    else p.modelo(i % 2 ? 'kitchenCabinetUpper' : 'kitchenCabinetUpperDouble', u, 0, { ancho: w + 0.01, atras: -0.68, y: alto + 2.1, solido: false });
   }
-  if (anafe !== undefined) {
-    p.d(anafe - 1, 2.12, -0.45, anafe + 1, 2.16, 0.45, '#1b1b1b');
-    [[-0.5, -0.2], [0.5, -0.2], [-0.5, 0.25], [0.5, 0.25]].forEach(([du, dv]) => p.d(anafe + du - 0.22, 2.16, dv - 0.12, anafe + du + 0.22, 2.17, dv + 0.12, '#424242'));
-    p.d(anafe - 0.9, 0.5, 0.65, anafe + 0.9, 1.6, 0.68, '#263238');
-    p.b(anafe - 1.2, 5.0, -0.65, anafe + 1.2, 5.6, 0.35, C.inox);
-    p.d(anafe - 0.35, 5.6, -0.65, anafe + 0.35, 9.6, -0.3, C.inox);
+  p.d(-L, alto, -0.68, L, alto + 2.1, -0.62, k.tex('baldosa', '#e9e4dc', 0.6));
+  const libres = [];
+  for (let i = 0; i < n; i++) {
+    const u = -L + w * (i + 0.5);
+    if (!cerca(u, bacha) && !cerca(u, anafe)) libres.push(u);
   }
+  ['kitchenCoffeeMachine', 'kitchenMicrowave', 'toaster'].forEach((m, i) => {
+    if (libres[i] !== undefined) p.modelo(m, libres[i], 0, { atras: -0.5, y: alto, solido: false });
+  });
 }
 
-function sofa(k, p, ancho, color, acento = C.lino) {
-  const W = ancho / 2;
-  p.b(-W, 0.3, -0.9, W, 1.2, 0.9, color);
-  for (const u of [-W + 0.2, W - 0.2]) for (const v of [-0.7, 0.7]) p.d(u - 0.1, 0, v - 0.1, u + 0.1, 0.3, v + 0.1, C.negro);
-  const n = Math.max(2, Math.round(ancho / 2.2));
-  const ancho1 = (ancho - 0.9) / n;
-  for (let i = 0; i < n; i++) {
-    const u0 = -W + 0.45 + i * ancho1;
-    p.d(u0 + 0.04, 1.2, -0.4, u0 + ancho1 - 0.04, 1.55, 0.85, color);
-    p.d(u0 + 0.06, 1.55, -0.85, u0 + ancho1 - 0.06, 2.85, -0.35, color);
-  }
-  p.b(-W, 1.2, -0.9, W, 2.6, -0.5, color);
-  p.b(-W, 1.2, -0.9, -W + 0.45, 2.1, 0.9, color);
-  p.b(W - 0.45, 1.2, -0.9, W, 2.1, 0.9, color);
-  p.d(-W + 0.6, 1.55, -0.35, -W + 1.4, 2.35, -0.15, acento);
-  p.d(W - 1.4, 1.55, -0.35, W - 0.6, 2.35, -0.15, acento);
+function sofa(k, p, ancho, color) {
+  if (ancho < 3.2) p.modelo('loungeChair', 0, 0, { ancho, atras: -0.9, tela: color });
+  else p.modelo(ancho > 5 ? 'loungeDesignSofa' : 'loungeSofa', 0, 0, { ancho, atras: -0.9, tela: color });
 }
 
 function mesaRatona(k, p, ancho, fondo) {
-  const W = ancho / 2;
-  const F = fondo / 2;
-  p.b(-W, 1.0, -F, W, 1.15, F, k.tex('baldosa', '#f1f1ef', 1.2));
-  for (const u of [-W + 0.15, W - 0.15]) for (const v of [-F + 0.15, F - 0.15]) p.d(u - 0.06, 0, v - 0.06, u + 0.06, 1.0, v + 0.06, C.negro);
-  p.d(-0.4, 1.15, -0.3, 0.2, 1.4, 0.1, '#b0bec5');
-  p.cil(0.25, 0.5, C.blanco, 0.6, 1.15, 0, 10);
+  p.modelo('tableCoffeeGlass', 0, 0, { ancho, fondo, alto: 1.15 });
+  p.modelo('books', -0.4, 0, { y: 1.15, solido: false, escala: 1.2 });
+  p.modelo('plantSmall1', 0.7, 0.1, { y: 1.15, solido: false, escala: 1.6 });
 }
 
 function tele(k, p, ancho) {
-  const W = ancho / 2;
-  p.b(-W, 0, -0.55, W, 1.3, 0.5, C.nogal);
-  p.d(-W + 0.1, 0.4, 0.5, W - 0.1, 0.44, 0.52, C.negro);
-  p.d(-W * 0.8, 2.4, -0.55, W * 0.8, 5.0, -0.48, C.negro);
-  p.d(-W * 0.8 + 0.1, 2.5, -0.48, W * 0.8 - 0.1, 4.9, -0.47, k.brillo('#24364a'));
+  p.modelo('cabinetTelevisionDoors', 0, 0, { ancho, alto: 1.4, fondo: 1.05, atras: -0.55 });
+  p.modelo('televisionModern', 0, 0, { ancho: ancho * 0.75, atras: -0.5, y: 1.4, solido: false });
+  p.modelo('speakerSmall', -ancho / 2 + 0.4, 0, { atras: -0.5, y: 1.4, solido: false });
+  p.modelo('speakerSmall', ancho / 2 - 0.4, 0, { atras: -0.5, y: 1.4, solido: false });
 }
 
 function planta(k, p, u, v, alto = 3) {
-  p.cil(0.55, 1.1, '#d7d2c8', u, 0, v, 10);
-  p.d(u - 0.9, 1.1, v - 0.2, u + 0.9, alto * 0.75, v + 0.2, '#2f7d32');
-  p.d(u - 0.2, 1.1, v - 0.9, u + 0.2, alto * 0.75, v + 0.9, '#3d8b3d');
-  p.d(u - 0.6, 1.6, v - 0.6, u + 0.6, alto, v + 0.6, '#4caf50');
+  p.modelo('pottedPlant', u, v, { alto: alto * 1.15 });
 }
 
 function lamparaPie(k, p, u, v) {
-  p.cil(0.4, 0.1, C.negro, u, 0, v, 12);
-  p.d(u - 0.06, 0.1, v - 0.06, u + 0.06, 4.6, v + 0.06, C.negro);
-  p.d(u - 0.55, 4.6, v - 0.55, u + 0.55, 5.4, v + 0.55, k.brillo('#fff3d6'));
+  p.modelo('lampRoundFloor', u, v, { alto: 5.4 });
 }
 
-function silla(k, p, color = C.roble) {
-  p.b(-0.6, 1.0, -0.6, 0.6, 1.2, 0.6, color);
-  for (const u of [-0.5, 0.5]) for (const v of [-0.5, 0.5]) p.d(u - 0.06, 0, v - 0.06, u + 0.06, 1.0, v + 0.06, C.negro);
-  p.b(-0.6, 1.2, -0.6, 0.6, 2.7, -0.45, color);
+function silla(k, p, color = '#e9e2d6') {
+  p.modelo('chairCushion', 0, 0, { tela: color });
 }
 
 function estanteria(k, p, ancho) {
-  const W = ancho / 2;
-  p.d(-W, 0, -0.5, -W + 0.12, 6, 0.5, C.negro);
-  p.d(W - 0.12, 0, -0.5, W, 6, 0.5, C.negro);
-  const libros = ['#8e2b2b', '#2b4a8e', '#c9a227', '#2e6b3a', '#6b3a8e', '#e0ddd5'];
-  for (let i = 0; i < 4; i++) {
-    const y = 0.4 + i * 1.5;
-    p.b(-W, y, -0.5, W, y + 0.1, 0.5, C.roble);
-    for (let j = 0; j < 7; j++) {
-      if ((i + j) % 4 === 3) continue;
-      const u = -W + 0.25 + j * ((ancho - 0.5) / 7);
-      p.d(u, y + 0.1, -0.35, u + (ancho - 0.5) / 7 - 0.08, y + 0.8 + ((i + j) % 3) * 0.15, 0.3, libros[(i + j) % libros.length]);
-    }
+  const n = Math.max(1, Math.round(ancho / 2.2));
+  const w = ancho / n;
+  for (let i = 0; i < n; i++) {
+    const u = -ancho / 2 + w * (i + 0.5);
+    p.modelo('bookcaseOpen', u, 0, { ancho: w, alto: 5.6, atras: -0.5 });
+    [0.03, 0.36, 0.69].forEach((f, j) => {
+      p.modelo('books', u - w * 0.22, 0, { y: 5.6 * f + 0.15, atras: -0.4, solido: false, escala: 1.4 });
+      if ((i + j) % 2) p.modelo('books', u + w * 0.2, 0, { y: 5.6 * f + 0.15, atras: -0.4, solido: false, escala: 1.4, rot: 0.3 });
+    });
   }
 }
 
 function escritorio(k, p, ancho, color) {
-  const W = ancho / 2;
-  p.b(-W, 1.9, -0.7, W, 2.05, 0.7, C.roble);
-  for (const u of [-W + 0.1, W - 0.1]) p.d(u - 0.06, 0, -0.6, u + 0.06, 1.9, 0.6, C.negro);
-  p.d(-0.9, 2.05, -0.6, 0.9, 3.4, -0.5, C.negro);
-  p.d(-0.8, 2.15, -0.5, 0.8, 3.3, -0.49, k.brillo(color));
-  p.d(-0.6, 2.05, -0.1, 0.6, 2.1, 0.3, '#424242');
-  p.b(-0.6, 1.0, 1.0, 0.6, 1.2, 2.0, C.negro);
-  p.b(-0.6, 1.2, 1.85, 0.6, 3.0, 2.0, color);
-  p.cil(0.08, 1.0, C.negro, 0, 0, 1.5, 6);
+  p.modelo('desk', 0, 0, { ancho, atras: -0.7 });
+  const alto = p.medida('desk', { ancho }).y;
+  p.modelo('computerScreen', 0, 0, { atras: -0.6, y: alto, solido: false });
+  p.modelo('computerKeyboard', 0, 0.4, { y: alto, solido: false });
+  p.modelo('chairDesk', 0, 1.8, { rot: Math.PI, tela: color });
 }
 
 function placard(k, p, ancho) {
-  const W = ancho / 2;
-  p.b(-W, 0, -0.65, W, 7, 0.65, C.blanco);
-  for (let u = -W + ancho / 3; u < W - 0.1; u += ancho / 3) p.d(u - 0.02, 0.1, 0.65, u + 0.02, 6.9, 0.67, '#cfcfcf');
-  for (let u = -W + ancho / 6; u < W; u += ancho / 3) p.d(u - 0.04, 3, 0.65, u + 0.04, 4.2, 0.72, C.negro);
+  p.modelo('bookcaseClosedWide', 0, 0, { ancho, alto: 7, fondo: 1.3, atras: -0.65 });
 }
 
+// Alfombra: color = modelo de alfombra con borde; textura = piso (baños).
 function alfombra(s, x0, z0, x1, z1, color) {
-  s.d(x0, 0, z0, x1, 0.05, z1, color);
+  if (typeof color !== 'string') { s.d(x0, 0, z0, x1, 0.05, z1, color); return; }
+  s.modelo('rugRectangle', (x0 + x1) / 2, 0.02, (z0 + z1) / 2, 0, { ancho: x1 - x0, fondo: z1 - z0, alto: 0.05, tela: color, solido: false });
 }
 
 function pintura(k, p, archivo, u, y, v, alto = 2.8) {
@@ -334,18 +260,19 @@ function cocina(k, s) {
   const P = pieza(s, 0, 0, '+z');
   mesada(k, pieza(s, -1.4, -6.05, '+z'), 12.2, -2.5, 2.5);
   heladera(k, pieza(s, 6.8, -5.85, '+z'));
-  const isla = pieza(s, -1.4, -1, '+z');
-  isla.b(-3, 0.25, -1, 3, 1.95, 1, C.nogal);
-  isla.d(-3, 0, -0.9, 3, 0.25, 0.9, C.negro);
-  isla.b(-3.3, 1.95, -1.3, 3.3, 2.12, 1.3, k.tex('baldosa', '#f1f1ef', 1.2));
-  isla.d(-0.5, 2.12, -0.4, 0.5, 2.5, 0.4, '#ff8a65');
-  for (const u of [-2, 0, 2]) {
-    isla.cil(0.45, 0.15, C.carbon, u, 1.75, 2.1, 12);
-    isla.cil(0.06, 1.75, C.cromo, u, 0, 2.1, 6);
-    isla.cil(0.35, 0.06, C.cromo, u, 0, 2.1, 10);
+  // Isla con barra y banquetas.
+  const isla = pieza(s, -1.4, -0.6, '+z');
+  for (const u of [-2.4, 0, 2.4]) {
+    isla.modelo('kitchenBar', u, 0, { ancho: 2.41 });
+    isla.modelo('stoolBar', u, 2.2, { rot: Math.PI, tela: '#3a3f44' });
   }
+  isla.modelo('plantSmall1', 0, 0, { y: isla.medida('kitchenBar', { ancho: 2.41 }).y, solido: false, escala: 1.5 });
+  // Mesa redonda para desayunar.
+  const mesa = pieza(s, 5, 3.4, '+z');
+  mesa.modelo('tableRound', 0, 0, { ancho: 3.2 });
+  [[0, -2.1, 0], [0, 2.1, Math.PI], [-2.1, 0, Math.PI / 2], [2.1, 0, -Math.PI / 2]].forEach(([u, v, r]) => mesa.modelo('chairModernCushion', u, v, { rot: r, tela: '#e9e2d6' }));
   planta(k, P, -7.8, 5.6);
-  planta(k, P, 7.8, 5.6);
+  planta(k, P, 7.8, -2);
 }
 
 function salaJuegos(k, s) {
@@ -363,6 +290,8 @@ function salaJuegos(k, s) {
   s.d(2.75, 3, 3.3, 2.8, 4.5, 4.9, brillo(k, '#ffea00'));
   s.cil(0.9, 0.1, '#ffffff', -7.95, 4, 5, 16).rotation.z = Math.PI / 2;
   s.d(-8.2, 0, 4.5, -4.5, 0.06, 6.5, '#ffb300');
+  s.modelo('loungeSofa', -6.4, 0, -5.4, 0, { ancho: 3.6, tela: '#5d4037' });
+  s.modelo('pottedPlant', -7.8, 0, -1, 0, { alto: 3.4 });
 }
 
 function banioPB(k, s) {
@@ -371,11 +300,8 @@ function banioPB(k, s) {
   ducha(k, pieza(s, -6.7, -4.75, '+z'), 4, 4);
   inodoro(k, pieza(s, 0.5, -6, '+z'));
   lavatorio(k, pieza(s, 8.1, -2.5, '-x'), 3.4);
-  const lv = pieza(s, 7.6, 3, '-x');
-  lv.b(-1.1, 0, -0.9, 1.1, 2.6, 0.9, C.blanco);
-  lv.d(-0.65, 0.65, 0.9, 0.65, 1.95, 0.96, '#9aa5ab');
-  lv.d(-1, 2.2, 0.9, 1, 2.5, 0.93, C.gris);
-  P.d(2.2, 3, -6.72, 3.8, 3.1, -6.6, C.cromo);
+  pieza(s, 7.6, 3, '-x').modelo('washerDryerStacked', 0, 0, { alto: 5.2, atras: -0.9 });
+  P.d(2.2, 3, -6.72, 3.8, 3.1, -6.6, '#c9ced3');
   P.d(2.3, 1.6, -6.7, 3.7, 3, -6.6, '#90caf9');
   planta(k, P, -7.7, 5.7);
 }
@@ -409,22 +335,24 @@ function dormitorio2(k, s) {
 }
 
 function salaGamer(k, s) {
-  s.b(3, 0, -6.6, 7.9, 2, -5.2, '#212121');
-  [3.6, 5.2, 6.8].forEach((x, i) => {
-    s.d(x - 0.75, 2, -6.4, x + 0.75, 3.3, -6.2, '#111111');
-    s.d(x - 0.65, 2.1, -6.2, x + 0.65, 3.2, -6.18, brillo(k, ['#00e5ff', '#ff4081', '#76ff03'][i]));
+  // Escritorio con tres monitores y silla gamer.
+  const P = pieza(s, 5.4, -6, '+z');
+  P.modelo('desk', 0, 0, { ancho: 5.2, atras: -0.6 });
+  const alto = P.medida('desk', { ancho: 5.2 }).y;
+  [-1.6, 0, 1.6].forEach((u, i) => {
+    P.modelo('computerScreen', u, 0, { atras: -0.5, y: alto, solido: false, rot: -u * 0.12 });
+    P.d(u - 0.75, alto + 0.45, 0.06, u + 0.75, alto + 1.4, 0.08, brillo(k, ['#00e5ff', '#ff4081', '#76ff03'][i]));
   });
-  s.b(4.5, 0, -4.5, 6, 1.5, -3, '#212121');
-  s.b(4.5, 1.5, -3.3, 6, 4, -3, '#e53935');
+  P.modelo('computerKeyboard', 0, 0.6, { y: alto, solido: false });
+  P.modelo('chairDesk', 0, 2.4, { rot: Math.PI, tela: '#e53935' });
   s.b(7.6, 1.5, 3.3, 7.9, 4.5, 6.6, '#111111');
   s.d(7.55, 1.7, 3.5, 7.6, 4.3, 6.4, brillo(k, '#7c4dff'));
-  s.b(1.5, 0, 3.2, 3, 1.4, 6.6, '#3949ab');
-  s.b(1.5, 1.4, 3.2, 2, 2.8, 6.6, '#3949ab');
-  s.b(-1.5, 0, 0, 0, 1, 1.5, '#ff4081');
-  s.b(-1.5, 0, -2.5, 0, 1, -1, '#00bcd4');
+  sofa(k, pieza(s, 1.4, 4.9, '+x'), 3.4, '#3949ab');
+  s.modelo('loungeChair', -1, 0, 0.6, Math.PI / 2, { tela: '#ff4081' });
+  s.modelo('loungeChair', -1, 0, -2.6, Math.PI / 2, { tela: '#00bcd4' });
   s.d(-8, 7.1, -6.6, 8, 7.3, -6.4, brillo(k, '#ff00ff'));
   s.d(-8, 7.1, 6.4, 8, 7.3, 6.6, brillo(k, '#00e5ff'));
-  s.d(-3, 0, -3, 4, 0.06, 2.5, '#263238');
+  alfombra(s, -3, -3, 4, 2.5, '#263238');
 }
 
 function banio1(k, s) {
@@ -433,9 +361,9 @@ function banio1(k, s) {
   banera(k, pieza(s, -4, -5.4, '+z'), 5.5);
   inodoro(k, pieza(s, 3.2, -6, '+z'));
   lavatorio(k, pieza(s, 8.1, 0, '-x'), 5);
-  P.d(-8.66, 3, 0, -8.6, 3.1, 2.5, C.cromo);
+  P.d(-8.66, 3, 0, -8.6, 3.1, 2.5, '#c9ced3');
   P.d(-8.6, 1.4, 0.2, -8.5, 3, 2.3, '#ff8a80');
-  P.b(-2, 0, 1.5, -0.8, 1.2, 2.7, C.roble);
+  P.modelo('stoolBar', -1.4, 2.1, { tela: '#e9e2d6' });
   planta(k, P, -7.7, 5.7);
   planta(k, P, 7.7, 5.7, 2.4);
 }
@@ -445,14 +373,11 @@ function banio1(k, s) {
 function dormitorioPrincipal(k, s) {
   const P = pieza(s, 0, 0, '+z');
   alfombra(s, -8, -4.6, 1, 4.6, '#cdbfae');
-  cama(k, pieza(s, -5.85, 0, '+x'), 5, 5, '#efe7da', '#8e6c4a');
-  mesaLuz(k, pieza(s, -7.9, 3.5, '+x'), 0, 0);
-  mesaLuz(k, pieza(s, -7.9, -3.5, '+x'), 0, 0);
+  cama(k, pieza(s, -5.85, 0, '+x'), 5, 5, '#efe7da');
+  mesaLuz(k, pieza(s, -7.9, 3.6, '+x'), 0, 0);
+  mesaLuz(k, pieza(s, -7.9, -3.6, '+x'), 0, 0);
   pintura(k, pieza(s, -8.62, 0, '+x'), 'grande_jatte.jpg', 0, 5.9, 0, 2.4);
-  const banco = pieza(s, -2.6, 0, '+x');
-  banco.b(-2, 0.4, -0.6, 2, 1.2, 0.6, '#c9b8a0');
-  banco.d(-1.9, 0, -0.5, -1.7, 0.4, 0.5, C.negro);
-  banco.d(1.7, 0, -0.5, 1.9, 0.4, 0.5, C.negro);
+  pieza(s, -1.2, 0, '+x').modelo('loungeSofaOttoman', 0, 0, { ancho: 3.8, fondo: 1.6, alto: 1.3, tela: '#8e6c4a' });
   tele(k, pieza(s, 8.1, 0, '-x'), 5.4);
   sofa(k, pieza(s, 3.6, 5.3, '-z'), 2.6, '#8e6c4a');
   placard(k, pieza(s, -5.2, 6, '-z'), 5);
@@ -481,12 +406,10 @@ function cine(k, s) {
   s.d(-8, 0, -6.6, 8, 0.06, 6.6, '#311b92');
   s.b(7.6, 1, -6, 7.95, 6.8, 6, '#000000');
   s.d(7.55, 1.3, -5.7, 7.6, 6.5, 5.7, brillo(k, '#e3f2fd'));
-  s.b(-4.2, 0, -6, -0.8, 0.5, 4.5, '#4a148c');
-  [[2.5, 0], [-2, 0.5]].forEach(([x, y]) => {
-    [-4, -1, 2].forEach((z) => {
-      s.b(x - 0.8, y, z - 1, x + 0.8, y + 1.2, z + 1, '#c62828');
-      s.b(x - 1.2, y + 1.2, z - 1, x - 0.8, y + 3, z + 1, '#b71c1c');
-    });
+  // Butacas reclinables mirando a la pantalla; la fila de atrás, sobre una tarima.
+  s.b(-4.2, 0, -6, -0.6, 0.5, 4.5, '#4a148c');
+  [[2.5, 0], [-2.3, 0.5]].forEach(([x, y]) => {
+    [-4, -1, 2].forEach((z) => s.modelo('loungeChairRelax', x, y, z, Math.PI / 2, { ancho: 2.2, tela: '#b71c1c' }));
   });
   s.b(-7.8, 0, -6.6, -6.4, 3, -5.2, '#d32f2f');
   s.d(-7.7, 3, -6.5, -6.5, 4.2, -5.3, '#fff9c4');
@@ -494,24 +417,21 @@ function cine(k, s) {
 }
 
 function biblioteca(k, s) {
-  const libros = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#fb8c00'];
-  [[-8, -4], [4, 8]].forEach(([x0, x1]) => {
-    s.b(x0, 0, -6.6, x1, 6.8, -5.4, '#5d4037');
-    for (let f = 0; f < 4; f++) {
-      for (let i = 0; i < 6; i++) {
-        const w = (x1 - x0 - 0.4) / 6;
-        s.d(x0 + 0.2 + i * w, 0.6 + f * 1.6, -5.42, x0 + 0.2 + (i + 1) * w - 0.08, 1.8 + f * 1.6, -5.36, libros[(i + f) % libros.length]);
-      }
-    }
-  });
-  s.b(-2, 1.6, -1.2, 2, 2, 1.2, '#5d4037');
-  s.b(-0.3, 0, -0.3, 0.3, 1.6, 0.3, '#4e342e');
-  s.b(-0.7, 0, 1.8, 0.7, 1.2, 3.2, '#795548');
-  s.esf(0.7, '#42a5f5', 1.2, 2.7, -0.4);
-  s.b(5, 0, 1.5, 7.5, 1.4, 4.5, '#8d6e63');
-  s.b(7, 1.4, 1.5, 7.5, 3, 4.5, '#8d6e63');
-  s.d(-6, 0, -4, 3, 0.06, 4, '#a1887f');
-  pintura(k, pieza(s, 8.62, 0, '-x'), 'ronda_nocturna.jpg', 2, 4.8, 0, 2.6);
+  const P = pieza(s, 0, 0, '+z');
+  alfombra(s, -6, -4, 3, 4, '#8d6e63');
+  estanteria(k, pieza(s, -6, -6.1, '+z'), 4.4);
+  estanteria(k, pieza(s, 6, -6.1, '+z'), 4.4);
+  const mesa = pieza(s, -1.5, 0, '+z');
+  mesa.modelo('table', 0, 0, { ancho: 4.4, fondo: 2.4, alto: 2.1 });
+  mesa.modelo('books', -0.8, 0, { y: 2.1, solido: false, escala: 1.4 });
+  mesa.modelo('lampRoundTable', 1.4, -0.4, { y: 2.1, solido: false });
+  mesa.modelo('chairCushion', 0, 1.9, { rot: Math.PI, tela: '#7b4a35' });
+  mesa.modelo('chairCushion', 0, -1.9, { tela: '#7b4a35' });
+  s.esf(0.7, '#42a5f5', -3.3, 2.8, -0.4);
+  sofa(k, pieza(s, 6.4, 3, '-x'), 2.8, '#7b4a35');
+  lamparaPie(k, P, 7.6, 5.5);
+  planta(k, P, -7.8, 5.6);
+  pintura(k, pieza(s, 8.62, 0, '-x'), 'ronda_nocturna.jpg', -2, 5, 0, 2.6);
 }
 
 // ---------- Piso 3 ----------
@@ -529,10 +449,7 @@ function salonFiestas(k, s) {
   s.b(-8, 0, -3, -6.2, 2.4, 3, '#212121');
   s.cil(0.6, 0.15, '#424242', -7.1, 2.4, -1.2, 16);
   s.cil(0.6, 0.15, '#424242', -7.1, 2.4, 1.2, 16);
-  [-5.8, 5.2].forEach((z) => {
-    s.b(-8, 0, z, -6.3, 4.6, z + 1.6, '#111111');
-    s.cil(0.5, 0.1, '#616161', -6.25, 3.3, z + 0.8, 12).rotation.z = Math.PI / 2;
-  });
+  [-5, 6].forEach((z) => s.modelo('speaker', -7.4, 0, z, Math.PI / 2, { alto: 4.8 }));
   colores.forEach((c, i) => s.d(-6 + i * 4, 7.2, -6.6, -4.5 + i * 4, 7.6, -6.2, brillo(k, c)));
   s.cartel('FIESTA VECIBANDA', 7, 1.4, 1, 5.2, -6.55, 0, '#ff4081', '#1a0033');
 }
@@ -546,8 +463,8 @@ function estudioMusica(k, s) {
   s.cil(0.8, 0.06, '#ffd54f', -6.8, 3, -5, 16);
   s.cil(0.8, 0.06, '#ffd54f', -3.2, 3, -5, 16);
   s.b(-5.3, 0, -1.8, -4.7, 1.2, -1.2, '#424242');
-  s.b(2, 0, -6.6, 4.2, 3, -5.2, '#212121');
-  s.d(2.2, 0.4, -5.22, 4, 2.6, -5.18, '#616161');
+  s.modelo('speaker', 2.4, 0, -5.9, 0, { alto: 3.4 });
+  s.modelo('speaker', 3.9, 0, -5.9, 0, { alto: 3.4 });
   s.b(5, 0, -6.6, 6.6, 2, -5.4, '#212121');
   [[5.5, '#ff7043'], [7.2, '#29b6f6']].forEach(([x, c]) => {
     s.d(x - 0.6, 2, -6.62, x + 0.6, 3.6, -6.5, c);
@@ -569,11 +486,12 @@ function bar(k, s) {
   });
   s.d(2.8, 3.3, -6.7, 7.8, 3.4, -6.2, '#5d4037');
   s.d(2.8, 4.9, -6.7, 7.8, 5, -6.2, '#5d4037');
-  [[3.8, -3.6], [5.2, -3.6], [5.2, 2.9], [5.2, -1.2]].forEach(([x, z]) => {
-    s.cil(0.5, 0.25, '#e53935', x, 1.6, z, 10);
-    s.b(x - 0.1, 0, z - 0.1, x + 0.1, 1.6, z + 0.1, '#9e9e9e');
+  [[3.6, -3.4, 0], [5.2, -3.4, 0], [5, 1, -Math.PI / 2], [5, -1.5, -Math.PI / 2]].forEach(([x, z, r]) => {
+    s.modelo('stoolBar', x, 0, z, r + Math.PI, { tela: '#c62828' });
   });
-  s.b(-2, 0, 2, 0, 2.6, 4, '#4e342e');
+  s.modelo('tableRound', -1, 0, 3, 0, { ancho: 2.6 });
+  s.modelo('stoolBar', -2.8, 0, 3, 0, { tela: '#c62828' });
+  s.modelo('stoolBar', 0.8, 0, 3, 0, { tela: '#c62828' });
   s.cartel('BAR VECIBANDA', 6, 1.3, -1, 5.5, -6.55, 0, '#00e5ff', '#0d0221');
   pintura(k, pieza(s, -8.62, 0, '+x'), 'cafe_noche.jpg', 0, 4.8, 0, 3);
 }
@@ -602,12 +520,13 @@ function cuarto(k, s, p) {
   cama(k, pieza(s, -6.05, 0, '+x'), 3.6, 4.6, p.remera);
   mesaLuz(k, pieza(s, -7.9, 2.9, '+x'), 0, 0);
   mesaLuz(k, pieza(s, -7.9, -2.9, '+x'), 0, 0);
-  s.d(-8.68, 3.95, -1.55, -8.6, 7.05, 1.55, C.negro);
+  s.d(-8.68, 3.95, -1.55, -8.6, 7.05, 1.55, '#24282c');
   s.plano(k.retrato(p, 2.8, 2.8), -8.55, 5.5, 0, Math.PI / 2);
   escritorio(k, pieza(s, 4.2, 6, '-z'), 4, p.remera);
   placard(k, pieza(s, 8, -1.5, '-x'), 4.5);
-  s.b(4.2, 0, -3.9, 5.8, 1, -2.3, '#424242');
+  s.modelo('loungeChair', 4.6, 0, -3.4, -Math.PI / 2 - 0.4, { tela: p.remera });
   planta(k, P, -7.6, 5.7);
+  P.modelo('coatRackStanding', 7.6, 5.8, { alto: 5 });
   s.cartel(`CUARTO DE ${p.nombre.toUpperCase()}`, 7, 1.2, 0, 8.2, -6.7, 0, '#ffffff', p.remera);
   s.cartel('VECIBANDA', 4, 1, 4.2, 6.9, 6.7, Math.PI, '#ffd23f', '#212121');
 }
@@ -615,21 +534,17 @@ function cuarto(k, s, p) {
 function comedor(k, s) {
   const P = pieza(s, 0, 0, '+z');
   alfombra(s, -6.2, -3.8, 6.2, 3.8, '#b7a48e');
-  P.b(-4.8, 1.85, -1.4, 4.8, 2.05, 1.4, C.nogal);
-  P.d(-4.2, 0, -1.1, -3.9, 1.85, 1.1, C.negro);
-  P.d(3.9, 0, -1.1, 4.2, 1.85, 1.1, C.negro);
+  P.modelo('table', 0, 0, { ancho: 9.6, fondo: 2.8, alto: 2.05 });
   P.cil(0.25, 0.9, '#e0ddd5', 0, 2.05, 0, 10);
   P.d(-0.15, 2.95, -0.15, 0.15, 3.6, 0.15, '#3d8b3d');
   for (const u of [-3.3, -1.1, 1.1, 3.3]) {
     silla(k, pieza(s, u, -2.1, '+z'));
     silla(k, pieza(s, u, 2.1, '-z'));
   }
-  silla(k, pieza(s, -5.7, 0, '+x'));
-  silla(k, pieza(s, 5.7, 0, '-x'));
+  silla(k, pieza(s, -5.5, 0, '+x'));
+  silla(k, pieza(s, 5.5, 0, '-x'));
   const ap = pieza(s, -8.1, 0, '+x');
-  ap.b(-3, 0.3, -0.55, 3, 2.4, 0.5, C.nogal);
-  ap.d(-3, 0, -0.45, 3, 0.3, 0.4, C.negro);
-  ap.d(-0.02, 0.4, 0.5, 0.02, 2.3, 0.52, C.negro);
+  ap.modelo('cabinetTelevisionDoors', 0, 0, { ancho: 6, alto: 2.4, fondo: 1.1, atras: -0.55 });
   ap.cil(0.3, 1, '#4fc3f7', -1.8, 2.4, 0, 8);
   ap.cil(0.25, 1.4, '#ffffff', 1.8, 2.4, 0, 8);
   pintura(k, pieza(s, -8.62, 0, '+x'), 'ronda_nocturna.jpg', 0, 5.4, 0, 3);
@@ -683,11 +598,7 @@ function playroom(k, s) {
   // Carpa.
   s.cono(1.7, 3.6, '#ffcc80', -6.2, 0, -3.2, 6);
   // Oso de peluche gigante.
-  s.esf(1.3, '#a1785c', 7.2, 1.3, 4.8);
-  s.esf(0.85, '#a1785c', 7.2, 3.2, 4.8);
-  s.esf(0.3, '#8d6347', 6.6, 3.9, 4.8);
-  s.esf(0.3, '#8d6347', 7.8, 3.9, 4.8);
-  s.esf(0.35, '#d7b899', 7.2, 3.05, 5.5);
+  s.modelo('bear', 7, 0, 4.8, -Math.PI / 2 - 0.5, { alto: 4.2 });
   s.cartel('PLAYROOM', 5, 1.2, 0, 7.6, -6.7, 0, '#ffffff', '#ff7043');
 }
 
@@ -706,8 +617,8 @@ function spa(k, s) {
   s.b(1, 0, -5.1, 1.4, 1.2, -1.4, '#ffffff');
   s.b(7.2, 0, -5.1, 7.6, 1.2, -1.4, '#ffffff');
   s.d(1.4, 0.2, -5.1, 7.2, 1, -1.4, k.agua);
-  s.b(-2, 0, 1, 2, 1.6, 2.6, '#eceff1');
-  [[7, 2.5], [-7.5, 2.5]].forEach(([x, z]) => s.d(x - 0.7, 0, z - 0.7, x + 0.7, 2.6, z + 0.7, '#2e7d32'));
+  [-1.8, 1.8].forEach((x) => s.modelo('loungeChairRelax', x, 0, 3.2, Math.PI, { ancho: 2.4, tela: '#f3f1ec' }));
+  [[7, 2.5], [-7.5, 2.5]].forEach(([x, z]) => s.modelo('pottedPlant', x, 0, z, 0, { alto: 3.4 }));
   s.cartel('SPA', 3, 1.1, 4.3, 6.6, -6.7, 0, '#ffffff', '#00897b');
 }
 
@@ -718,22 +629,24 @@ function karaoke(k, s) {
   s.esf(0.3, '#212121', -6.5, 4.7, 0);
   s.b(-8.66, 2.5, -3.5, -8.6, 7.5, 3.5, '#111111');
   s.d(-8.6, 2.7, -3.3, -8.56, 7.3, 3.3, brillo(k, '#e1bee7'));
-  [-3, 3].forEach((z) => s.b(-8.6, 0, z - 0.7, -7.2, 3.5, z + 0.7, '#212121'));
-  s.b(3, 0, -3.5, 4.5, 1.3, 3.5, '#d81b60');
-  s.b(4.5, 1.3, -3.5, 5, 2.6, 3.5, '#d81b60');
+  [-3, 3].forEach((z) => s.modelo('speaker', -7.9, 0.6, z, Math.PI / 2, { alto: 3.6 }));
+  sofa(k, pieza(s, 4, 0, '-x'), 7, '#d81b60');
+  s.modelo('tableCoffeeGlass', 1.2, 0, 0, Math.PI / 2, { ancho: 3, fondo: 1.6, alto: 1.1 });
   ['#ff1744', '#00e5ff', '#76ff03', '#ffea00'].forEach((c, i) => s.d(-6 + i * 4, 9.2, -0.4, -5 + i * 4, 9.5, 0.4, brillo(k, c)));
   s.cartel('KARAOKE', 5, 1.2, 0, 7.6, -6.7, 0, '#ff4081', '#1a0033');
 }
 
 function streaming(k, s) {
-  s.d(-3, 0, -2, 5, 0.06, 4, '#263238');
-  s.b(1, 0, 3.6, 6.6, 2, 5, '#212121');
-  [2.4, 4.6].forEach((x, i) => {
-    s.d(x - 1, 2, 4.4, x + 1, 3.4, 4.6, '#111111');
-    s.d(x - 0.9, 2.1, 4.38, x + 0.9, 3.3, 4.4, brillo(k, i ? '#7c4dff' : '#00e5ff'));
+  alfombra(s, -3, -2, 5, 4, '#263238');
+  const P = pieza(s, 3.8, 4.3, '-z');
+  P.modelo('desk', 0, 0, { ancho: 5.6, atras: -0.7 });
+  const alto = P.medida('desk', { ancho: 5.6 }).y;
+  [-1.2, 1.2].forEach((u, i) => {
+    P.modelo('computerScreen', u, 0, { atras: -0.6, y: alto, solido: false });
+    P.d(u - 0.75, alto + 0.45, -0.04, u + 0.75, alto + 1.4, -0.02, brillo(k, i ? '#7c4dff' : '#00e5ff'));
   });
-  s.b(3, 0, 1.6, 4.4, 1.5, 2.8, '#212121');
-  s.b(3, 1.5, 1.4, 4.4, 4, 1.7, '#e53935');
+  P.modelo('computerKeyboard', 0, 0.4, { y: alto, solido: false });
+  P.modelo('chairDesk', 0, 2.2, { rot: Math.PI, tela: '#e53935' });
   s.b(0.4, 0, 2, 0.6, 3.8, 2.2, '#9e9e9e');
   s.cil(0.8, 0.12, '#fffde7', 0.5, 4.2, 2.1, 20).rotation.x = Math.PI / 2;
   s.d(8.6, 0, -4, 8.66, 7, 3, '#00c853');

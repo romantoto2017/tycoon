@@ -28,7 +28,7 @@ export const COBRAR = { x: -55.5, z: 27.8 };
 // Patio trasero y alrededores.
 export const PISCINA = { x0: -12, x1: 12, z0: -62, z1: -44, alto: 2.4 };
 export const CANCHA = { x0: 28, x1: 60, z0: -84, z1: -46 };
-export const GARAGE = { x0: 49, x1: 69, z0: 2, z1: 18 };
+export const GARAGE = { x0: 47, x1: 70.5, z0: -12, z1: 20, alto: 9 };
 
 // Ascensor: una plataforma por piso, en el fondo del núcleo.
 export const ASCENSOR = { x: -6, z: -31 };

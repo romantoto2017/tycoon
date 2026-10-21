@@ -8,7 +8,7 @@ const LAMBERT = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 const BASICO = new THREE.MeshBasicMaterial({ color: '#ffffff' });
 
 function claveDe(material) {
-  const liso = !material.transparent && !material.map;
+  const liso = !material.transparent && !material.map && !material.vertexColors;
   if (liso && material.isMeshLambertMaterial && material.emissive.getHex() === 0) return LAMBERT;
   if (liso && material.isMeshBasicMaterial) return BASICO;
   return material;
