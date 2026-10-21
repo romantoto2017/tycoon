@@ -91,16 +91,13 @@ function cohete(k, p) {
   });
 }
 
+// Sin cartel con el nombre (así lo pidió el dueño del juego).
 export function cuadro(k, g, i, datos) {
   const { piso, lado, z } = slotCuadro(i);
   const p = k.pintura(datos.archivo, 2.6, { carpeta: 'cuadros', marco: '#1d1f22' });
   p.position.set(lado * 7.72, nivel(piso) + 4.7, z);
   p.rotation.y = -lado * Math.PI / 2;
   g.add(p);
-  const cartel = k.cartel(datos.nombre, 2.6, 0.4, '#ffffff', '#24282c');
-  cartel.position.set(lado * 7.7, nivel(piso) + 2.75, z);
-  cartel.rotation.y = -lado * Math.PI / 2;
-  g.add(cartel);
 }
 
 export function cartelFinal(k, g) {
