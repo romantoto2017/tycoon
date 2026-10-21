@@ -136,18 +136,29 @@ export function obra(k, g, i, datos) {
 
 // ---------- Lujos ----------
 
-// Armero en la pared del garage con el AK-47 colgado.
+// Armero en la pared del garage: tablero, dos ganchos que salen de la pared y el AK-47
+// apoyado de costado arriba de ellos (se ve entero desde adentro del garage).
 export function armero(k, g) {
-  const x = G.x1 - 0.5;
-  const z = G.z0 + 14;
-  g.add(k.cajaDe(x - 0.15, 2.6, z - 2.2, x, 6.2, z + 2.2, '#4a5056'));
-  g.add(k.noSolido(k.cajaDe(x - 0.45, 3.6, z - 1.6, x - 0.15, 3.8, z - 1.2, '#24282c')));
-  g.add(k.noSolido(k.cajaDe(x - 0.45, 3.6, z + 1.2, x - 0.15, 3.8, z + 1.6, '#24282c')));
+  const pared = G.x1 - 0.5;
+  const zc = G.z0 + 14;
+  const y = 4;
+  const escala = 1.35;
+  g.add(k.cajaDe(pared - 0.12, 2.4, zc - 3.2, pared, 6.4, zc + 3.2, '#d6d1c8'));
+  g.add(k.noSolido(k.cajaDe(pared - 0.14, 2.4, zc - 3.2, pared - 0.12, 2.55, zc + 3.2, '#8a4b22')));
+  g.add(k.noSolido(k.cajaDe(pared - 0.14, 6.25, zc - 3.2, pared - 0.12, 6.4, zc + 3.2, '#8a4b22')));
+  // El arma: cañón hacia +z, de costado contra el tablero. Su centro está ~0,6 adelante del origen.
   const ak = k.ak47();
-  ak.position.set(x - 0.4, 4.1, z - 0.3);
+  ak.scale.setScalar(escala);
+  ak.position.set(pared - 0.42, y, zc - 0.6 * escala);
   g.add(ak);
+  // Ganchos debajo de la culata y del guardamanos (salen de la pared y doblan hacia arriba).
+  for (const dz of [-0.75, 1.1]) {
+    const z = ak.position.z + dz * escala;
+    g.add(k.noSolido(k.cajaDe(pared - 0.62, y - 0.22, z - 0.08, pared - 0.12, y - 0.1, z + 0.08, '#c9ced3')));
+    g.add(k.noSolido(k.cajaDe(pared - 0.68, y - 0.22, z - 0.08, pared - 0.58, y + 0.18, z + 0.08, '#c9ced3')));
+  }
   const cartel = k.cartel('ANTI SCHWEPA', 3.6, 0.6, '#ffffff', '#b71c1c');
-  cartel.position.set(x - 0.17, 5.6, z);
+  cartel.position.set(pared - 0.15, 5.7, zc);
   cartel.rotation.y = -Math.PI / 2;
   g.add(cartel);
 }
