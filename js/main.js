@@ -11,6 +11,7 @@ import { iniciarAudio, setVolumenes, pausarAudio, sfx } from './sfx.js';
 import * as UI from './ui.js';
 import { formato } from './util.js';
 import { cargarModelos, MODELOS } from './modelos.js';
+import { ITEMS } from './progresion.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -41,10 +42,13 @@ async function iniciar() {
   const controles = new Controles(canvas);
 
   const estado = cargar();
+  // ?completo: muestra la mansión terminada sin tocar la partida guardada.
+  const vistaCompleta = new URLSearchParams(location.search).has('completo');
+  if (vistaCompleta) estado.compras = ITEMS.map((i) => i.id);
   // Partidas guardadas antes de que el terreno fuera una compra.
   if (estado.compras.length && !estado.compras.includes('terreno')) estado.compras.unshift('terreno');
   let reiniciando = false;
-  const guardarAhora = () => { if (!reiniciando) guardar(estado); };
+  const guardarAhora = () => { if (!reiniciando && !vistaCompleta) guardar(estado); };
 
   const tycoon = new Tycoon({ escena, colisiones, estado, ui: UI, guardar: guardarAhora });
   tycoon.reconstruir();
@@ -157,7 +161,7 @@ async function iniciar() {
   $('btn-reiniciar').addEventListener('click', async () => {
     if (await UI.pedirConfirmacion()) {
       reiniciando = true;
-      borrar();
+      if (!vistaCompleta) borrar();
       location.reload();
     }
   });

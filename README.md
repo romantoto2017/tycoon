@@ -12,6 +12,10 @@ Tycoon 3D de bloques para el navegador. Es un sitio 100% estático (HTML + JS + 
 
 **Controles:** WASD / flechas para moverse, espacio para saltar, arrastrar el mouse para girar la cámara, rueda para zoom, `Esc` para la configuración. En pantalla táctil aparece un joystick y un botón de salto.
 
+## Ver la mansión terminada
+
+Agregando `?completo` al link (`https://romantoto2017.github.io/tycoon/?completo`) se abre con todo construido. Esa vista no guarda nada: la partida de verdad queda como estaba.
+
 ## Fotos de las caras
 
 - Van en `assets/caras/`. El archivo de cada uno se indica en `data/personajes.js` (campo `foto`, por ejemplo `toto.jpeg`).

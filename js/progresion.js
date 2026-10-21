@@ -204,8 +204,11 @@ const ETAPAS = {
   6: 'living', 7: 'piso_1', 8: 'piso_2', 9: 'piso_3', 10: 'techo',
 };
 
+// Una habitación se nombra por su id, pero en la lista está su último mueble.
+const real = (id) => ALIAS[id] || id;
+
 function insertarDespues(idPrevio, item) {
-  let i = lista.findIndex((x) => x.id === idPrevio);
+  let i = lista.findIndex((x) => x.id === real(idPrevio));
   if (i < 0) i = lista.length - 1;
   // Después del previo y de los especiales ya insertados ahí.
   while (lista[i + 1]?.especial) i++;
@@ -259,7 +262,8 @@ LUJOS.forEach((l) => {
   if (!lugar) return;
   const etapa = Math.min(10, Math.max(1, Math.round(l.etapa) || 1));
   const requiere = [ETAPAS[etapa], ...lugar.base];
-  const ultimo = requiere.reduce((a, id) => (lista.findIndex((x) => x.id === id) > lista.findIndex((x) => x.id === a) ? id : a));
+  const indice = (id) => lista.findIndex((x) => x.id === real(id));
+  const ultimo = requiere.reduce((a, id) => (indice(id) > indice(a) ? id : a));
   insertarDespues(ultimo, {
     id: `lujo_${l.id}`, nombre: l.nombre, precio: l.precio, tipo: 'construccion', especial: true,
     requiere, boton: lugar.boton, construir: lugar.construir,
