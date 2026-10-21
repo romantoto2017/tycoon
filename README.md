@@ -11,7 +11,7 @@ Tycoon 3D de bloques para el navegador. Es un sitio 100% estático (HTML + JS + 
 > No se puede abrir con doble clic en `index.html` (el navegador bloquea los módulos). Usá el link de Pages.
 
 **Controles (al estilo Roblox):**
-- PC: WASD / flechas para moverse, espacio para saltar, arrastrar el mouse para girar la cámara, rueda o `I`/`O` para el zoom (al máximo entra en primera persona), `,`/`.` para girar la cámara, `Shift` para el Shift Lock y `Esc` para la configuración.
+- PC: WASD / flechas para moverse, espacio para saltar, arrastrar el mouse para girar la cámara, rueda o `I`/`O` para el zoom (al máximo entra en primera persona), `,`/`.` para girar la cámara, `Shift` para el Shift Lock, `C` para agacharse (solo Jeipi) y `Esc` para la configuración.
 - Celu (acostado): el joystick aparece donde apoyás el pulgar izquierdo, arrastrás el resto de la pantalla para mirar, pellizcás para el zoom y el botón de la flecha salta (si lo mantenés, salta seguido; también salta solo al chocar con algo bajo). En Android se pone en pantalla completa y horizontal al tocar Jugar; en iPhone conviene agregarlo a la pantalla de inicio.
 
 ## Ver la mansión terminada
@@ -23,6 +23,7 @@ Agregando `?completo` al link (`https://romantoto2017.github.io/tycoon/?completo
 - Van en `assets/caras/`. El archivo de cada uno se indica en `data/personajes.js` (campo `foto`, por ejemplo `toto.jpeg`).
 - La foto va en el frente de la cabeza. La nuca, los costados y la parte de arriba se dibujan solos con el color de pelo y de piel de la foto.
 - En `data/personajes.js` podés forzar `piel` y `pelo` (colores), `peinado` (`'liso'`, `'ondulado'` o `'rulos'`) y `cuerpo: 'gordo'`. Lo que no pongas se saca de la foto.
+- `alto`: (opcional) Jeipi tiene 1.35: es más alto, no entra por las puertas parado y tiene el botón de agacharse.
 - `remeraFotos` pone una remera con imágenes (frente con el diseño + tela para espalda y mangas). La de Bauti sale de `assets/caras/glassybauti.jpg`, recortada con `herramientas/remera_glassy.py` en `assets/ropa/`.
 - Si querés una nuca propia (por ejemplo hecha con IA), subila a `assets/caras/` y poné su nombre en `fotoAtras` (ej. `fotoAtras: 'toto_atras.jpeg'`).
 - Si la cara sale mal encuadrada, ajustá `recorte: [centroX, centroY, tamaño]` en `data/personajes.js`:

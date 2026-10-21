@@ -13,7 +13,8 @@ export const ZOOM = { inicial: 12.5, min: 0.5, max: 40, primeraPersona: 1.2 };
 
 // Controles al estilo Roblox.
 // PC: WASD/flechas, espacio, arrastrar con el mouse (botón derecho o izquierdo) para girar la
-// cámara, rueda o I/O para el zoom, coma/punto para girar de a poco y Shift para el Shift Lock.
+// cámara, rueda o I/O para el zoom, coma/punto para girar de a poco, Shift para el Shift Lock
+// y C para agacharse (solo los personajes que pueden).
 // Celu: joystick que aparece donde apoyás el pulgar izquierdo, arrastrar el resto de la
 // pantalla para girar, pellizcar para el zoom y el botón de salto (mantenerlo salta seguido).
 export class Controles {
@@ -27,6 +28,7 @@ export class Controles {
     this.pitch = 0.35;
     this.dist = ZOOM.inicial;
     this.shiftLock = false;
+    this.agacharse = false; // solo cuenta si el personaje puede (Jeipi)
     this.joy = { x: 0, y: 0 };
     this.saltoTactil = false;
     this.punteros = new Map(); // pointerId -> { tipo: 'camara'|'stick', x, y, x0, y0 }
@@ -95,6 +97,7 @@ export class Controles {
 
   atajo(code) {
     if (code === 'ShiftLeft' || code === 'ShiftRight') this.ponerShiftLock(!this.shiftLock);
+    else if (code === 'KeyC') this.agacharse = !this.agacharse;
     else if (code === 'KeyI') this.zoom(-Math.max(1, this.dist * 0.2));
     else if (code === 'KeyO') this.zoom(Math.max(1, this.dist * 0.2));
     else if (code === 'Comma') this.yaw += Math.PI / 4;

@@ -6,12 +6,13 @@ export const SPAWN = { x: 0, z: 48 };
 
 // Mansión moderna: frente hacia +Z (la calle). 4 pisos (0 a 3) + terraza.
 // Planta: núcleo central (hall + escaleras) en x[-8,8]; a cada lado dos columnas de
-// habitaciones (x 8..26 y 26..44), adelante (z 0..-14) y atrás (z -20..-34),
-// con un pasillo en z[-20,-14] que las conecta.
+// habitaciones (x 8..26 y 26..44), adelante (z 0..-13) y atrás (z -21..-34),
+// con un pasillo ancho en z[-21,-13] que las conecta (puertas de 6).
 export const MANSION = { x0: -44, x1: 44, z0: -34, z1: 0 };
 export const NUCLEO = 8;
 export const COLUMNA = 26;
-export const PASILLO = { z0: -20, z1: -14 };
+export const PASILLO = { z0: -21, z1: -13 };
+export const ANCHO_PUERTA = 6;
 export const ALTO_PISO = 10;
 export const LOSA = 0.4;
 export const PISOS = 4;

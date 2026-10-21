@@ -4,6 +4,7 @@ import { SPAWN } from './constantes.js';
 
 const RADIO = 0.75;
 const ALTO = 5.3;
+const AGACHADO = 0.6;   // alto agachado (proporción)
 const PASO = 0.75;      // escalón que se sube caminando
 // Como en Roblox (1 unidad ≈ 1 stud): camina a 16, gravedad 196,2 y salto de 50
 // (sube unas 6,4 unidades, más alto que la cabeza, y dura medio segundo).
@@ -19,6 +20,9 @@ export class Jugador {
     this.pos = new THREE.Vector3(SPAWN.x, 0, SPAWN.z);
     this.enAgua = false;
     this.factorVel = 1; // por personaje (data/personajes.js: velocidad)
+    this.escala = 1; // Jeipi es más alto (data/personajes.js: alto)
+    this.agachado = false;
+    this.quiereAgacharse = false;
     this.mirarA = null; // ángulo fijo (Shift Lock / primera persona): mira hacia donde mira la cámara
     this.autoSalto = false; // en el celu, como en Roblox
     this.trabado = 0; // alto del obstáculo contra el que chocó este cuadro
@@ -39,12 +43,40 @@ export class Jugador {
     escena.add(this.sombra);
   }
 
+  // Alto actual del cuerpo (para chocar con techos y dinteles).
+  get alto() { return ALTO * this.escala * (this.agachado ? AGACHADO : 1); }
+
+  setEscala(e) {
+    this.escala = e;
+    this.agachado = false;
+    this.quiereAgacharse = false;
+    this.contenedor.scale.y = 1;
+    if (this.modelo) this.modelo.grupo.scale.setScalar(e);
+  }
+
+  // Pararse solo si hay lugar arriba (si no, sigue agachado hasta salir del dintel).
+  actualizarAgachado(colisiones) {
+    if (this.quiereAgacharse === this.agachado) return;
+    if (!this.quiereAgacharse) {
+      const p = this.pos;
+      const r = RADIO * 0.9;
+      const parado = ALTO * this.escala;
+      const bajo = parado * AGACHADO;
+      const choca = colisiones.some((b) => p.x + r > b.min.x && p.x - r < b.max.x && p.z + r > b.min.z && p.z - r < b.max.z
+        && b.min.y >= p.y + bajo - 0.05 && b.min.y < p.y + parado);
+      if (choca) return;
+    }
+    this.agachado = this.quiereAgacharse;
+    this.contenedor.scale.y = this.agachado ? AGACHADO : 1;
+  }
+
   setModelo(modelo) {
     if (this.modelo) {
       this.contenedor.remove(this.modelo.grupo);
       this.modelo.liberar();
     }
     this.modelo = modelo;
+    modelo.grupo.scale.setScalar(this.escala);
     this.contenedor.add(modelo.grupo);
   }
 
@@ -53,7 +85,8 @@ export class Jugador {
   actualizar(dt, dir, saltar, colisiones, agua = []) {
     const p = this.pos;
     this.enAgua = agua.some((b) => p.x > b.min.x && p.x < b.max.x && p.z > b.min.z && p.z < b.max.z && p.y + 1.5 < b.max.y && p.y > b.min.y - 1);
-    const vel = VEL_CAMINAR * this.factorVel * (this.enAgua ? 0.6 : 1);
+    this.actualizarAgachado(colisiones);
+    const vel = VEL_CAMINAR * this.factorVel * (this.enAgua ? 0.6 : 1) * (this.agachado ? 0.55 : 1);
     this.vel.x = dir.x * vel;
     this.vel.z = dir.z * vel;
     let salto = false;
@@ -90,7 +123,7 @@ export class Jugador {
     p.z = THREE.MathUtils.clamp(p.z + this.vel.z * dt, -LIMITE, LIMITE);
     this.trabado = 0;
     for (const b of colisiones) {
-      if (b.max.y <= p.y + PASO || b.min.y >= p.y + ALTO) continue;
+      if (b.max.y <= p.y + PASO || b.min.y >= p.y + this.alto) continue;
       const ox1 = p.x + RADIO - b.min.x;
       const ox2 = b.max.x - (p.x - RADIO);
       if (ox1 <= 0 || ox2 <= 0) continue;
@@ -119,8 +152,8 @@ export class Jugador {
       if (p.x + r <= b.min.x || p.x - r >= b.max.x || p.z + r <= b.min.z || p.z - r >= b.max.z) continue;
       if (b.max.y <= yAntes + PASO + 0.001) {
         if (b.max.y > suelo) suelo = b.max.y;
-      } else if (this.vel.y > 0 && b.min.y >= yAntes + ALTO - 0.01 && p.y + ALTO > b.min.y) {
-        p.y = b.min.y - ALTO; // cabezazo contra un techo
+      } else if (this.vel.y > 0 && b.min.y >= yAntes + this.alto - 0.01 && p.y + this.alto > b.min.y) {
+        p.y = b.min.y - this.alto; // cabezazo contra un techo
         this.vel.y = 0;
       }
     }

@@ -119,9 +119,21 @@ async function iniciar() {
     }
   };
 
+  // Agacharse: botón exclusivo de los personajes altos (Jeipi). Toca para agacharse o pararse.
+  let puedeAgacharse = false;
+  let ultimoAgachar = null;
+  const btnAgachar = document.getElementById('btn-agachar');
+  btnAgachar.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    controles.agacharse = !controles.agacharse;
+  });
+
   const ponerPersonaje = async (p) => {
     jugador.setModelo(crearPersonaje(p, await cargarCabeza(p)));
     jugador.factorVel = p.velocidad || 1;
+    jugador.setEscala(p.alto || 1);
+    puedeAgacharse = (p.alto || 1) > 1;
+    controles.agacharse = false;
     estado.personaje = p.id;
     guardarAhora();
   };
@@ -237,7 +249,7 @@ async function iniciar() {
     const primera = controles.primeraPersona && !conduciendo;
     jugador.mirarA = (primera || controles.shiftLock) && !conduciendo ? controles.yaw + Math.PI : null;
     objetivo.lerp(jugador.pos, Math.min(1, dt * 14));
-    const cabeza = new THREE.Vector3(objetivo.x, objetivo.y + 4.5, objetivo.z);
+    const cabeza = new THREE.Vector3(objetivo.x, objetivo.y + jugador.alto * 0.85, objetivo.z);
     if (controles.shiftLock && !primera) {
       // Shift Lock: la cámara va un poco a la derecha, por encima del hombro.
       derecha.set(Math.cos(controles.yaw), 0, -Math.sin(controles.yaw));
@@ -287,9 +299,16 @@ async function iniciar() {
     } else {
       controles.direccion(dir);
       jugador.autoSalto = controles.esTactil;
+      jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
     }
     const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : '';
+    const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
+    if (estadoAgachar !== ultimoAgachar) {
+      ultimoAgachar = estadoAgachar;
+      btnAgachar.classList.toggle('oculto', !estadoAgachar);
+      btnAgachar.setAttribute('aria-pressed', estadoAgachar || 'false');
+    }
     if (texto !== textoManejar) {
       textoManejar = texto;
       btnManejar.textContent = texto;

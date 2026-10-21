@@ -1,6 +1,6 @@
 // Muebles de cada habitación. Coordenadas locales: (0,0) es el centro de la habitación,
 // x de -8 a 8, z de -6.6 a 6.6, y desde el piso terminado.
-import { nivel, ALTO_PISO, LOSA } from './constantes.js';
+import { nivel, ALTO_PISO, LOSA, PASILLO } from './constantes.js';
 import { colgante } from './arquitectura.js';
 
 // Habitaciones: W/E = ala oeste/este, I/O = columna interior/exterior, F/B = adelante/atrás.
@@ -11,11 +11,29 @@ const LUGARES = {
 
 // Cada diseño se dibujó para un tipo de habitación ("nativo": WF, WB, EF o EB). Si va en
 // otra, se refleja en X (oeste/este) y/o en Z (adelante/atrás) para que la puerta quede libre.
+// Los diseños se hicieron para habitaciones de 13,5 de fondo; desde que el pasillo es más
+// ancho miden menos, así que las posiciones en Z se comprimen hacia la pared de enfrente
+// (la del pasillo se corre y la otra queda donde estaba).
+const MEDIO_FONDO = 6.75;
+function fondoZ(lugar, ez) {
+  const [, cz] = LUGARES[lugar];
+  const pasilloAdelante = lugar[2] === 'F'; // las de adelante tienen el pasillo hacia -z
+  const pared = pasilloAdelante ? PASILLO.z1 + 0.25 : PASILLO.z0 - 0.25;
+  const libre = pasilloAdelante ? pared - (cz - MEDIO_FONDO) : (cz + MEDIO_FONDO) - pared;
+  const k = Math.min(1, (2 * MEDIO_FONDO - Math.max(0, libre)) / (2 * MEDIO_FONDO));
+  // w: coordenada local ya reflejada (positiva = hacia +z del mundo).
+  return (z) => {
+    const w = ez * z;
+    return pasilloAdelante ? MEDIO_FONDO - (MEDIO_FONDO - w) * k : -MEDIO_FONDO + (w + MEDIO_FONDO) * k;
+  };
+}
+
 function sala(k, g, lugar, piso, nativo) {
   const [cx, cz] = LUGARES[lugar];
   const y = nivel(piso);
   const ex = lugar[0] === nativo[0] ? 1 : -1;
   const ez = lugar[2] === nativo[1] ? 1 : -1;
+  const fz = fondoZ(lugar, ez);
   const rango = (a, b, e) => (e > 0 ? [a, b] : [-b, -a]);
   const girar = (rot) => {
     let r = ex > 0 ? rot : -rot;
@@ -25,7 +43,7 @@ function sala(k, g, lugar, piso, nativo) {
   const s = {
     b(x0, y0, z0, x1, y1, z1, color) {
       const [a0, a1] = rango(x0, x1, ex);
-      const [c0, c1] = rango(z0, z1, ez);
+      const [c0, c1] = [fz(z0), fz(z1)].sort((p, q) => p - q);
       const m = k.cajaDe(cx + a0, y + y0, cz + c0, cx + a1, y + y1, cz + c1, color);
       g.add(m);
       return m;
@@ -33,23 +51,23 @@ function sala(k, g, lugar, piso, nativo) {
     // Decoración que no choca.
     d(x0, y0, z0, x1, y1, z1, color) { return k.noSolido(s.b(x0, y0, z0, x1, y1, z1, color)); },
     cil(r, h, color, x, y0, z, seg = 12) {
-      const m = k.cilindro(r, r, h, color, cx + ex * x, y + y0 + h / 2, cz + ez * z, seg);
+      const m = k.cilindro(r, r, h, color, cx + ex * x, y + y0 + h / 2, cz + fz(z), seg);
       g.add(m);
       return m;
     },
     esf(r, color, x, y0, z) {
-      const m = k.esfera(r, color, cx + ex * x, y + y0, cz + ez * z);
+      const m = k.esfera(r, color, cx + ex * x, y + y0, cz + fz(z));
       g.add(m);
       return m;
     },
     cono(r, h, color, x, y0, z, seg = 8) {
-      const m = k.cono(r, h, color, cx + ex * x, y + y0 + h / 2, cz + ez * z, seg);
+      const m = k.cono(r, h, color, cx + ex * x, y + y0 + h / 2, cz + fz(z), seg);
       g.add(m);
       return m;
     },
     // Coloca una lámina (cartel, retrato) que mira hacia rotY.
     plano(m, x, y0, z, rotY) {
-      m.position.set(cx + ex * x, y + y0, cz + ez * z);
+      m.position.set(cx + ex * x, y + y0, cz + fz(z));
       m.rotation.y = girar(rotY);
       g.add(m);
       return m;
@@ -62,7 +80,7 @@ function sala(k, g, lugar, piso, nativo) {
       return s.plano(k.modelo(nombre, opts), x, y0, z, rotY);
     },
     medida: (nombre, opts) => k.medida(nombre, opts),
-    luz: () => colgante(k, g, cx, y + ALTO_PISO - LOSA, cz),
+    luz: () => colgante(k, g, cx, y + ALTO_PISO - LOSA, cz + fz(0)),
   };
   return s;
 }
@@ -490,8 +508,8 @@ const spa = [
     s.b(7.2, 0, -5.1, 7.6, 1.2, -1.4, '#ffffff');
     s.d(1.4, 0.2, -5.1, 7.2, 1, -1.4, k.agua);
   }),
-  M('reposeras', 'Reposeras', 0, 3.4, (k, s) => [-1.8, 1.8].forEach((x) => s.modelo('loungeChairRelax', x, 0, 3.2, Math.PI, { ancho: 2.4, tela: '#f3f1ec' }))),
-  M('plantas', 'Plantas', 5.6, 4.6, (k, s) => [[7, 2.5], [-7.5, 2.5]].forEach(([x, z]) => s.modelo('pottedPlant', x, 0, z, 0, { alto: 3.4 }))),
+  M('reposeras', 'Reposeras', 0, 2, (k, s) => [-4.2, 4.2].forEach((x) => s.modelo('loungeChairRelax', x, 0, 2.6, Math.PI, { ancho: 2.4, tela: '#f3f1ec' }))),
+  M('plantas', 'Plantas', 6, 5.8, (k, s) => [[7, 2.5], [-7.5, 2.5]].forEach(([x, z]) => s.modelo('pottedPlant', x, 0, z, 0, { alto: 3.4 }))),
 ];
 
 // ---------- Piso 1 ----------
@@ -540,9 +558,9 @@ const salaGamer = [
     s.d(7.55, 1.7, 3.5, 7.6, 4.3, 6.4, brillo(k, '#7c4dff'));
   }),
   M('sillon', 'Sillón', 1.2, 4.9, (k, s) => sofa(k, pieza(s, 1.4, 4.9, '+x'), 3.4, '#3949ab')),
-  M('puffs', 'Puffs', -1, 0.6, (k, s) => {
-    s.modelo('loungeChair', -1, 0, 0.6, Math.PI / 2, { tela: '#ff4081' });
-    s.modelo('loungeChair', -1, 0, -2.6, Math.PI / 2, { tela: '#00bcd4' });
+  M('puffs', 'Puffs', -2.2, 1.4, (k, s) => {
+    s.modelo('loungeChair', -2.2, 0, 1.4, Math.PI / 2, { tela: '#ff4081' });
+    s.modelo('loungeChair', -2.2, 0, -1.6, Math.PI / 2, { tela: '#00bcd4' });
   }),
   M('neon', 'Luces neón', -5, 3, (k, s) => {
     s.d(-8, 7.1, -6.6, 8, 7.3, -6.4, brillo(k, '#ff00ff'));
@@ -576,9 +594,9 @@ const cine = [
     s.b(7.6, 1, -6, 7.95, 6.8, 6, '#000000');
     s.d(7.55, 1.3, -5.7, 7.6, 6.5, 5.7, brillo(k, '#e3f2fd'));
   }),
-  M('tarima', 'Tarima', -2.4, 0, (k, s) => s.b(-4.2, 0, -6, -0.6, 0.5, 4.5, '#4a148c')),
-  M('butacas1', 'Butacas de adelante', 2.5, -1, (k, s) => [-4, -1, 2].forEach((z) => s.modelo('loungeChairRelax', 2.5, 0, z, Math.PI / 2, { ancho: 2.2, tela: '#b71c1c' }))),
-  M('butacas2', 'Butacas de atrás', -5.6, 5.4, (k, s) => [-4, -1, 2].forEach((z) => s.modelo('loungeChairRelax', -2.3, 0.5, z, Math.PI / 2, { ancho: 2.2, tela: '#b71c1c' }))),
+  M('tarima', 'Tarima', -2.4, 0, (k, s) => s.b(-4.2, 0, -6, -0.6, 0.5, 5, '#4a148c')),
+  M('butacas1', 'Butacas de adelante', 2.5, 0, (k, s) => [-2.4, 0.6, 3.6].forEach((z) => s.modelo('loungeChairRelax', 2.5, 0, z, Math.PI / 2, { ancho: 2.2, tela: '#b71c1c' }))),
+  M('butacas2', 'Butacas de atrás', -5.6, 5.4, (k, s) => [-2.4, 0.6, 3.6].forEach((z) => s.modelo('loungeChairRelax', -2.3, 0.5, z, Math.PI / 2, { ancho: 2.2, tela: '#b71c1c' }))),
   M('pochoclos', 'Máquina de pochoclos', -7.1, -4.6, (k, s) => {
     s.b(-7.8, 0, -6.6, -6.4, 3, -5.2, '#d32f2f');
     s.d(-7.7, 3, -6.5, -6.5, 4.2, -5.3, '#fff9c4');
@@ -846,7 +864,7 @@ export function botonMueble(diseno, lugar, piso, [x, z]) {
   const [cx, cz] = LUGARES[lugar];
   const ex = lugar[0] === nativo[0] ? 1 : -1;
   const ez = lugar[2] === nativo[1] ? 1 : -1;
-  return [cx + ex * x, nivel(piso), cz + ez * z];
+  return [cx + ex * x, nivel(piso), cz + fondoZ(lugar, ez)(z)];
 }
 
 // Arma el mueble número `i` del diseño en la habitación `lugar` del piso `piso`.

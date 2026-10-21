@@ -1,6 +1,6 @@
 // Piezas de la mansión moderna: losas, paredes con ventanales, escaleras y barandas.
 // Cada función recibe el "kit" (k) con los creadores de bloques y un grupo (g) donde agregar.
-import { MANSION as M, NUCLEO, COLUMNA, PASILLO, ALTO_PISO, LOSA, nivel } from './constantes.js';
+import { MANSION as M, NUCLEO, COLUMNA, PASILLO, ANCHO_PUERTA, ALTO_PISO, LOSA, nivel } from './constantes.js';
 
 const GROSOR_EXT = 0.5;
 const GROSOR_INT = 0.4;
@@ -202,7 +202,8 @@ export function paredesInteriores(k, g, n) {
     pared(k, g, 'z', s * NUCLEO, z0, z1, base, ALTO_PARED, t, m.ladrillo, [{ ...pasillo, y1: PUERTA.y1 }]);
     pared(k, g, 'z', s * COLUMNA, z0, z1, base, ALTO_PARED, t, c, [pasillo]);
     // Paredes del pasillo con una puerta por habitación.
-    const puertas = [17, 35].map((x) => ({ a: s > 0 ? x - 2 : -x - 2, b: s > 0 ? x + 2 : -x + 2, ...PUERTA }));
+    const m2 = ANCHO_PUERTA / 2;
+    const puertas = [17, 35].map((x) => ({ a: s > 0 ? x - m2 : -x - m2, b: s > 0 ? x + m2 : -x + m2, ...PUERTA }));
     const a0 = s > 0 ? NUCLEO + t / 2 : M.x0 + GROSOR_EXT;
     const a1 = s > 0 ? M.x1 - GROSOR_EXT : -NUCLEO - t / 2;
     pared(k, g, 'x', PASILLO.z1, a0, a1, base, ALTO_PARED, t, c, puertas);
