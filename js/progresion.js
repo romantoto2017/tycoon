@@ -3,12 +3,13 @@
 // - boton:    [x, y, z] donde aparece
 // - tipo:     'dropper' | 'mejora' | 'construccion'
 // - muebles:  true si son muebles (la cámara los atraviesa)
+// - mueble:   true si es un mueble de una habitación (se compran de a uno, en orden)
 // Los precios salen de js/precios.js (generado con herramientas/balance.mjs),
 // salvo los objetos especiales y cuadros, que están en data/objetos.js.
 // Este archivo no importa three: lo usa también la simulación de balance.
 import { DROPPERS, MEJORAS_VALOR, MEJORAS_VELOCIDAD, OBJETOS_VECIBANDA, CUADROS, OBRAS_DE_ARTE, LUJOS } from '../data/objetos.js';
 import { PERSONAJES } from '../data/personajes.js';
-import { SLOTS_DROPPER, ASCENSOR, PASILLO, nivel } from './constantes.js';
+import { SLOTS_DROPPER, ASCENSOR, nivel } from './constantes.js';
 import { PRECIOS } from './precios.js';
 import * as A from './arquitectura.js';
 import * as Mu from './muebles.js';
@@ -73,15 +74,27 @@ function estructuraPiso(n, requierePiso, botonPiso, entre) {
   obra(`paredes_int_${s}`, `Habitaciones ${nombre}`, [`ventanas_${s}`], en(n, H4), (k, g) => A.paredesInteriores(k, g, n));
 }
 
-// Habitación: el botón va en el pasillo, frente a su puerta.
+// Habitación: cada mueble es un botón en el piso, donde va el mueble. Se compran en
+// orden (aparece uno por habitación). `id` de la habitación queda como alias del último
+// mueble, para usarlo de requisito; MIGRAR convierte partidas que la compraban entera.
 const salasPiso = [[], [], [], []];
+const ALIAS = {};
+export const MIGRAR = {};
 function sala(id, nombre, piso, lugar, diseno, extra) {
-  const [cx] = Mu.LUGARES[lugar];
-  const zPasillo = (PASILLO.z0 + PASILLO.z1) / 2;
-  const x = lugar[2] === 'F' ? cx - 2.5 : cx + 2.5;
+  let previo = `paredes_int_${SUF[piso]}`;
+  MIGRAR[id] = [];
+  Mu.mueblesDe(diseno).forEach((m, i) => {
+    const mid = `${id}_${m.id}`;
+    agregar({
+      id: mid, nombre: m.nombre, sala: nombre, tipo: 'construccion', mueble: true, muebles: true,
+      requiere: [previo], boton: Mu.botonMueble(diseno, lugar, piso, m.boton),
+      construir: (k, g) => Mu.amueblar(k, g, diseno, i, lugar, piso, extra),
+    });
+    MIGRAR[id].push(mid);
+    previo = mid;
+  });
+  ALIAS[id] = previo;
   salasPiso[piso].push(id);
-  obra(id, nombre, [`paredes_int_${SUF[piso]}`], en(piso, [x, zPasillo]),
-    (k, g) => Mu.amueblar(k, g, diseno, lugar, piso, extra), { muebles: true });
 }
 
 // Cuarto de cada integrante, en el orden de data/personajes.js.
@@ -251,6 +264,9 @@ LUJOS.forEach((l) => {
     requiere, boton: lugar.boton, construir: lugar.construir,
   });
 });
+
+// Los requisitos que nombran una habitación apuntan a su último mueble.
+for (const item of lista) item.requiere = item.requiere.map((r) => ALIAS[r] || r);
 
 // ---------- Final ----------
 

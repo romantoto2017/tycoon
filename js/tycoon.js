@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DROPPERS } from '../data/objetos.js';
-import { ITEMS, ITEMS_POR_ID } from './progresion.js';
+import { ITEMS, ITEMS_POR_ID, MIGRAR } from './progresion.js';
 import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA, ASCENSOR, GARAGE, nivel } from './constantes.js';
 import { caja, mat, matTex, formato, GEO_CAJA } from './util.js';
 import { Lote } from './lote.js';
@@ -75,7 +75,7 @@ function crearKit() {
     },
     tex: (tipo, color, tamano) => matTex(tipo, color, tamano),
     // Mueble 3D (ver modelos.js): origen en el centro de la base, frente hacia +z.
-    modelo: (nombre, opts = {}) => crearModelo(nombre, { ...opts, material: mat, vidrio: kit.vidrio, luz: kit.brillo('#fff3d6') }),
+    modelo: (nombre, opts = {}) => crearModelo(nombre, { vidrio: kit.vidrio, luz: kit.brillo('#fff3d6'), ...opts, material: mat }),
     medida: medidaModelo,
     // Césped del terreno con franjas de cortadora.
     baseplate(ancho, largo, x, z) {
@@ -191,7 +191,8 @@ export class Tycoon {
     const hechos = new Set();
     const validos = [];
     let reintegro = 0;
-    for (const id of this.estado.compras) {
+    // Habitaciones que antes se compraban enteras: pasan a tener todos sus muebles.
+    for (const id of this.estado.compras.flatMap((c) => MIGRAR[c] || [c])) {
       const item = ITEMS_POR_ID[id];
       if (!item || hechos.has(id)) continue;
       if (item.requiere.every((r) => hechos.has(r))) {
@@ -275,7 +276,7 @@ export class Tycoon {
       if (comprados.has(item.id) || conBoton.has(item.id)) continue;
       if (!item.requiere.every((r) => comprados.has(r))) continue;
       this.crearBoton(item);
-      if (avisar && item.tipo === 'construccion' && !item.especial) this.ui.toast(`Nuevo botón: ${item.nombre}`, 'info');
+      if (avisar && item.tipo === 'construccion' && !item.especial && !item.mueble) this.ui.toast(`Nuevo botón: ${item.nombre}`, 'info');
     }
   }
 
@@ -298,7 +299,7 @@ export class Tycoon {
     etiqueta.sprite.position.y = 3.6;
     grupo.add(aro, disco, haz, etiqueta.sprite);
     this.escena.add(grupo);
-    this.botones.push({ item, grupo, disco, haz, etiqueta, x, y, z, pisado: false, alcanza: null, fase: Math.random() * 6 });
+    this.botones.push({ item, grupo, disco, haz, etiqueta, x, y, z, pisado: false, armado: false, alcanza: null, fase: Math.random() * 6 });
     grupo.scale.setScalar(0.01);
     this.animaciones.push({ obj: grupo, y0: y, t: 0, dur: 0.4, caida: 0 });
   }
@@ -648,7 +649,9 @@ export class Tycoon {
       const dx = jugador.pos.x - b.x;
       const dz = jugador.pos.z - b.z;
       const encima = dx * dx + dz * dz < 1.7 * 1.7 && Math.abs(jugador.pos.y - b.y) < 1;
-      if (encima) {
+      // Un botón que aparece debajo del jugador no compra hasta que se baje y lo vuelva a pisar.
+      if (!encima) b.armado = true;
+      if (encima && b.armado) {
         if (!this.intentarComprar(b) && !b.pisado) {
           sfx.error();
           this.ui.toast(`Te faltan ${formato(b.item.precio - this.estado.plata)}`, 'error');

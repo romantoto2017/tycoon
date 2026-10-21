@@ -40,9 +40,13 @@ Para cambiar algo: editá el archivo en GitHub (ícono del lápiz), guardá con 
 
 Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (en el HUD y en los bloques).
 
+## Muebles
+
+Cada mueble se compra por separado, como en un tycoon: al entrar a una habitación aparece un botón en el piso donde va el próximo mueble (primero la luz, después la cama, el ropero, la alfombra...). Se compran de a uno y en orden. La lista de muebles de cada habitación, con su nombre y dónde aparece el botón, está en `js/muebles.js`. Si cambiás muebles, volvé a correr el balance (abajo) para recalcular los precios.
+
 ## Precios y duración
 
-Los precios de la mansión están en `js/precios.js` y se calculan con `herramientas/balance.mjs`, que simula una partida completa (unas 3 horas). Los precios de los objetos especiales y los cuadros se editan directo en `data/objetos.js`.
+Los precios de la mansión están en `js/precios.js` y se calculan con `herramientas/balance.mjs`, que simula una partida completa (unas 3 horas; `node herramientas/balance.mjs --escribir`). Los precios de los objetos especiales y los cuadros se editan directo en `data/objetos.js`.
 
 El progreso se guarda solo en el navegador (localStorage). "Reiniciar partida" en la configuración lo borra.
 

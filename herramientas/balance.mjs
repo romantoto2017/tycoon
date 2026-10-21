@@ -6,10 +6,18 @@ import { DROPPERS } from '../data/objetos.js';
 import { ITEMS } from '../js/progresion.js';
 
 const T0 = 8;          // segundos de espera para las primeras compras
-const T1 = 150;        // segundos extra hacia el final
+const T1 = 140;        // segundos extra hacia el final
 const CURVA = 1.2;
 let eficiencia = 0.85;    // se pierde algo de tiempo yendo a cobrar (hasta el cobrador automático)
 const CAMINAR = 15;    // segundos promedio para llegar a cada botón
+// Los muebles se compran de a uno dentro de la misma habitación: cada uno es una
+// fracción de lo que antes costaba la habitación entera, y el botón está a pocos pasos.
+// Los chicos (luz, plantas, alfombra...) valen menos que los grandes (heladera, cama...).
+const PESO_MUEBLE = 0.15;
+const PESO_CHICO = 0.06;
+const CHICO = /_(luz|alfombra|piso|planta|plantas|toallero|lampara|espejo|perchero|cuadro|neon|banqueta|puff|puffs|electro|campana|silla|sillas|banquetas)$/;
+const CAMINAR_MUEBLE = 4;
+const peso = (item) => (!item.mueble ? 1 : CHICO.test(item.id) ? PESO_CHICO : PESO_MUEBLE);
 
 const redondo = (n) => {
   if (n < 100) return Math.max(1, Math.round(n));
@@ -24,17 +32,20 @@ const droppers = [];
 const precios = {};
 let t = 0;
 const N = ITEMS.length;
+const W = ITEMS.reduce((a, item) => a + peso(item), 0);
+let w = 0;
 const filas = [];
 
 ITEMS.forEach((item, i) => {
-  const objetivo = T0 + T1 * Math.pow(i / N, CURVA);
+  const objetivo = peso(item) * (T0 + T1 * Math.pow(w / W, CURVA));
+  w += peso(item);
   const sugerido = redondo(ingreso * eficiencia * objetivo);
   let precio;
   if (item.gratis) precio = 0;
   else if (item.especial) precio = item.precio;
   else { precio = sugerido; precios[item.id] = precio; }
   const espera = precio === 0 ? 0 : precio / (ingreso * eficiencia);
-  t += espera + CAMINAR;
+  t += espera + (item.mueble ? CAMINAR_MUEBLE : CAMINAR);
   if (item.tipo === 'dropper') droppers.push(item.dropper);
   if (item.id === 'auto_cobro') eficiencia = 0.97;
   if (item.valor) multValor *= item.valor;
