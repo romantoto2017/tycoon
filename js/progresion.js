@@ -3,6 +3,7 @@
 // - boton:    [x, y, z] donde aparece
 // - tipo:     'dropper' | 'mejora' | 'construccion'
 // - muebles:  true si son muebles (la cámara los atraviesa)
+// - opcional: no hace falta para el cartel final (objetos Vecibanda)
 // - multPrecio: cuántas veces más caro que lo que le tocaría por su lugar en la partida
 // - mueble:   true si es un mueble de una habitación (se compran de a uno, en orden)
 // Los precios salen de js/precios.js (generado con herramientas/balance.mjs),
@@ -226,7 +227,7 @@ OBJETOS_VECIBANDA.forEach((obj, i) => {
   const [x, z] = Es.SLOTS_ESPECIALES[i % Es.SLOTS_ESPECIALES.length];
   insertarDespues(ETAPAS[etapa], {
     id: `especial${i + 1}`, nombre: obj.nombre, descripcion: obj.descripcion, precio: obj.precio,
-    tipo: 'construccion', especial: true, requiere: [ETAPAS[etapa]],
+    tipo: 'construccion', especial: true, opcional: true, requiere: [ETAPAS[etapa]],
     boton: suelo(x < 0 ? x - 4.5 : x + 4.5, z),
     construir: (k, g) => Es.objetoEspecial(k, g, i, obj),
   });
@@ -283,7 +284,8 @@ for (const item of lista) item.requiere = item.requiere.map((r) => ALIAS[r] || r
 
 agregar({
   id: 'cartel_final', nombre: '¡CARTEL LA VECIBANDA HOUSE!', tipo: 'construccion', final: true,
-  requiere: lista.map((i) => i.id), boton: suelo(0, 53.5), construir: Es.cartelFinal,
+  // Los objetos Vecibanda son caros a propósito: no hacen falta para terminar.
+  requiere: lista.filter((i) => !i.opcional).map((i) => i.id), boton: suelo(0, 53.5), construir: Es.cartelFinal,
 });
 
 for (const item of lista) {

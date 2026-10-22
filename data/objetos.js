@@ -33,16 +33,18 @@ export const MEJORAS_VELOCIDAD = ['Cinta Turbo', 'Droppers Rápidos', 'Motor Vec
 //   6 living, 7 primer piso, 8 segundo piso, 9 tercer piso, 10 terraza
 // Cada uno tiene una forma distinta según su posición en la lista
 // (trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete).
+// Son caros a propósito (más o menos 20 veces lo que se gana en ese momento, unos 10 a 25
+// minutos juntando) y no hacen falta para el cartel final: son los trofeos difíciles.
 // forma (opcional): 'lapiz', 'papa' o 'stm' usan su modelo; sin forma, una figura de relleno.
 export const OBJETOS_VECIBANDA = [
-  { nombre: 'Lápiz de Nico', precio: 300, etapa: 4, descripcion: 'Staedtler Mars Lumograph 9B', forma: 'lapiz' },
-  { nombre: 'Papa Podrida', precio: 1400, etapa: 5, descripcion: 'Nadie sabe hace cuánto está', forma: 'papa' },
-  { nombre: 'STM de la Schwepa', precio: 2800, etapa: 6, descripcion: 'Boleto estudiante', forma: 'stm' },
-  { nombre: 'Objeto Vecibanda 4', precio: 35000,  etapa: 7,  descripcion: 'Descripción corta 4' },
-  { nombre: 'Objeto Vecibanda 5', precio: 40000, etapa: 7,  descripcion: 'Descripción corta 5' },
-  { nombre: 'Objeto Vecibanda 6', precio: 5.5e6,   etapa: 8,  descripcion: 'Descripción corta 6' },
-  { nombre: 'Objeto Vecibanda 7', precio: 340e6,  etapa: 9,  descripcion: 'Descripción corta 7' },
-  { nombre: 'Objeto Vecibanda 8', precio: 4.7e9,    etapa: 10, descripcion: 'Descripción corta 8' },
+  { nombre: 'Lápiz de Nico', precio: 5000, etapa: 4, descripcion: 'Staedtler Mars Lumograph 9B', forma: 'lapiz' },
+  { nombre: 'Papa Podrida', precio: 25000, etapa: 5, descripcion: 'Nadie sabe hace cuánto está', forma: 'papa' },
+  { nombre: 'STM de la Schwepa', precio: 60000, etapa: 6, descripcion: 'Boleto estudiante', forma: 'stm' },
+  { nombre: 'Objeto Vecibanda 4', precio: 900000,  etapa: 7,  descripcion: 'Descripción corta 4' },
+  { nombre: 'Objeto Vecibanda 5', precio: 1.2e6,  etapa: 7,  descripcion: 'Descripción corta 5' },
+  { nombre: 'Objeto Vecibanda 6', precio: 8e7,      etapa: 8,  descripcion: 'Descripción corta 6' },
+  { nombre: 'Objeto Vecibanda 7', precio: 4e9,     etapa: 9,  descripcion: 'Descripción corta 7' },
+  { nombre: 'Objeto Vecibanda 8', precio: 4.5e10,    etapa: 10, descripcion: 'Descripción corta 8' },
 ];
 
 // Cuadros: la imagen se busca en assets/cuadros/<archivo> (un .mp4 se ve animado).

@@ -38,7 +38,7 @@ Todo en `data/objetos.js`:
 
 - `DROPPERS`: nombres y colores de las 10 máquinas.
 - `MEJORAS_VALOR` / `MEJORAS_VELOCIDAD`: nombres de las mejoras.
-- `OBJETOS_VECIBANDA`: los 8 objetos especiales (nombre, precio, etapa, descripción). Aparecen en pedestales en el camino de entrada.
+- `OBJETOS_VECIBANDA`: los 8 objetos especiales (nombre, precio, etapa, descripción, forma). Aparecen en pedestales en el camino de entrada. Son caros a propósito (10 a 30 minutos juntando plata) y no hacen falta para el cartel final.
 - `CUADROS`: nombre, precio y archivo de imagen (en `assets/cuadros/`). Toman la forma de la foto. Un `.mp4` se ve animado (conviene subir también la versión `.webm` con el mismo nombre). Las fotos originales que se subieron quedan en `assets/cuadros/originales/`; `herramientas/especiales.py` las recorta y achica.
 - `LUJOS`: objetos de rico con lugar fijo (estatuas, piano, T-Rex, Nico de cartón, bóveda, piscina infinita, helicóptero).
 

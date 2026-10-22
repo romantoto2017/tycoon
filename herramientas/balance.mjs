@@ -45,7 +45,8 @@ ITEMS.forEach((item, i) => {
   else if (item.especial) precio = item.precio;
   else { precio = sugerido; precios[item.id] = precio; }
   const espera = precio === 0 ? 0 : precio / (ingreso * eficiencia);
-  t += espera + (item.mueble ? CAMINAR_MUEBLE : CAMINAR);
+  // Los opcionales (objetos Vecibanda) no cuentan para la duración: se compran si sobra plata.
+  if (!item.opcional) t += espera + (item.mueble ? CAMINAR_MUEBLE : CAMINAR);
   if (item.tipo === 'dropper') droppers.push(item.dropper);
   if (item.id === 'auto_cobro') eficiencia = 0.97;
   if (item.valor) multValor *= item.valor;
