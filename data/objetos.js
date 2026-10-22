@@ -63,7 +63,7 @@ export const CUADROS = [
   { nombre: 'Llorens', precio: 3200, archivo: 'llorens.jpg' },
   { nombre: 'Cuadro Gorda', precio: 4.1e5, archivo: 'cuadrogorda.jpg' },
   { nombre: 'Joaco', precio: 6500, archivo: 'joaco.jpg' },
-  { nombre: 'Trolleado', precio: 4.6e5, archivo: 'trolleado.jpg' },
+  { nombre: 'Patito', precio: 4.6e5, archivo: 'trolleado.jpg' }, // el nombre real es 'Trolleado'
 ];
 
 // Obras de arte famosas (dominio público) que se compran y se cuelgan en los pasillos.

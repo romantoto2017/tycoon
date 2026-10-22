@@ -1,6 +1,7 @@
 // Objetos especiales de la Vecibanda (pedestales en el camino de entrada),
 // cuadros en los pasillos y el cartel final.
 import { nivel, PASILLO, GARAGE as G } from './constantes.js';
+import { GROSOR_INT } from './arquitectura.js';
 
 // Pedestales a los costados del camino de entrada: [x, z].
 export const SLOTS_ESPECIALES = [[-8, 18], [8, 18], [-8, 26], [8, 26], [-8, 34], [8, 34], [-8, 42], [8, 42]];
@@ -148,7 +149,7 @@ function cohete(k, p) {
 export function cuadro(k, g, i, datos) {
   const { piso, lado, z } = slotCuadro(i);
   const p = k.pintura(datos.archivo, 2.6, { carpeta: 'cuadros', marco: '#1d1f22' });
-  p.position.set(lado * 7.72, nivel(piso) + 4.7, z);
+  p.position.set(lado * (8 - GROSOR_INT / 2 - 0.08), nivel(piso) + 4.7, z);
   p.rotation.y = -lado * Math.PI / 2;
   g.add(p);
 }
@@ -178,11 +179,11 @@ export function slotObra(i) {
 export function obra(k, g, i, datos) {
   const { piso, lado } = slotObra(i);
   const p = k.pintura(datos.archivo, 3);
-  p.position.set(lado * 26, nivel(piso) + 4.6, PASILLO.z1 - 0.24);
+  p.position.set(lado * 26, nivel(piso) + 4.6, PASILLO.z1 - GROSOR_INT / 2 - 0.08);
   p.rotation.y = Math.PI;
   g.add(p);
   const cartel = k.cartel(datos.nombre, 4, 0.45, '#ffffff', '#24282c');
-  cartel.position.set(lado * 26, nivel(piso) + 2.3, PASILLO.z1 - 0.23);
+  cartel.position.set(lado * 26, nivel(piso) + 2.3, PASILLO.z1 - GROSOR_INT / 2 - 0.02);
   cartel.rotation.y = Math.PI;
   g.add(cartel);
 }

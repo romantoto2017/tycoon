@@ -1,7 +1,7 @@
 // Muebles de cada habitación. Coordenadas locales: (0,0) es el centro de la habitación,
 // x de -8 a 8, z de -6.6 a 6.6, y desde el piso terminado.
-import { nivel, ALTO_PISO, LOSA, PASILLO } from './constantes.js';
-import { colgante } from './arquitectura.js';
+import { nivel, ALTO_PISO, LOSA, PASILLO, NUCLEO, COLUMNA, MANSION } from './constantes.js';
+import { colgante, GROSOR_INT } from './arquitectura.js';
 
 // Habitaciones: W/E = ala oeste/este, I/O = columna interior/exterior, F/B = adelante/atrás.
 const LUGARES = {
@@ -11,20 +11,28 @@ const LUGARES = {
 
 // Cada diseño se dibujó para un tipo de habitación ("nativo": WF, WB, EF o EB). Si va en
 // otra, se refleja en X (oeste/este) y/o en Z (adelante/atrás) para que la puerta quede libre.
-// Los diseños se hicieron para habitaciones de 13,5 de fondo; desde que el pasillo es más
-// ancho miden menos, así que las posiciones en Z se comprimen hacia la pared de enfrente
-// (la del pasillo se corre y la otra queda donde estaba).
+// Los diseños se dibujaron para habitaciones de 17,6 x 13,5 (paredes finas). Las posiciones se
+// estiran o encogen para que el diseño vaya de cara a cara de las paredes reales (gruesas y
+// con el pasillo ancho): así nada queda metido adentro de una pared.
+const MEDIO_ANCHO = 8.8;
 const MEDIO_FONDO = 6.75;
-function fondoZ(lugar, ez) {
-  const [, cz] = LUGARES[lugar];
-  const pasilloAdelante = lugar[2] === 'F'; // las de adelante tienen el pasillo hacia -z
-  const pared = pasilloAdelante ? PASILLO.z1 + 0.25 : PASILLO.z0 - 0.25;
-  const libre = pasilloAdelante ? pared - (cz - MEDIO_FONDO) : (cz + MEDIO_FONDO) - pared;
-  const k = Math.min(1, (2 * MEDIO_FONDO - Math.max(0, libre)) / (2 * MEDIO_FONDO));
-  // w: coordenada local ya reflejada (positiva = hacia +z del mundo).
-  return (z) => {
-    const w = ez * z;
-    return pasilloAdelante ? MEDIO_FONDO - (MEDIO_FONDO - w) * k : -MEDIO_FONDO + (w + MEDIO_FONDO) * k;
+const ADENTRO_EXT = 0.5;
+function caras(lugar) {
+  const [cx, cz] = LUGARES[lugar];
+  const s = Math.sign(cx);
+  const ax = Math.abs(cx);
+  const xa = ax < COLUMNA ? NUCLEO + GROSOR_INT / 2 : COLUMNA + GROSOR_INT / 2;
+  const xb = ax < COLUMNA ? COLUMNA - GROSOR_INT / 2 : MANSION.x1 - ADENTRO_EXT;
+  const [x0, x1] = s > 0 ? [xa, xb] : [-xb, -xa];
+  const [z0, z1] = lugar[2] === 'F' ? [PASILLO.z1 + GROSOR_INT / 2, MANSION.z1 - ADENTRO_EXT] : [MANSION.z0 + ADENTRO_EXT, PASILLO.z0 - GROSOR_INT / 2];
+  return { x0: x0 - cx, x1: x1 - cx, z0: z0 - cz, z1: z1 - cz };
+}
+// Convierte una coordenada del diseño (ya reflejada: + = hacia + del mundo) a la real.
+function mapeo(lugar) {
+  const c = caras(lugar);
+  return {
+    x: (w) => c.x0 + ((w + MEDIO_ANCHO) / (2 * MEDIO_ANCHO)) * (c.x1 - c.x0),
+    z: (w) => c.z0 + ((w + MEDIO_FONDO) / (2 * MEDIO_FONDO)) * (c.z1 - c.z0),
   };
 }
 
@@ -33,8 +41,9 @@ function sala(k, g, lugar, piso, nativo) {
   const y = nivel(piso);
   const ex = lugar[0] === nativo[0] ? 1 : -1;
   const ez = lugar[2] === nativo[1] ? 1 : -1;
-  const fz = fondoZ(lugar, ez);
-  const rango = (a, b, e) => (e > 0 ? [a, b] : [-b, -a]);
+  const map = mapeo(lugar);
+  const fx = (x) => map.x(ex * x);
+  const fz = (z) => map.z(ez * z);
   const girar = (rot) => {
     let r = ex > 0 ? rot : -rot;
     if (ez < 0) r = Math.PI - r;
@@ -42,7 +51,7 @@ function sala(k, g, lugar, piso, nativo) {
   };
   const s = {
     b(x0, y0, z0, x1, y1, z1, color) {
-      const [a0, a1] = rango(x0, x1, ex);
+      const [a0, a1] = [fx(x0), fx(x1)].sort((p, q) => p - q);
       const [c0, c1] = [fz(z0), fz(z1)].sort((p, q) => p - q);
       const m = k.cajaDe(cx + a0, y + y0, cz + c0, cx + a1, y + y1, cz + c1, color);
       g.add(m);
@@ -51,23 +60,23 @@ function sala(k, g, lugar, piso, nativo) {
     // Decoración que no choca.
     d(x0, y0, z0, x1, y1, z1, color) { return k.noSolido(s.b(x0, y0, z0, x1, y1, z1, color)); },
     cil(r, h, color, x, y0, z, seg = 12) {
-      const m = k.cilindro(r, r, h, color, cx + ex * x, y + y0 + h / 2, cz + fz(z), seg);
+      const m = k.cilindro(r, r, h, color, cx + fx(x), y + y0 + h / 2, cz + fz(z), seg);
       g.add(m);
       return m;
     },
     esf(r, color, x, y0, z) {
-      const m = k.esfera(r, color, cx + ex * x, y + y0, cz + fz(z));
+      const m = k.esfera(r, color, cx + fx(x), y + y0, cz + fz(z));
       g.add(m);
       return m;
     },
     cono(r, h, color, x, y0, z, seg = 8) {
-      const m = k.cono(r, h, color, cx + ex * x, y + y0 + h / 2, cz + fz(z), seg);
+      const m = k.cono(r, h, color, cx + fx(x), y + y0 + h / 2, cz + fz(z), seg);
       g.add(m);
       return m;
     },
     // Coloca una lámina (cartel, retrato) que mira hacia rotY.
     plano(m, x, y0, z, rotY) {
-      m.position.set(cx + ex * x, y + y0, cz + fz(z));
+      m.position.set(cx + fx(x), y + y0, cz + fz(z));
       m.rotation.y = girar(rotY);
       g.add(m);
       return m;
@@ -80,7 +89,7 @@ function sala(k, g, lugar, piso, nativo) {
       return s.plano(k.modelo(nombre, opts), x, y0, z, rotY);
     },
     medida: (nombre, opts) => k.medida(nombre, opts),
-    luz: () => colgante(k, g, cx, y + ALTO_PISO - LOSA, cz + fz(0)),
+    luz: () => colgante(k, g, cx + fx(0), y + ALTO_PISO - LOSA, cz + fz(0)),
   };
   return s;
 }
@@ -403,24 +412,146 @@ const salaJuegos = [
 ];
 
 const arcade = [
-  LUZ(0, 3, (k, s) => s.cartel('ARCADE', 5, 1.2, 0, 7, -6.7, 0, '#00e5ff', '#1a0033')),
-  M('piso', 'Piso', 0, -2, (k, s) => s.d(-8, 0, -6.6, 8, 0.06, 3, '#1a237e')),
-  M('arcades1', 'Arcades retro', -4.75, -4.3, (k, s) => maquinas(k, s, [0, 1])),
-  M('arcades2', 'Arcades nuevos', 1.45, -4.3, (k, s) => maquinas(k, s, [2, 3])),
-  M('hockey', 'Air hockey', 0, 0, (k, s) => {
-    s.b(-2, 0, -1.2, 2, 1.6, 1.2, '#1565c0');
-    s.d(-1.9, 1.6, -1.1, 1.9, 1.65, 1.1, '#ffffff');
+  LUZ(0, 3, (k, s) => {
+    s.cartel('ARCADE', 6, 1.5, 0, 7.4, -6.68, 0, '#29e7ff', '#2a0845');
+    // Tiras de neón en el techo.
+    [['#ff3d9a', -4], ['#29e7ff', 0], ['#ffe14d', 4]].forEach(([c, z]) => s.d(-7.6, 9.3, z - 0.1, 7.6, 9.4, z + 0.1, brillo(k, c)));
   }),
-  M('pinball', 'Pinball', 7, 0, (k, s) => {
-    s.b(6.2, 0, -2, 7.8, 2.2, 2, '#e91e63');
-    s.d(6.25, 2.2, -1.9, 7.75, 2.25, 1.9, brillo(k, '#ff80ab'));
+  M('piso', 'Alfombra de arcade', 0, -2, (k, s) => s.d(-8.8, 0, -6.75, 8.8, 0.06, 6.75, k.tex('alfombraArcade', '#ffffff', 5))),
+  M('arcades1', 'Máquinas de baile', -4.2, -2.6, (k, s) => {
+    maquinaBaile(k, s, -5.95, '#1e88e5', '#f48fb1');
+    maquinaBaile(k, s, -2.35, '#8e24aa', '#80deea');
   }),
-  M('peluches', 'Máquina de peluches', -7.4, 1, (k, s) => {
-    s.b(-8.4, 0, 0, -6.4, 1.6, 2, '#ffeb3b');
-    s.b(-8.4, 1.6, 0, -6.4, 4.6, 2, k.vidrio);
-    s.b(-8.4, 4.6, 0, -6.4, 5, 2, '#ffeb3b');
+  M('arcades2', 'Arcades', 6.2, 0.3, (k, s) => {
+    ['#e53935', '#43a047', '#1e88e5', '#fdd835'].forEach((c, i) => maquinaArcade(k, s, 7.7, -3 + i * 2.2, c, ['#00e5ff', '#ff4081', '#76ff03', '#ffea00'][i]));
   }),
+  M('hockey', 'Air hockey', 1.3, -1.2, (k, s) => airHockey(k, s, 1.3, -1.2)),
+  M('pinball', 'Pinballs', -4, 0.9, (k, s) => [-1.2, 1, 3.2].forEach((z, i) => pinball(k, s, z, ['#fdd835', '#ff7043', '#29b6f6'][i]))),
+  M('peluches', 'Máquinas de peluches', 2.6, -3.5, (k, s) => {
+    maquinaPeluches(k, s, 1.4, '#f06292');
+    maquinaPeluches(k, s, 3.85, '#4dd0e1');
+  }),
+  M('premios', 'Mostrador de premios', -5.8, 4.4, (k, s) => mostradorPremios(k, s)),
 ];
+
+// ---------- Máquinas del arcade (estilo tycoon de Roblox) ----------
+
+// Máquina de baile: gabinete con pantalla y flechas, parlantes, cartel y plataforma con
+// las 4 flechas de colores y la baranda de atrás. Contra la pared del fondo, centrada en x.
+function maquinaBaile(k, s, x, color, colorCartel) {
+  const gris = '#b0b6bc';
+  s.b(x - 1.2, 0, -6.6, x + 1.2, 5.4, -5.3, gris);
+  s.d(x - 1.15, 0.3, -5.31, x + 1.15, 1.9, -5.27, color);
+  s.d(x - 1, 2.1, -5.32, x + 1, 4.3, -5.26, '#141414');
+  s.d(x - 0.85, 2.25, -5.27, x + 0.85, 4.15, -5.24, brillo(k, '#25163d'));
+  [['#7cff5a', -0.55], ['#29e7ff', -0.18], ['#ff3d9a', 0.18], ['#ffe14d', 0.55]].forEach(([c, dx], i) => {
+    s.d(x + dx - 0.04, 2.3, -5.24, x + dx + 0.04, 4.1, -5.23, brillo(k, '#5c4b7a'));
+    s.d(x + dx - 0.16, 2.6 + ((i * 0.53) % 1.2), -5.235, x + dx + 0.16, 2.8 + ((i * 0.53) % 1.2), -5.22, brillo(k, c));
+  });
+  s.d(x - 1.25, 5.4, -6.6, x + 1.25, 6.5, -5.05, '#3a3f44');
+  s.cartel('DANCE', 2.3, 0.95, x, 5.95, -5.03, 0, '#7b1fa2', colorCartel);
+  for (const lado of [-1, 1]) {
+    const px = x + lado * 1.55;
+    s.b(px - 0.35, 0, -6.4, px + 0.35, 2.6, -5.5, '#5f6368');
+    s.cil(0.24, 0.06, '#24282c', px, 1.7, -5.48, 14).rotation.x = Math.PI / 2;
+    s.cil(0.18, 0.06, '#24282c', px, 0.9, -5.48, 14).rotation.x = Math.PI / 2;
+  }
+  // Plataforma con flechas.
+  s.d(x - 1.2, 0, -5.3, x + 1.2, 0.35, -2.4, '#5f6368');
+  const pads = [[-0.7, -3.85, '#7cff5a'], [0, -4.55, '#29e7ff'], [0, -3.15, '#ff3d9a'], [0.7, -3.85, '#ffe14d']];
+  for (const [dx, z, c] of pads) s.d(x + dx - 0.3, 0.35, z - 0.3, x + dx + 0.3, 0.4, z + 0.3, brillo(k, c));
+  s.d(x - 0.3, 0.35, -4.15, x + 0.3, 0.38, -3.55, '#9aa0a6');
+  for (const dx of [-1.1, 1.1]) s.d(x + dx - 0.07, 0.35, -2.6, x + dx + 0.07, 2.6, -2.46, '#e53935');
+  s.d(x - 1.15, 2.45, -2.6, x + 1.15, 2.6, -2.46, '#e53935');
+}
+
+// Arcade vertical contra la pared +x, mirando hacia -x: gabinete de color, pantalla
+// inclinada, tablero con palanca y botones, y cartel iluminado arriba.
+function maquinaArcade(k, s, x, z, color, pantalla) {
+  s.b(x - 0.8, 0, z - 0.85, x + 0.8, 5.2, z + 0.85, color);
+  s.d(x - 0.82, 0, z - 0.87, x + 0.82, 0.3, z + 0.87, '#24282c');
+  s.d(x - 0.85, 2.7, z - 0.7, x - 0.8, 4.4, z + 0.7, '#111111');
+  s.d(x - 0.87, 2.85, z - 0.6, x - 0.85, 4.25, z + 0.6, brillo(k, pantalla));
+  s.d(x - 0.87, 3.3, z - 0.35, x - 0.86, 3.7, z + 0.1, brillo(k, '#ffffff'));
+  s.b(x - 1.4, 2, z - 0.85, x - 0.8, 2.4, z + 0.85, '#2b2f34');
+  s.d(x - 1.25, 2.4, z - 0.45, x - 1.15, 2.85, z - 0.35, '#24282c');
+  s.esf(0.12, '#e53935', x - 1.2, 2.9, z - 0.4);
+  ['#ffe14d', '#29e7ff', '#7cff5a'].forEach((c, i) => s.cil(0.08, 0.06, c, x - 1.15, 2.4, z + 0.05 + i * 0.22, 10));
+  s.d(x - 0.85, 4.6, z - 0.8, x - 0.82, 5.1, z + 0.8, brillo(k, '#fff3c4'));
+  s.d(x - 0.9, 1.0, z - 0.25, x - 0.8, 1.4, z + 0.25, '#ffc928');
+}
+
+// Pinball contra la pared -x: mesa inclinada con vidrio, patas, y la caja de atrás con el
+// cartel. El jugador se para en el lado +x.
+function pinball(k, s, z, color) {
+  const x0 = -8.6;
+  const x1 = -5.4;
+  for (const [x, dz] of [[x0 + 0.3, -0.5], [x0 + 0.3, 0.5], [x1 - 0.2, -0.5], [x1 - 0.2, 0.5]]) s.d(x - 0.07, 0, z + dz - 0.07, x + 0.07, 1.6, z + dz + 0.07, '#24282c');
+  s.b(x0, 1.6, z - 0.65, x1, 2.25, z + 0.65, color);
+  s.d(x0 + 0.1, 2.0, z - 0.55, x1 - 0.1, 2.27, z + 0.55, '#16213e');
+  [[-7.6, -0.25, '#ff3d9a'], [-7.4, 0.25, '#29e7ff'], [-7, 0, '#ffe14d'], [-6.4, -0.3, '#7cff5a']].forEach(([x, dz, c]) => s.cil(0.13, 0.12, c, x, 2.27, z + dz, 10));
+  s.d(-5.9, 2.27, z - 0.35, -5.75, 2.32, z - 0.05, '#ffffff');
+  s.d(-5.9, 2.27, z + 0.05, -5.75, 2.32, z + 0.35, '#ffffff');
+  s.d(x0 + 0.1, 2.33, z - 0.6, x1 - 0.1, 2.36, z + 0.6, k.vidrio);
+  s.b(x0, 2.25, z - 0.65, x0 + 0.5, 4.4, z + 0.65, color);
+  s.d(x0 + 0.5, 2.8, z - 0.55, x0 + 0.52, 4.2, z + 0.55, '#16213e');
+  s.cartel('PINBALL', 1.2, 0.45, x0 + 0.54, 3.9, z, Math.PI / 2, '#d50000', '#ffe14d');
+  s.d(x0 + 0.53, 2.9, z - 0.45, x0 + 0.54, 3.55, z + 0.45, brillo(k, '#ff80ab'));
+}
+
+// Mesa de air hockey: patas, mesa blanca con borde de color, arcos, disco y dos paletas.
+function airHockey(k, s, x, z) {
+  const L = 2.3;
+  const W = 1.25;
+  for (const dx of [-L + 0.3, L - 0.3]) for (const dz of [-W + 0.25, W - 0.25]) s.d(x + dx - 0.12, 0, z + dz - 0.12, x + dx + 0.12, 1.5, z + dz + 0.12, '#24282c');
+  s.b(x - L, 1.5, z - W, x + L, 1.85, z + W, '#1565c0');
+  s.d(x - L + 0.12, 1.85, z - W + 0.12, x + L - 0.12, 1.88, z + W - 0.12, '#eef3f7');
+  s.d(x - L, 1.85, z - W, x + L, 2.05, z - W + 0.12, '#e53935');
+  s.d(x - L, 1.85, z + W - 0.12, x + L, 2.05, z + W, '#e53935');
+  s.d(x - L, 1.85, z - W, x - L + 0.12, 2.05, z + W, '#e53935');
+  s.d(x + L - 0.12, 1.85, z - W, x + L, 2.05, z + W, '#e53935');
+  s.d(x - 0.02, 1.88, z - W + 0.12, x + 0.02, 1.89, z + W - 0.12, '#e53935');
+  s.cil(0.35, 0.01, '#e53935', x, 1.88, z, 18);
+  s.cil(0.32, 0.012, '#eef3f7', x, 1.885, z, 18);
+  s.cil(0.14, 0.05, '#212121', x + 0.6, 1.88, z + 0.2, 12);
+  s.cil(0.22, 0.1, '#ff3d9a', x - 1.5, 1.88, z, 12);
+  s.cil(0.22, 0.1, '#29e7ff', x + 1.6, 1.88, z - 0.3, 12);
+  s.d(x - 1.2, 1.5, z + W, x + 1.2, 1.7, z + W + 0.05, '#ffe14d');
+}
+
+// Máquina de peluches: base, vidrio, peluches adentro, la garra y el cartel.
+function maquinaPeluches(k, s, x, color) {
+  const z0 = -6.5;
+  const z1 = -4.3;
+  s.b(x - 1.05, 0, z0, x + 1.05, 2.3, z1, color);
+  s.d(x - 0.5, 1.2, z1, x + 0.5, 1.7, z1 + 0.02, '#24282c');
+  s.d(x - 0.25, 0.4, z1, x + 0.25, 0.8, z1 + 0.03, '#111111');
+  s.b(x - 1.05, 2.3, z0, x + 1.05, 5.4, z1, k.vidrio);
+  for (const [dx, dz] of [[-1, z0], [1, z0], [-1, z1], [1, z1]]) s.d(x + dx - 0.06, 2.3, dz - 0.06, x + dx + 0.06, 5.4, dz + 0.06, '#c9ced3');
+  const peluches = ['#ffeb3b', '#ff80ab', '#80deea', '#a5d6a7', '#ffcc80', '#ce93d8'];
+  for (let i = 0; i < 9; i++) {
+    const px = x - 0.65 + (i % 3) * 0.65;
+    const pz = z0 + 0.5 + Math.floor(i / 3) * 0.6;
+    s.esf(0.26, peluches[i % peluches.length], px, 2.6 + (i % 2) * 0.12, pz);
+  }
+  s.d(x - 0.04, 4.4, (z0 + z1) / 2 - 0.04, x + 0.04, 5.4, (z0 + z1) / 2 + 0.04, '#9aa0a6');
+  s.d(x - 0.25, 4.2, (z0 + z1) / 2 - 0.25, x + 0.25, 4.4, (z0 + z1) / 2 + 0.25, '#c9ced3');
+  s.b(x - 1.05, 5.4, z0, x + 1.05, 6.3, z1, color);
+  s.cartel('PELUCHES', 1.9, 0.6, x, 5.85, z1 + 0.02, 0, '#ffffff', '#c2185b');
+}
+
+// Mostrador de premios con estantes de peluches y un cartel de TICKETS.
+function mostradorPremios(k, s) {
+  s.b(-8.6, 0, 4.9, -4.4, 2.2, 6.0, '#ffc928');
+  s.d(-8.7, 2.2, 4.8, -4.3, 2.35, 6.1, '#24282c');
+  s.d(-8.6, 0.6, 4.88, -4.4, 1.4, 4.9, '#e53935');
+  for (const y of [3.4, 4.8]) {
+    s.d(-8.6, y, 6.0, -4.4, y + 0.12, 6.7, '#f5f5f5');
+    for (let i = 0; i < 6; i++) s.esf(0.28, ['#ffeb3b', '#ff80ab', '#80deea', '#a5d6a7', '#ffcc80', '#ce93d8'][(i + (y > 4 ? 2 : 0)) % 6], -8.2 + i * 0.75, y + 0.4, 6.35);
+  }
+  s.cartel('TICKETS', 3, 0.8, -6.5, 6.3, 6.72, Math.PI, '#ffe14d', '#c2185b');
+}
+
 
 // Estatuilla verde de juguete (unos 15 cm), escondida arriba de la isla de la cocina.
 // Pies descalzos enormes, piernas largas, cara marrón con nariz grande y gorro verde.
@@ -445,15 +576,6 @@ function estatuilla(s, x, y, z) {
   b(-0.078, 0.53, -0.058, 0.078, 0.575, 0.058, verde);
 }
 
-function maquinas(k, s, cuales) {
-  const colores = ['#e53935', '#43a047', '#1e88e5', '#fdd835'];
-  for (const i of cuales) {
-    const x = -6.3 + i * 3.1;
-    s.b(x - 1, 0, -6.7, x + 1, 5, -5.2, colores[i]);
-    s.d(x - 0.8, 3, -5.22, x + 0.8, 4.4, -5.18, brillo(k, ['#00e5ff', '#ff4081', '#76ff03', '#ffea00'][i]));
-    s.d(x - 0.9, 2, -5.4, x + 0.9, 2.3, -4.8, '#212121');
-  }
-}
 
 // Playroom: pelotero, tobogán, cama elástica, carpa y un oso gigante.
 const playroom = [
@@ -864,7 +986,8 @@ export function botonMueble(diseno, lugar, piso, [x, z]) {
   const [cx, cz] = LUGARES[lugar];
   const ex = lugar[0] === nativo[0] ? 1 : -1;
   const ez = lugar[2] === nativo[1] ? 1 : -1;
-  return [cx + ex * x, nivel(piso), cz + fondoZ(lugar, ez)(z)];
+  const map = mapeo(lugar);
+  return [cx + map.x(ex * x), nivel(piso), cz + map.z(ez * z)];
 }
 
 // Arma el mueble número `i` del diseño en la habitación `lugar` del piso `piso`.

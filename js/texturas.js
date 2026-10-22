@@ -492,27 +492,80 @@ export function texturaSombra() {
 }
 
 // Cartel con texto (letras grandes con borde), para paredes y carteles.
+// Cartel: chapa con degradé, borde claro con esquinas redondeadas, tornillitos y el texto
+// con contorno, sombra y un poco de brillo de su color (tipo neón si el color es claro).
 export function canvasCartel(texto, ancho, alto, color, fondo) {
-  const h = 128;
+  const h = 192;
   const w = Math.min(2048, Math.round((h * ancho) / alto));
   const c = nuevoCanvas(w, h);
   const g = c.getContext('2d');
-  g.fillStyle = fondo;
+  const base = new THREE.Color(fondo);
+  const claro = base.clone().lerp(new THREE.Color('#ffffff'), 0.22).getStyle();
+  const oscuro = base.clone().multiplyScalar(0.55).getStyle();
+  const r = Math.min(h * 0.18, w * 0.08);
+  const rect = (x, y, ww, hh, rr) => {
+    g.beginPath();
+    g.moveTo(x + rr, y);
+    g.arcTo(x + ww, y, x + ww, y + hh, rr);
+    g.arcTo(x + ww, y + hh, x, y + hh, rr);
+    g.arcTo(x, y + hh, x, y, rr);
+    g.arcTo(x, y, x + ww, y, rr);
+    g.closePath();
+  };
+  // Fondo y marco.
+  g.fillStyle = oscuro;
   g.fillRect(0, 0, w, h);
-  let tam = h * 0.7;
+  const borde = Math.max(6, h * 0.06);
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, claro);
+  grad.addColorStop(0.55, fondo);
+  grad.addColorStop(1, oscuro);
+  rect(borde, borde, w - borde * 2, h - borde * 2, r);
+  g.fillStyle = grad;
+  g.fill();
+  g.lineWidth = borde * 0.55;
+  g.strokeStyle = 'rgba(255,255,255,0.55)';
+  rect(borde * 1.6, borde * 1.6, w - borde * 3.2, h - borde * 3.2, r * 0.8);
+  g.stroke();
+  // Brillo de arriba.
+  const brillo = g.createLinearGradient(0, borde, 0, h * 0.5);
+  brillo.addColorStop(0, 'rgba(255,255,255,0.22)');
+  brillo.addColorStop(1, 'rgba(255,255,255,0)');
+  rect(borde * 2, borde * 2, w - borde * 4, h * 0.42, r * 0.7);
+  g.fillStyle = brillo;
+  g.fill();
+  // Tornillos en las esquinas.
+  g.fillStyle = 'rgba(230,230,235,0.9)';
+  for (const [x, y] of [[borde * 3, borde * 3], [w - borde * 3, borde * 3], [borde * 3, h - borde * 3], [w - borde * 3, h - borde * 3]]) {
+    if (w < h * 2.2 && x > borde * 3 && x < w - borde * 3) continue;
+    g.beginPath();
+    g.arc(x, y, borde * 0.45, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Texto.
+  let tam = h * 0.56;
   g.font = `700 ${tam}px ${FUENTE}`;
-  while (g.measureText(texto).width > w * 0.92 && tam > 10) {
+  while (g.measureText(texto).width > w - borde * 9 && tam > 10) {
     tam -= 4;
     g.font = `700 ${tam}px ${FUENTE}`;
   }
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.lineJoin = 'round';
-  g.lineWidth = tam * 0.14;
-  g.strokeStyle = '#000';
-  g.strokeText(texto, w / 2, h * 0.54);
+  const yt = h * 0.53;
+  g.fillStyle = 'rgba(0,0,0,0.45)';
+  g.fillText(texto, w / 2 + tam * 0.04, yt + tam * 0.07);
+  g.lineWidth = tam * 0.16;
+  g.strokeStyle = '#111';
+  g.strokeText(texto, w / 2, yt);
+  g.save();
+  g.shadowColor = color;
+  g.shadowBlur = tam * 0.35;
   g.fillStyle = color;
-  g.fillText(texto, w / 2, h * 0.54);
+  g.fillText(texto, w / 2, yt);
+  g.restore();
+  g.fillStyle = color;
+  g.fillText(texto, w / 2, yt);
   return c;
 }
 
@@ -554,6 +607,53 @@ function ruido(g, w, h, cantidad, alfa, semilla) {
 }
 
 const DIBUJOS = {
+  // Alfombra de arcade: fondo violeta con figuritas de neón (estrellas, rayos, círculos).
+  alfombraArcade(g, s) {
+    g.fillStyle = '#3a0f4f';
+    g.fillRect(0, 0, s, s);
+    let a = 21;
+    const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
+    for (let i = 0; i < 900; i++) {
+      g.fillStyle = `rgba(${120 + rnd() * 60},${20 + rnd() * 30},${110 + rnd() * 60},0.35)`;
+      g.fillRect(rnd() * s, rnd() * s, 2, 2);
+    }
+    const colores = ['#ff3d9a', '#29e7ff', '#ffe14d', '#7cff5a', '#ff8a3d'];
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * s;
+      const y = rnd() * s;
+      const r = 6 + rnd() * 10;
+      g.strokeStyle = colores[i % colores.length];
+      g.fillStyle = colores[(i + 2) % colores.length];
+      g.lineWidth = 3;
+      const forma = i % 4;
+      g.beginPath();
+      if (forma === 0) {
+        g.arc(x, y, r, 0, Math.PI * 2);
+        g.stroke();
+      } else if (forma === 1) {
+        for (let k = 0; k < 10; k++) {
+          const ang = (k / 10) * Math.PI * 2 - Math.PI / 2;
+          const rr = k % 2 ? r * 0.45 : r;
+          if (k) g.lineTo(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr);
+          else g.moveTo(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr);
+        }
+        g.closePath();
+        g.fill();
+      } else if (forma === 2) {
+        g.moveTo(x - r, y + r * 0.2);
+        g.lineTo(x - r * 0.2, y - r * 0.4);
+        g.lineTo(x + r * 0.2, y + r * 0.3);
+        g.lineTo(x + r, y - r * 0.3);
+        g.stroke();
+      } else {
+        g.moveTo(x, y - r);
+        g.lineTo(x + r, y + r * 0.8);
+        g.lineTo(x - r, y + r * 0.8);
+        g.closePath();
+        g.stroke();
+      }
+    }
+  },
   // Estuco: casi liso con grano fino.
   estuco(g, s) {
     g.fillStyle = '#f4f4f4';

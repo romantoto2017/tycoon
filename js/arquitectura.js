@@ -2,8 +2,13 @@
 // Cada función recibe el "kit" (k) con los creadores de bloques y un grupo (g) donde agregar.
 import { MANSION as M, NUCLEO, COLUMNA, PASILLO, ANCHO_PUERTA, ALTO_PISO, LOSA, nivel } from './constantes.js';
 
-const GROSOR_EXT = 0.5;
-const GROSOR_INT = 0.4;
+// Paredes gruesas. Las de afuera crecen hacia afuera: la cara de adentro queda a 0,5 del
+// borde de la mansión (así no se achican los ambientes) y la de afuera sobresale AFUERA.
+export const GROSOR_EXT = 0.9;
+export const GROSOR_INT = 0.9;
+const ADENTRO_EXT = 0.5;
+const AFUERA = GROSOR_EXT - ADENTRO_EXT;
+const CENTRO_EXT = ADENTRO_EXT - GROSOR_EXT / 2; // desde el borde de la mansión hacia adentro
 const ALTO_PARED = ALTO_PISO - LOSA;
 const VENTANAL = { y0: 0.8, y1: 8.8 };
 const PUERTA = { y0: 0, y1: 7 };
@@ -183,10 +188,12 @@ export function paredesExteriores(k, g, n) {
   const t = GROSOR_EXT;
   const zonas = zonasFachada(k, n);
   const lateral = zonas[0].m;
-  paredZonas(k, g, 'x', M.z1 - t / 2, base, ALTO_PARED, t, hu.frente, zonas);
-  paredZonas(k, g, 'x', M.z0 + t / 2, base, ALTO_PARED, t, hu.fondo, zonas);
-  pared(k, g, 'z', M.x0 + t / 2, M.z0 + t, M.z1 - t, base, ALTO_PARED, t, lateral, hu.costado);
-  pared(k, g, 'z', M.x1 - t / 2, M.z0 + t, M.z1 - t, base, ALTO_PARED, t, lateral, hu.costado);
+  // Frente y fondo cubren también las esquinas (los costados van entre ellos).
+  const zonasAnchas = zonas.map((z, i) => ({ ...z, a: i === 0 ? z.a - AFUERA : z.a, b: i === zonas.length - 1 ? z.b + AFUERA : z.b }));
+  paredZonas(k, g, 'x', M.z1 - CENTRO_EXT, base, ALTO_PARED, t, hu.frente, zonasAnchas);
+  paredZonas(k, g, 'x', M.z0 + CENTRO_EXT, base, ALTO_PARED, t, hu.fondo, zonasAnchas);
+  pared(k, g, 'z', M.x0 + CENTRO_EXT, M.z0 + ADENTRO_EXT, M.z1 - ADENTRO_EXT, base, ALTO_PARED, t, lateral, hu.costado);
+  pared(k, g, 'z', M.x1 - CENTRO_EXT, M.z0 + ADENTRO_EXT, M.z1 - ADENTRO_EXT, base, ALTO_PARED, t, lateral, hu.costado);
 }
 
 export function paredesInteriores(k, g, n) {
@@ -194,8 +201,8 @@ export function paredesInteriores(k, g, n) {
   const m = materiales(k);
   const c = m.interior;
   const t = GROSOR_INT;
-  const z0 = M.z0 + GROSOR_EXT;
-  const z1 = M.z1 - GROSOR_EXT;
+  const z0 = M.z0 + ADENTRO_EXT;
+  const z1 = M.z1 - ADENTRO_EXT;
   const pasillo = { a: PASILLO.z0 + 0.2, b: PASILLO.z1 - 0.2, y0: 0, y1: ALTO_PARED };
   for (const s of [-1, 1]) {
     // Núcleo y división entre columnas: abiertas a la altura del pasillo.
@@ -204,8 +211,8 @@ export function paredesInteriores(k, g, n) {
     // Paredes del pasillo con una puerta por habitación.
     const m2 = ANCHO_PUERTA / 2;
     const puertas = [17, 35].map((x) => ({ a: s > 0 ? x - m2 : -x - m2, b: s > 0 ? x + m2 : -x + m2, ...PUERTA }));
-    const a0 = s > 0 ? NUCLEO + t / 2 : M.x0 + GROSOR_EXT;
-    const a1 = s > 0 ? M.x1 - GROSOR_EXT : -NUCLEO - t / 2;
+    const a0 = s > 0 ? NUCLEO + t / 2 : M.x0 + ADENTRO_EXT;
+    const a1 = s > 0 ? M.x1 - ADENTRO_EXT : -NUCLEO - t / 2;
     pared(k, g, 'x', PASILLO.z1, a0, a1, base, ALTO_PARED, t, c, puertas);
     pared(k, g, 'x', PASILLO.z0, a0, a1, base, ALTO_PARED, t, c, puertas);
     // Luces empotradas en el techo del pasillo.
@@ -256,8 +263,11 @@ export function aberturas(k, g, n) {
           g.add(k.noSolido(k.cajaDe(h.a - 0.4, y0, z0, h.a, y1, z1, negro)));
           g.add(k.noSolido(k.cajaDe(h.b, y0, z0, h.b + 0.4, y1, z1, negro)));
         }
-        g.add(k.noSolido(caja(h.a, y0 - 0.15, h.b, y0, 0.3, negro)));
-        g.add(k.noSolido(caja(h.a, y1, h.b, y1 + 0.15, 0.3, negro)));
+        g.add(k.noSolido(caja(h.a, y0 - 0.15, h.b, y0, GROSOR_EXT / 2 + 0.02, negro)));
+        g.add(k.noSolido(caja(h.a, y1, h.b, y1 + 0.15, GROSOR_EXT / 2 + 0.02, negro)));
+        // Jambas: tapan el canto de la pared gruesa a los costados del ventanal.
+        g.add(k.noSolido(caja(h.a, y0, h.a + 0.12, y1, GROSOR_EXT / 2 + 0.02, negro)));
+        g.add(k.noSolido(caja(h.b - 0.12, y0, h.b, y1, GROSOR_EXT / 2 + 0.02, negro)));
         const partes = Math.max(1, Math.round((h.b - h.a) / 3.5));
         for (let i = 1; i < partes; i++) {
           const x = h.a + ((h.b - h.a) * i) / partes;
@@ -275,10 +285,10 @@ export function aberturas(k, g, n) {
       }
     }
   };
-  lado('x', M.z1 - GROSOR_EXT / 2, hu.frente);
-  lado('x', M.z0 + GROSOR_EXT / 2, hu.fondo);
-  lado('z', M.x0 + GROSOR_EXT / 2, hu.costado);
-  lado('z', M.x1 - GROSOR_EXT / 2, hu.costado);
+  lado('x', M.z1 - CENTRO_EXT, hu.frente);
+  lado('x', M.z0 + CENTRO_EXT, hu.fondo);
+  lado('z', M.x0 + CENTRO_EXT, hu.costado);
+  lado('z', M.x1 - CENTRO_EXT, hu.costado);
   if (n === 0) {
     // Alero oscuro sobre la entrada.
     g.add(k.noSolido(k.cajaDe(-8, 7.6, 0, 8, 8.1, 6, COLORES.marco)));

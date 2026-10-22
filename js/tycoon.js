@@ -66,11 +66,20 @@ function crearKit() {
     esfera: (r, c, x, y, z) => malla(geo(`e${r}`, () => new THREE.SphereGeometry(r, 14, 10)), c, x, y, z),
     grupo: () => new THREE.Group(),
     etiqueta: (lineas, ancho) => crearEtiqueta(lineas, ancho).sprite,
+    // Cartel con su chapa: el plano con el dibujo y atrás una placa con canto, así no
+    // parece una calcomanía pegada.
     cartel(texto, ancho, alto, color, fondo) {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto),
-        new THREE.MeshBasicMaterial({ map: texturaDeCanvas(canvasCartel(texto, ancho, alto, color, fondo)) }));
+      const tex = texturaDeCanvas(canvasCartel(texto, ancho, alto, color, fondo));
+      tex.anisotropy = 4;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: tex }));
+      const placa = new THREE.Mesh(GEO_CAJA, mat('#1d1f22'));
+      placa.scale.set(ancho + 0.12, alto + 0.12, 0.12);
+      placa.position.z = -0.065;
+      placa.userData.noSolido = true;
+      m.add(placa);
       return kit.noSolido(m);
     },
+
     tex: (tipo, color, tamano) => matTex(tipo, color, tamano),
     // Mueble 3D (ver modelos.js): origen en el centro de la base, frente hacia +z.
     modelo: (nombre, opts = {}) => crearModelo(nombre, { vidrio: kit.vidrio, luz: kit.brillo('#fff3d6'), ...opts, material: mat }),
