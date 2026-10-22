@@ -66,6 +66,7 @@ export const sfx = {
   error() { efecto([[160, 0, 0.25, 'sawtooth', 0.05]]); },
   salto() { efecto([[330, 0, 0.12, 'triangle', 0.05], [500, 0.04, 0.1, 'triangle', 0.04]]); },
   gol() { efecto([392, 523, 659, 784, 1047, 1319].map((f, i) => [f, i * 0.09, 0.3, 'square', 0.05])); },
+  brillo() { efecto([1568, 2093, 2637, 3136].map((f, i) => [f, 0.05 + i * 0.05, 0.25, 'sine', 0.035])); },
   disparo() { efecto([[150, 0, 0.06, 'square', 0.05], [70, 0.01, 0.08, 'sawtooth', 0.05]]); },
   moto() { efecto([[70, 0, 0.5, 'sawtooth', 0.04], [95, 0.12, 0.6, 'sawtooth', 0.04], [120, 0.3, 0.7, 'sawtooth', 0.035]]); },
   robo() { efecto([[660, 0, 0.12, 'square', 0.05], [440, 0.1, 0.12, 'square', 0.05], [220, 0.2, 0.3, 'square', 0.05]]); },

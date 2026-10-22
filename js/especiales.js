@@ -44,13 +44,11 @@ function papa(k, p) {
   }
 }
 
-// Boxer Supreme (sin el paquete ni el fondo) colgado de un soporte de metal.
+// Boxer Supreme (sin el paquete ni el fondo), flotando y girando sobre el pedestal.
 function boxer(k, p) {
-  p.add(k.caja(0.12, 3.6, 0.12, '#9aa0a6', 0, 1.8, -0.1));
-  p.add(k.caja(2.6, 0.1, 0.1, '#9aa0a6', 0, 3.55, -0.1));
   for (const lado of [1, -1]) {
     const b = k.imagen('assets/especiales/boxer_supreme.png', 2.9, 2.64);
-    b.position.set(0, 2.25, lado * 0.01);
+    b.position.set(0, 2, lado * 0.01);
     b.rotation.y = lado > 0 ? 0 : Math.PI;
     p.add(b);
   }

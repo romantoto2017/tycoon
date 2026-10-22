@@ -306,6 +306,7 @@ export class Tycoon {
       this.ui.celebrar(this.estado.tiempoJugado || 0);
     } else {
       sfx.comprar();
+      this.alComprar?.(item);
       this.ui.toast(`¡${item.nombre}!`, 'ok');
       if (item.descripcion) this.ui.toast(item.descripcion, 'plata');
     }

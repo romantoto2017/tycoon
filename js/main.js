@@ -238,6 +238,57 @@ async function iniciar() {
     if (ak.userData.fogonazo.visible && (ak.userData.fogonazoVida -= dt) <= 0) ak.userData.fogonazo.visible = false;
   };
 
+  // Brillito al comprar para los que usan kipá (data/personajes.js: kipa).
+  const brillos = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.25, 'rgba(255,214,90,0.95)');
+    grad.addColorStop(1, 'rgba(255,215,64,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    g.fillStyle = 'rgba(255,240,170,0.95)';
+    g.fillRect(29, 2, 6, 60);
+    g.fillRect(2, 29, 60, 6);
+    const tex = new THREE.CanvasTexture(c);
+    const lista = Array.from({ length: 18 }, () => {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, }));
+      sp.visible = false;
+      escena.add(sp);
+      return sp;
+    });
+    return {
+      tirar(centro) {
+        lista.forEach((sp, i) => {
+          const a = (i / lista.length) * Math.PI * 2;
+          sp.userData.vel = new THREE.Vector3(Math.cos(a) * 2.2, 2.5 + Math.random() * 2.5, Math.sin(a) * 2.2);
+          sp.position.set(centro.x + Math.cos(a) * 1.3, centro.y + 1.5 + Math.random() * 4, centro.z + Math.sin(a) * 1.3);
+          sp.userData.vida = 1.1 + Math.random() * 0.4;
+          sp.visible = true;
+        });
+        sfx.brillo();
+      },
+      actualizar(dt) {
+        for (const sp of lista) {
+          if (!sp.visible) continue;
+          sp.userData.vida -= dt;
+          if (sp.userData.vida <= 0) { sp.visible = false; continue; }
+          sp.position.addScaledVector(sp.userData.vel, dt);
+          sp.userData.vel.multiplyScalar(1 - dt * 1.5);
+          const t = sp.userData.vida;
+          sp.material.opacity = Math.min(1, t * 2);
+          const e = 1.4 + 0.5 * Math.sin(t * 14);
+          sp.scale.set(e, e, 1);
+        }
+      },
+    };
+  })();
+  tycoon.alComprar = () => {
+    if (PERSONAJES.find((x) => x.id === estado.personaje)?.kipa) brillos.tirar(jugador.pos);
+  };
+
   const ponerPersonaje = async (p) => {
     const enMano = armaEnMano;
     if (enMano) sacarArma(false);
@@ -429,6 +480,7 @@ async function iniciar() {
     ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     actualizarArma(dt);
+    brillos.actualizar(dt);
     mundo.actualizar(dt, estado.tiempoJugado, estado.compras.includes('farolas'));
     if (modo === 'juego') {
       estado.tiempoJugado += dt;

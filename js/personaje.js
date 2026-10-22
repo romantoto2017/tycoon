@@ -4,6 +4,57 @@ import { texturaDeCanvas, recorteCanvas } from './texturas.js';
 
 const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
 
+// Kipá vista desde arriba: satén con brillo, costuras de los gajos, estrella de David
+// bordada en plateado adelante y zigzag plateado cerca del borde.
+function canvasKipa() {
+  const n = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d');
+  const m = n / 2;
+  const fondo = g.createRadialGradient(m * 0.8, m * 0.75, 4, m, m, m);
+  fondo.addColorStop(0, '#4a4f6e');
+  fondo.addColorStop(0.45, '#262a40');
+  fondo.addColorStop(1, '#14161f');
+  g.fillStyle = fondo;
+  g.fillRect(0, 0, n, n);
+  g.strokeStyle = 'rgba(0,0,0,0.45)';
+  g.lineWidth = 2;
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    g.beginPath(); g.moveTo(m, m); g.lineTo(m + Math.cos(a) * m, m + Math.sin(a) * m); g.stroke();
+  }
+  g.strokeStyle = '#c9ccd6';
+  g.lineWidth = 2.5;
+  g.beginPath();
+  for (let i = 0; i <= 72; i++) {
+    const a = (i / 72) * Math.PI * 2;
+    const rr = m * (i % 2 ? 0.86 : 0.8);
+    const x = m + Math.cos(a) * rr;
+    const y = m + Math.sin(a) * rr;
+    if (i) g.lineTo(x, y); else g.moveTo(x, y);
+  }
+  g.stroke();
+  // Estrella de David (dos triángulos), hacia adelante (abajo en la textura = frente).
+  const ex = m;
+  const ey = m + m * 0.38;
+  const er = m * 0.24;
+  g.lineWidth = 6;
+  g.strokeStyle = '#d6d9e2';
+  for (const giro of [0, Math.PI]) {
+    g.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const a = giro - Math.PI / 2 + (i * 2 * Math.PI) / 3;
+      const x = ex + Math.cos(a) * er;
+      const y = ey + Math.sin(a) * er;
+      if (i) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.closePath();
+    g.stroke();
+  }
+  return c;
+}
+
 // Muñeco de bloques. Mira hacia +Z. Los pies están en y = 0 (alto total ~5.4).
 // cabeza: lo que devuelve cargarCabeza() (las 6 texturas y el color de piel de la foto).
 export function crearPersonaje(p, cabezaTex) {
@@ -86,18 +137,23 @@ export function crearPersonaje(p, cabezaTex) {
   const cabeza = new THREE.Mesh(GEO_CABEZA, materiales);
   cabeza.position.y = 4.7 - CADERA;
   cuerpo.add(cabeza);
-  // Kipá (data/personajes.js: kipa): disco finito en la coronilla, tamaño real (unos 13 cm
-  // sobre una cabeza de 18), un poco corrido hacia atrás y siguiendo la curva de la nuca.
+  // Kipá (data/personajes.js: kipa): casquete de tela con forma de cúpula, tamaño real (unos
+  // 14 cm sobre una cabeza de 18), en la coronilla y un poco hacia atrás: de costado se ve
+  // paradita. Satén azul oscuro con la estrella bordada y el borde en zigzag plateado.
   if (p.kipa) {
-    const tex = new THREE.TextureLoader().load('assets/especiales/kipa.png');
-    tex.colorSpace = THREE.SRGBColorSpace;
-    const tela = new THREE.MeshLambertMaterial({ color: '#1c1a22' });
-    const arriba = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.4 });
-    extras.push(tex, tela, arriba);
-    const kipa = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.43, 0.06, 24), [tela, arriba, tela]);
-    kipa.position.set(0, cabeza.position.y + 0.68, -0.2);
-    kipa.rotation.x = -0.18;
-    extras.push(kipa.geometry);
+    const r = 0.44;
+    const geo = new THREE.SphereGeometry(r, 28, 8, 0, Math.PI * 2, 0, 1.15);
+    geo.scale(1, 0.8, 1);
+    // Textura proyectada desde arriba (así la estrella no se deforma).
+    const pos = geo.attributes.position;
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, 0.5 + pos.getX(i) / (2 * r), 0.5 - pos.getZ(i) / (2 * r));
+    const tex = texturaDeCanvas(canvasKipa());
+    const tela = new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide });
+    extras.push(tex, tela, geo);
+    const kipa = new THREE.Mesh(geo, tela);
+    kipa.position.set(0, cabeza.position.y + 0.64 - 0.14, -0.2); // el borde apoya en la cabeza
+    kipa.rotation.x = -0.25;
     cuerpo.add(kipa);
   }
   // Pelo largo (data/personajes.js: peloLargo): cae por la espalda y a los costados de la cara.
