@@ -3,6 +3,7 @@
 // - boton:    [x, y, z] donde aparece
 // - tipo:     'dropper' | 'mejora' | 'construccion'
 // - muebles:  true si son muebles (la cámara los atraviesa)
+// - multPrecio: cuántas veces más caro que lo que le tocaría por su lugar en la partida
 // - mueble:   true si es un mueble de una habitación (se compran de a uno, en orden)
 // Los precios salen de js/precios.js (generado con herramientas/balance.mjs),
 // salvo los objetos especiales y cuadros, que están en data/objetos.js.
@@ -138,6 +139,13 @@ estructuraPiso(1, salasPiso[0], subir(0), [
 ]);
 agregar({ id: 'ascensor', nombre: 'Ascensor', tipo: 'construccion', requiere: ['piso_1'], boton: en(0, [ASCENSOR.x, ASCENSOR.z]) });
 agregar({ id: 'auto_cobro', nombre: 'Cobrador Automático', tipo: 'construccion', requiere: ['piso_1', 'dropper5'], boton: suelo(-50, 34) });
+// Garage, AK-47 y auto alrededor del 20% de la partida. El AK cuesta más que lo que
+// hay alrededor y el auto bastante más (multPrecio, ver herramientas/balance.mjs).
+obra('garage', 'Garage', ['piso_1', 'cascadas'], suelo(59, 24), Ex.garage);
+obra('ak47', 'AK-47 (para la Schwepa)', ['garage'], suelo(66.5, 2), Es.armero, {
+  descripcion: 'Apretá 1 o el botón de abajo para sacarla', multPrecio: 3,
+});
+agregar({ id: 'auto', nombre: 'Auto Deportivo (manejable)', tipo: 'construccion', requiere: ['ak47'], boton: suelo(59, 30), multPrecio: 10 });
 cuarto(0);
 cuarto(1);
 mejora('velocidad', ['vel1', 'paredes_int_1']);
@@ -156,11 +164,6 @@ estructuraPiso(2, salasPiso[1], subir(1), [
   () => dropper(6, ['dropper6', 'piso_2']),
 ]);
 mejora('velocidad', ['vel2', 'paredes_int_2']);
-// Garage a mitad de partida, con el AK-47 para echar a la Schwepa (ver ladron.js).
-obra('garage', 'Garage', ['piso_2', 'camino'], suelo(59, 24), Ex.garage);
-obra('ak47', 'AK-47 (para la Schwepa)', ['garage'], suelo(66.5, 2), Es.armero, {
-  descripcion: 'Apretá 1 o el botón de abajo para sacarla',
-});
 cuarto(6);
 cuarto(7);
 sala('cine', 'Cine', 2, 'EIF', 'cine');
@@ -190,7 +193,6 @@ sala('bar', 'Bar Vecibanda', 3, 'EIF', 'bar');
 sala('trofeos', 'Sala de Trofeos', 3, 'EIB', 'salaTrofeos');
 sala('streaming', 'Estudio de Streaming', 3, 'EOF', 'streaming');
 sala('suite_vip', 'Suite VIP', 3, 'EOB', 'dormitorio1');
-agregar({ id: 'auto', nombre: 'Auto Deportivo (manejable)', tipo: 'construccion', requiere: ['garage', 'piso_3'], boton: suelo(59, 30) });
 obra('cancha', 'Cancha de Fútbol', ['piso_3'], suelo(24, -60), Ex.cancha);
 obra('gradas', 'Gradas y Marcador', ['cancha'], suelo(24, -44), Ex.gradas);
 obra('farolas', 'Farolas', ['jardin', 'piso_3'], suelo(-30, 30), Ex.farolas);
@@ -257,7 +259,7 @@ const LUGAR_LUJO = {
   nico_carton: { base: ['paredes_int_pb'], boton: en(0, [3.5, -1.6]), construir: Es.nicoCarton },
   piano: { base: ['paredes_int_pb'], boton: en(0, [5.5, -31.5]), construir: Es.piano },
   trex: { base: ['jardin'], boton: suelo(-34, 42), construir: Es.trex },
-  boveda: { base: ['garage', 'auto'], boton: suelo(50, -3), construir: Es.boveda },
+  boveda: { base: ['garage', 'techo'], boton: suelo(50, -3), construir: Es.boveda },
   piscina_inf: { base: ['techo'], boton: en(4, [14, -17]), construir: Es.piscinaInfinita },
   helicoptero: { base: ['techo'], boton: en(4, [32, -20]), construir: Es.helicoptero },
 };

@@ -39,7 +39,7 @@ const filas = [];
 ITEMS.forEach((item, i) => {
   const objetivo = peso(item) * (T0 + T1 * Math.pow(w / W, CURVA));
   w += peso(item);
-  const sugerido = redondo(ingreso * eficiencia * objetivo);
+  const sugerido = redondo(ingreso * eficiencia * objetivo * (item.multPrecio || 1));
   let precio;
   if (item.gratis) precio = 0;
   else if (item.especial) precio = item.precio;
