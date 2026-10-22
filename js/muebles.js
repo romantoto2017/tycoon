@@ -384,32 +384,131 @@ const banioPB = [
 ];
 
 const salaJuegos = [
-  LUZ(0, 2.5),
-  M('pool', 'Mesa de pool', 0, -1, (k, s) => {
-    s.b(-3, 0, -2, 3, 1.6, 2, '#5d4037');
-    s.d(-2.7, 1.6, -1.7, 2.7, 1.72, 1.7, '#2e7d32');
-    s.esf(0.2, '#ffffff', -1, 1.92, 0);
-    s.esf(0.2, '#e53935', 1, 1.92, 0.4);
-    s.esf(0.2, '#fdd835', 1.3, 1.92, -0.3);
+  LUZ(0, 2.5, (k, s) => {
+    s.cartel('SALA DE JUEGOS', 7, 1.4, 0, 7.4, 6.68, Math.PI, '#ffe14d', '#1b5e20');
+    // Lámparas de pool sobre la mesa.
+    [-1.6, 1.6].forEach((x) => {
+      s.d(x - 0.03, 6.6, -0.03, x + 0.03, 9.6, 0.03, '#24282c');
+      s.d(x - 0.7, 6.3, -0.45, x + 0.7, 6.6, 0.45, '#1b5e20');
+      s.d(x - 0.6, 6.25, -0.35, x + 0.6, 6.3, 0.35, brillo(k, '#fff3c4'));
+    });
   }),
-  M('ping_pong', 'Ping pong', 5.6, -5.4, (k, s) => {
-    s.b(3.6, 0, -6.4, 7.6, 1.8, -4.4, '#1565c0');
-    s.d(3.6, 1.8, -6.2, 7.6, 1.85, -4.6, '#4caf50');
-    [4.3, 5.2, 6.1, 7].forEach((x) => s.d(x - 0.06, 1.95, -6.9, x + 0.06, 2.07, -3.9, '#bdbdbd'));
+  M('alfombra', 'Alfombra', -3, 2.8, (k, s) => alfombra(s, -6, -4, 6, 4, '#2e5d3a')),
+  M('pool', 'Mesa de pool', 0, -2.6, (k, s) => mesaPool(k, s)),
+  M('tacos', 'Tacos de pool', -7.6, -2, (k, s) => tacos(k, s)),
+  M('ping_pong', 'Ping pong', 5.6, -3.4, (k, s) => pingPong(k, s)),
+  M('arcades', 'Máquinas de arcade', 5.8, 3.6, (k, s) => {
+    maquinaArcade(k, s, 7.7, 2.4, '#7b1fa2', '#00e5ff');
+    maquinaArcade(k, s, 7.7, 4.6, '#c2185b', '#ffea00');
   }),
-  M('arcades', 'Máquinas de arcade', 5.3, 4.1, (k, s) => {
-    s.b(5.8, 0, 3, 7.8, 5.2, 5.2, '#7b1fa2');
-    s.d(5.75, 3, 3.3, 5.8, 4.5, 4.9, brillo(k, '#00e5ff'));
-    s.b(2.8, 0, 3, 4.8, 5.2, 5.2, '#c2185b');
-    s.d(2.75, 3, 3.3, 2.8, 4.5, 4.9, brillo(k, '#ffea00'));
-  }),
-  M('dardos', 'Dardos', -6.5, 5.2, (k, s) => {
-    s.cil(0.9, 0.1, '#ffffff', -7.95, 4, 5, 16).rotation.z = Math.PI / 2;
-    s.d(-8.2, 0, 4.5, -4.5, 0.06, 6.5, '#ffb300');
-  }),
+  M('metegol', 'Metegol', 0, 3, (k, s) => metegol(k, s, 0, 4.6)),
+  M('dardos', 'Dardos', -6.5, 5.2, (k, s) => dardos(k, s)),
   M('sillon', 'Sillón', -6.4, -5, (k, s) => s.modelo('loungeSofa', -6.4, 0, -5.4, 0, { ancho: 3.6, tela: '#5d4037' })),
-  M('planta', 'Planta', -6.6, -1.5, (k, s) => s.modelo('pottedPlant', -7.8, 0, -1, 0, { alto: 3.4 })),
+  M('planta', 'Planta', -6.6, -1.5, (k, s) => s.modelo('pottedPlant', -7.8, 0, 0.6, 0, { alto: 3.4 })),
 ];
+
+// ---------- Sala de juegos ----------
+
+// Mesa de pool: patas torneadas, marco de madera, paño verde, troneras, bandas, triángulo
+// de bolas y la blanca.
+function mesaPool(k, s) {
+  const L = 3;
+  const W = 1.7;
+  for (const x of [-L + 0.35, 0, L - 0.35]) for (const z of [-W + 0.35, W - 0.35]) {
+    s.d(x - 0.22, 0, z - 0.22, x + 0.22, 0.25, z + 0.22, '#3e2418');
+    s.d(x - 0.15, 0.25, z - 0.15, x + 0.15, 1.35, z + 0.15, '#5d3a24');
+  }
+  s.b(-L, 1.35, -W, L, 1.75, W, '#5d3a24');
+  s.d(-L + 0.3, 1.75, -W + 0.3, L - 0.3, 1.78, W - 0.3, '#1e7a3c');
+  s.d(-L, 1.75, -W, L, 1.95, -W + 0.3, '#4a2c1c');
+  s.d(-L, 1.75, W - 0.3, L, 1.95, W, '#4a2c1c');
+  s.d(-L, 1.75, -W, -L + 0.3, 1.95, W, '#4a2c1c');
+  s.d(L - 0.3, 1.75, -W, L, 1.95, W, '#4a2c1c');
+  s.d(-L + 0.3, 1.78, -W + 0.3, L - 0.3, 1.83, -W + 0.42, '#176631');
+  s.d(-L + 0.3, 1.78, W - 0.42, L - 0.3, 1.83, W - 0.3, '#176631');
+  for (const x of [-L + 0.35, 0, L - 0.35]) for (const z of [-W + 0.35, W - 0.35]) s.cil(0.17, 0.03, '#111111', x, 1.78, z, 12);
+  for (const x of [-L + 0.35, L - 0.35]) for (const z of [-W + 0.35, W - 0.35]) s.d(x - 0.2, 1.95, z - 0.2, x + 0.2, 1.97, z + 0.2, '#c9a227');
+  const colores = ['#fdd835', '#1e88e5', '#e53935', '#6a1b9a', '#ff7043', '#2e7d32', '#8d1c1c', '#111111', '#fdd835', '#1e88e5', '#e53935', '#6a1b9a', '#ff7043', '#2e7d32', '#8d1c1c'];
+  let n = 0;
+  for (let fila = 0; fila < 5; fila++) {
+    for (let i = 0; i <= fila; i++) {
+      s.esf(0.11, colores[n++ % colores.length], 1.1 + fila * 0.19, 1.89, (i - fila / 2) * 0.23);
+    }
+  }
+  s.esf(0.11, '#ffffff', -1.6, 1.89, 0);
+  s.d(-1.1, 1.92, 0.4, 0.9, 1.97, 0.46, '#c49a6c');
+}
+
+// Soporte de pared con tacos y la tiza.
+function tacos(k, s) {
+  s.d(-8.75, 2.2, -3.4, -8.55, 6.2, -0.6, '#5d3a24');
+  s.d(-8.55, 2.6, -3.3, -8.35, 2.8, -0.7, '#4a2c1c');
+  s.d(-8.55, 5.6, -3.3, -8.35, 5.8, -0.7, '#4a2c1c');
+  [-3, -2.4, -1.8, -1.2].forEach((z, i) => {
+    s.d(-8.5, 2.4, z - 0.05, -8.4, 6.1, z + 0.05, '#e0c79c');
+    s.d(-8.5, 2.4, z - 0.07, -8.4, 3.6, z + 0.07, ['#3e2418', '#1b5e20', '#8d1c1c', '#1a237e'][i]);
+  });
+}
+
+// Mesa de ping pong azul con líneas blancas, red, patas y dos paletas.
+function pingPong(k, s) {
+  const x0 = 3.6;
+  const x1 = 7.8;
+  const z0 = -6.2;
+  const z1 = -3.8;
+  for (const x of [x0 + 0.3, x1 - 0.3]) for (const z of [z0 + 0.3, z1 - 0.3]) s.d(x - 0.07, 0, z - 0.07, x + 0.07, 1.6, z + 0.07, '#24282c');
+  s.b(x0, 1.6, z0, x1, 1.72, z1, '#1565c0');
+  s.d(x0, 1.72, z0, x1, 1.73, z0 + 0.05, '#ffffff');
+  s.d(x0, 1.72, z1 - 0.05, x1, 1.73, z1, '#ffffff');
+  s.d(x0, 1.72, z0, x0 + 0.05, 1.73, z1, '#ffffff');
+  s.d(x1 - 0.05, 1.72, z0, x1, 1.73, z1, '#ffffff');
+  s.d(x0, 1.72, (z0 + z1) / 2 - 0.02, x1, 1.73, (z0 + z1) / 2 + 0.02, '#ffffff');
+  const xm = (x0 + x1) / 2;
+  s.d(xm - 0.02, 1.72, z0 - 0.1, xm + 0.02, 2.05, z1 + 0.1, '#f5f5f5');
+  s.d(xm - 0.03, 2.0, z0 - 0.1, xm + 0.03, 2.05, z1 + 0.1, '#ffffff');
+  s.cil(0.22, 0.04, '#d32f2f', x0 + 0.9, 1.73, z0 + 0.6, 14);
+  s.cil(0.22, 0.04, '#111111', x1 - 0.9, 1.73, z1 - 0.6, 14);
+  s.esf(0.07, '#ff9800', xm + 0.6, 1.8, (z0 + z1) / 2 + 0.3);
+}
+
+// Metegol: mueble de madera, cancha verde, barras de metal con jugadores rojos y azules.
+function metegol(k, s, x, z) {
+  const L = 1.6;
+  const W = 0.7;
+  for (const dx of [-L + 0.2, L - 0.2]) for (const dz of [-W + 0.15, W - 0.15]) s.d(x + dx - 0.1, 0, z + dz - 0.1, x + dx + 0.1, 1.3, z + dz + 0.1, '#3e2418');
+  s.b(x - L, 1.3, z - W, x + L, 2.1, z + W, '#8d5a34');
+  s.d(x - L + 0.1, 1.8, z - W + 0.1, x + L - 0.1, 1.82, z + W - 0.1, '#2e7d32');
+  s.d(x - 0.02, 1.82, z - W + 0.1, x + 0.02, 1.83, z + W - 0.1, '#ffffff');
+  for (let i = 0; i < 6; i++) {
+    const bx = x - L + 0.35 + i * ((2 * L - 0.7) / 5);
+    s.d(bx - 0.03, 2.0, z - W - 0.35, bx + 0.03, 2.06, z + W + 0.35, '#c9ced3');
+    s.d(bx - 0.06, 2.0, z - W - 0.45, bx + 0.06, 2.12, z - W - 0.3, '#111111');
+    const color = i % 2 ? '#1e88e5' : '#e53935';
+    const n = [1, 2, 3, 3, 2, 1][i];
+    for (let j = 0; j < n; j++) {
+      const pz = z + (j - (n - 1) / 2) * 0.4;
+      s.d(bx - 0.06, 1.85, pz - 0.05, bx + 0.06, 2.12, pz + 0.05, color);
+    }
+  }
+  s.esf(0.06, '#ffffff', x + 0.3, 1.88, z + 0.1);
+}
+
+// Tablero de dardos: respaldo de madera, aros de colores, dardos clavados y la línea de tiro.
+function dardos(k, s) {
+  s.d(-8.75, 3.0, 3.6, -8.6, 6.2, 6.4, '#5d3a24');
+  const aros = [[0.95, '#111111'], [0.85, '#e53935'], [0.7, '#f3e5c0'], [0.55, '#1b5e20'], [0.4, '#f3e5c0'], [0.18, '#1b5e20'], [0.08, '#e53935']];
+  aros.forEach(([r, c], i) => {
+    const d = s.cil(r, 0.05, c, -8.58 + i * 0.012, 4.6, 5, 24);
+    d.rotation.z = Math.PI / 2;
+  });
+  [[4.75, 4.95, '#ffe14d'], [4.4, 5.2, '#29e7ff'], [4.7, 5.25, '#ff3d9a']].forEach(([y, z, c]) => {
+    s.d(-8.5, y - 0.02, z - 0.02, -8.15, y + 0.02, z + 0.02, '#9aa0a6');
+    s.d(-8.2, y - 0.08, z - 0.01, -8.05, y + 0.08, z + 0.01, c);
+  });
+  s.d(-3.6, 0, 4, -3.5, 0.08, 6, '#ffe14d');
+  s.cartel('DARDOS', 1.8, 0.5, -8.58, 6.6, 5, Math.PI / 2, '#ffe14d', '#8d1c1c');
+}
+
 
 const arcade = [
   LUZ(0, 3, (k, s) => {
