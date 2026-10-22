@@ -26,8 +26,48 @@ async function iniciar() {
 
   const canvas = document.getElementById('juego');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  let pixelRatio = Math.min(window.devicePixelRatio || 1, 1.25);
+  // Resolución: 'auto' la ajusta sola, 'alta' siempre al máximo, 'rapida' más baja y fija.
+  // En auto solo se baja si de verdad hace falta y si sirve: cuando la que no da abasto es la
+  // compu (no la placa de video), bajar la resolución no sube los fps y solo pixela, así que se
+  // vuelve atrás. Si después sobran fps, se vuelve a subir.
+  const MAXIMA = Math.min(window.devicePixelRatio || 1, 1.5);
+  const MINIMA = Math.min(MAXIMA, 0.8);
+  let pixelRatio = Math.min(MAXIMA, 1.25);
   renderer.setPixelRatio(pixelRatio);
+  const resolucion = {
+    modo: 'auto',
+    prueba: null, // { anterior, fps } mientras se ve si bajar sirvió
+    trabaCPU: 0, // segundos sin volver a intentar bajar
+    poner(pr) {
+      pr = Math.round(Math.min(MAXIMA, Math.max(MINIMA, pr)) * 100) / 100;
+      if (pr === pixelRatio) return;
+      pixelRatio = pr;
+      renderer.setPixelRatio(pixelRatio);
+      ajustar();
+    },
+    cambiarModo(modo) {
+      this.modo = modo;
+      this.prueba = null;
+      this.poner(modo === 'alta' ? MAXIMA : modo === 'rapida' ? MINIMA : Math.min(MAXIMA, 1.25));
+    },
+    medir(fps) {
+      if (this.modo !== 'auto') return;
+      this.trabaCPU = Math.max(0, this.trabaCPU - 2);
+      if (this.prueba) {
+        const sirvio = fps > this.prueba.fps * 1.12;
+        if (!sirvio) {
+          this.poner(this.prueba.anterior);
+          this.trabaCPU = 60;
+        }
+        this.prueba = null;
+      } else if (fps < 38 && pixelRatio > MINIMA && this.trabaCPU === 0) {
+        this.prueba = { anterior: pixelRatio, fps };
+        this.poner(pixelRatio - 0.15);
+      } else if (fps > 54 && pixelRatio < MAXIMA) {
+        this.poner(pixelRatio + 0.1);
+      }
+    },
+  };
 
   const escena = new THREE.Scene();
   const camara = new THREE.PerspectiveCamera(70, 1, 0.2, 900);
@@ -63,6 +103,7 @@ async function iniciar() {
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
   const aplicarAjustes = () => {
+    if (ajustes.calidad !== resolucion.modo) resolucion.cambiarModo(ajustes.calidad);
     setVolumenes({ general: ajustes.general, musica: ajustes.musica, efectos: ajustes.efectos });
     controles.sensibilidad = ajustes.sensibilidad;
     guardarAjustes(ajustes);
@@ -429,18 +470,12 @@ async function iniciar() {
       camaraMenu(dt);
     }
 
-    // Si la máquina no llega a 40 fps, bajar la resolución de a poco
-    // (se ignoran los primeros segundos, que siempre son lentos). Va antes de dibujar:
-    // cambiar el tamaño del canvas lo borra.
+    // Resolución automática (va antes de dibujar: cambiar el tamaño del canvas lo borra).
     if (real < 0.25 && reloj.elapsedTime > 4) {
       medida += real;
       cuadros++;
       if (medida > 2) {
-        if (cuadros / medida < 40 && pixelRatio > 0.6) {
-          pixelRatio = Math.max(0.6, pixelRatio - 0.15);
-          renderer.setPixelRatio(pixelRatio);
-          ajustar();
-        }
+        resolucion.medir(cuadros / medida);
         medida = 0;
         cuadros = 0;
       }

@@ -107,4 +107,10 @@ export function prepararConfig(ajustes, alCambiar) {
       alCambiar(ajustes);
     });
   }
+  const calidad = $('aj-calidad');
+  calidad.value = ajustes.calidad;
+  calidad.addEventListener('change', () => {
+    ajustes.calidad = calidad.value;
+    alCambiar(ajustes);
+  });
 }

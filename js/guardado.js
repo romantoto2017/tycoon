@@ -35,7 +35,7 @@ export function borrar() {
 const CLAVE_AJUSTES = 'vecibanda-house-ajustes';
 
 export function cargarAjustes() {
-  const base = { general: 0.8, musica: 0.5, efectos: 0.8, sensibilidad: 1 };
+  const base = { general: 0.8, musica: 0.5, efectos: 0.8, sensibilidad: 1, calidad: 'auto' };
   try {
     return { ...base, ...JSON.parse(localStorage.getItem(CLAVE_AJUSTES)) };
   } catch {
