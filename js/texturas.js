@@ -222,6 +222,57 @@ function dibujarAtras(g, s, pelo, piel, peinado) {
   mechones(g, s, 0, s * 0.9, 3, peinado);
 }
 
+// Pelitos de barba (trazos cortos semitransparentes) en los puntos donde dentro(x, y).
+function barbaEn(g, s, color, dentro) {
+  let a = 13;
+  const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
+  g.save();
+  // Base pareja (sombra de barba) y después los pelitos encima.
+  const base = g.createImageData(s, s);
+  const [r, gg, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+  for (let y = 0; y < s; y++) {
+    for (let x = 0; x < s; x++) {
+      if (!dentro(x, y)) continue;
+      const k = (y * s + x) * 4;
+      base.data.set([r, gg, b, 105], k);
+    }
+  }
+  const capa = document.createElement('canvas');
+  capa.width = capa.height = s;
+  capa.getContext('2d').putImageData(base, 0, 0);
+  g.filter = 'blur(2px)';
+  g.drawImage(capa, 0, 0);
+  g.filter = 'none';
+  g.strokeStyle = color;
+  g.lineCap = 'round';
+  for (let i = 0; i < 4200; i++) {
+    const x = rnd() * s;
+    const y = rnd() * s;
+    if (!dentro(x, y)) continue;
+    g.globalAlpha = 0.25 + rnd() * 0.4;
+    g.lineWidth = 1 + rnd() * 1.6;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + (rnd() - 0.5) * 3, y + 2 + rnd() * 4);
+    g.stroke();
+  }
+  g.restore();
+}
+
+// Barba sobre la foto: bigote arriba de la boca, mandíbula a los costados y debajo de los
+// labios. boca: [x0, y0, x1, y1] de los labios en proporción de la textura (0 a 1).
+function dibujarBarba(g, s, color, [bx0, by0, bx1, by1]) {
+  const mx = (bx0 + bx1) / 2;
+  const labios = (x, y) => ((x / s - mx) / ((bx1 - bx0) / 2)) ** 2 + ((y / s - (by0 + by1) / 2) / ((by1 - by0) / 2)) ** 2 < 1;
+  const bigote = (x, y) => y / s > by0 - 0.06 && y / s < by0 + 0.015 && Math.abs(x / s - mx) < (bx1 - bx0) * 0.55;
+  const mandibula = (x, y) => {
+    const u = Math.abs(x / s - 0.5); // 0 en el centro, 0.5 en el borde
+    const desde = 0.95 - u * 0.9; // más alto hacia los costados (patillas)
+    return y / s > desde && !labios(x, y);
+  };
+  barbaEn(g, s, color, (x, y) => bigote(x, y) || mandibula(x, y));
+}
+
 // Las 6 caras de la cabeza: frente con la foto y el resto dibujado con los colores
 // de pelo y piel sacados de la misma foto. Si existe p.fotoAtras, se usa para la nuca.
 export function cargarCabeza(p) {
@@ -293,6 +344,20 @@ export function cargarCabeza(p) {
           };
           ropa = { frente: aCanvas(imgFrente), tela: aCanvas(imgTela) };
         }
+      }
+      if (p.barba) {
+        const b = p.barba;
+        dibujarBarba(gf, s, b.color, b.boca);
+        // Costados: patillas y mandíbula del lado de la cara (en la textura, a la izquierda).
+        barbaEn(gd, s, b.color, (x, y) => x < s * 0.45 && y > s * (0.55 + 0.25 * (x / (s * 0.45))));
+        gi.setTransform(1, 0, 0, 1, 0, 0);
+        gi.clearRect(0, 0, s, s);
+        gi.translate(s, 0);
+        gi.scale(-1, 1);
+        gi.drawImage(der, 0, 0);
+        gab.fillStyle = b.color;
+        gab.fillRect(0, 0, s, s * 0.55);
+        barbaEn(gab, s, b.color, (x, y) => y < s * 0.7);
       }
       return { frente, der, izq, atras, arriba, abajo, piel, pelo, ropa };
     })());

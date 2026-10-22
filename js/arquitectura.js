@@ -215,6 +215,13 @@ export function paredesInteriores(k, g, n) {
   }
   // Lámparas colgantes en el hall.
   for (const x of [-3, 3]) colgante(k, g, x, base + ALTO_PARED, -6);
+  // Póster del Grupo X pegado en el pasillo del tercer piso, al lado del estudio de música.
+  if (n === 3) {
+    const poster = k.imagen('assets/especiales/grupox.jpg', 3.4 * 1080 / 1295, 3.4);
+    poster.position.set(-22.6, base + 4.4, PASILLO.z0 + t / 2 + 0.03);
+    poster.rotation.z = 0.035;
+    g.add(poster);
+  }
 }
 
 // Lámpara colgante: cable, pantalla negra y luz cálida abajo.

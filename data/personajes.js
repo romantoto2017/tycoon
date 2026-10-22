@@ -10,6 +10,7 @@
 // - peinado: 'liso', 'ondulado' o 'rulos'
 // - cuerpo:  (opcional) 'gordo'
 // - velocidad: (opcional) 1 = normal, 0.5 = la mitad de rápido
+// - barba: (opcional) { color, boca: [x0, y0, x1, y1] de los labios en la foto recortada, de 0 a 1 }
 // - kipa: (opcional) true = lleva kipá en la coronilla
 // - alto: (opcional) 1 = normal; más alto no entra por las puertas y tiene el botón de agacharse
 // - remera / pantalon: color de la ropa
@@ -19,7 +20,7 @@ export const PERSONAJES = [
   { id: 'toto',   nombre: 'Toto',   foto: 'toto.jpeg',   recorte: [0.5, 0.53, 0.52],   piel: '#f3d3bd',                    remera: '#e53935', pantalon: '#1e3a8a', kipa: true },
   { id: 'nico',   nombre: 'Nico',   foto: 'nico.jpeg',   recorte: [0.5, 0.54, 1],                                         remera: '#1e88e5', pantalon: '#37474f' },
   { id: 'val',    nombre: 'Val',    foto: 'val.jpeg',    recorte: [0.55, 0.61, 0.68], piel: '#fbe3d4', pelo: '#e3bd62', peinado: 'rulos', remera: '#8e24aa', pantalon: '#263238', kipa: true },
-  { id: 'juanma', nombre: 'Juanma', foto: 'juanma.jpeg', recorte: [0.5, 0.49, 0.62],                                      remera: '#43a047', pantalon: '#5d4037' },
+  { id: 'juanma', nombre: 'Juanma', foto: 'juanma.jpeg', recorte: [0.5, 0.49, 0.62],                                      remera: '#43a047', pantalon: '#5d4037', barba: { color: '#2a1d16', boca: [0.37, 0.74, 0.82, 0.92] } },
   { id: 'jeipi',  nombre: 'Jeipi',  foto: 'jeipi.jpeg',  recorte: [0.5, 0.55, 0.72], piel: '#f3d6c4', pelo: '#17110d', peinado: 'rulos', remera: '#fb8c00', pantalon: '#283593', alto: 1.35 },
   { id: 'tepho',  nombre: 'Tepho',  foto: 'tepho.jpeg',  recorte: [0.5, 0.5, 0.47],  pelo: '#6b4423', peinado: 'ondulado', remera: '#00acc1', pantalon: '#212121', kipa: true },
   { id: 'mateo',  nombre: 'Mateo',  foto: 'mateo.jpeg',  recorte: [0.5, 0.45, 1],    piel: '#8a5a3c',                     remera: '#fdd835', pantalon: '#1565c0', kipa: true },
