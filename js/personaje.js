@@ -86,6 +86,20 @@ export function crearPersonaje(p, cabezaTex) {
   const cabeza = new THREE.Mesh(GEO_CABEZA, materiales);
   cabeza.position.y = 4.7 - CADERA;
   cuerpo.add(cabeza);
+  // Kipá (data/personajes.js: kipa): disco finito en la coronilla, tamaño real (unos 13 cm
+  // sobre una cabeza de 18), un poco corrido hacia atrás y siguiendo la curva de la nuca.
+  if (p.kipa) {
+    const tex = new THREE.TextureLoader().load('assets/especiales/kipa.png');
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const tela = new THREE.MeshLambertMaterial({ color: '#1c1a22' });
+    const arriba = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.4 });
+    extras.push(tex, tela, arriba);
+    const kipa = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.43, 0.06, 24), [tela, arriba, tela]);
+    kipa.position.set(0, cabeza.position.y + 0.68, -0.2);
+    kipa.rotation.x = -0.18;
+    extras.push(kipa.geometry);
+    cuerpo.add(kipa);
+  }
   // Pelo largo (data/personajes.js: peloLargo): cae por la espalda y a los costados de la cara.
   if (p.peloLargo) {
     const colorPelo = cabezaTex.pelo || p.pelo || '#3b2a20';

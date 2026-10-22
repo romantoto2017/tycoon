@@ -11,7 +11,7 @@ export function slotCuadro(i) {
 }
 
 const FORMAS = [trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete];
-const FORMAS_PROPIAS = { lapiz, papa, stm };
+const FORMAS_PROPIAS = { lapiz, papa, stm, boxer };
 
 // Lápiz Staedtler azul, hexagonal, con punta de madera y mina negra, inclinado.
 function lapiz(k, p) {
@@ -41,6 +41,18 @@ function papa(k, p) {
     m.position.y = 1.2;
     m.rotation.y = r;
     p.add(m);
+  }
+}
+
+// Boxer Supreme (sin el paquete ni el fondo) colgado de un soporte de metal.
+function boxer(k, p) {
+  p.add(k.caja(0.12, 3.6, 0.12, '#9aa0a6', 0, 1.8, -0.1));
+  p.add(k.caja(2.6, 0.1, 0.1, '#9aa0a6', 0, 3.55, -0.1));
+  for (const lado of [1, -1]) {
+    const b = k.imagen('assets/especiales/boxer_supreme.png', 2.9, 2.64);
+    b.position.set(0, 2.25, lado * 0.01);
+    b.rotation.y = lado > 0 ? 0 : Math.PI;
+    p.add(b);
   }
 }
 
