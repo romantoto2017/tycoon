@@ -107,10 +107,15 @@ export function prepararConfig(ajustes, alCambiar) {
       alCambiar(ajustes);
     });
   }
+  // Calidad de imagen: 50% a 100% de la resolución de la pantalla.
   const calidad = $('aj-calidad');
-  calidad.value = ajustes.calidad;
+  const texto = $('aj-calidad-valor');
+  const verValor = () => { texto.textContent = `${calidad.value}%${calidad.value === '100' ? ' (máxima)' : ''}`; };
+  calidad.value = Math.round(ajustes.calidad * 100);
+  verValor();
+  calidad.addEventListener('input', verValor);
   calidad.addEventListener('change', () => {
-    ajustes.calidad = calidad.value;
+    ajustes.calidad = Number(calidad.value) / 100;
     alCambiar(ajustes);
   });
 }

@@ -35,9 +35,12 @@ export function borrar() {
 const CLAVE_AJUSTES = 'vecibanda-house-ajustes';
 
 export function cargarAjustes() {
-  const base = { general: 0.8, musica: 0.5, efectos: 0.8, sensibilidad: 1, calidad: 'auto' };
+  const base = { general: 0.8, musica: 0.5, efectos: 0.8, sensibilidad: 1, calidad: 1 };
   try {
-    return { ...base, ...JSON.parse(localStorage.getItem(CLAVE_AJUSTES)) };
+    const datos = { ...base, ...JSON.parse(localStorage.getItem(CLAVE_AJUSTES)) };
+    // Versiones viejas guardaban 'auto' / 'alta' / 'rapida': ahora es un número (1 = máxima).
+    if (typeof datos.calidad !== 'number') datos.calidad = 1;
+    return datos;
   } catch {
     return base;
   }

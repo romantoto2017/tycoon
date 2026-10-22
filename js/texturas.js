@@ -622,7 +622,7 @@ export function texturaMaterial(tipo) {
     DIBUJOS[tipo](c.getContext('2d'), s);
     const t = texturaDeCanvas(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = 2;
+    t.anisotropy = 4; // pisos y paredes nítidos aunque se vean de costado
     texturasMaterial.set(tipo, t);
   }
   return texturasMaterial.get(tipo);

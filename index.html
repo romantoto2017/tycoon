@@ -70,12 +70,10 @@
       <label class="ajuste">Música <input id="aj-musica" type="range" min="0" max="100"></label>
       <label class="ajuste">Efectos de sonido <input id="aj-efectos" type="range" min="0" max="100"></label>
       <label class="ajuste">Sensibilidad de cámara <input id="aj-sensibilidad" type="range" min="20" max="250"></label>
-      <label class="ajuste">Calidad de imagen
-        <select id="aj-calidad">
-          <option value="auto">Automática (recomendada)</option>
-          <option value="alta">Alta (más nítido)</option>
-          <option value="rapida">Rápida (más fps)</option>
-        </select>
+      <label class="ajuste">
+        <span>Calidad de imagen <b id="aj-calidad-valor" class="valor">100%</b></span>
+        <input id="aj-calidad" type="range" min="50" max="100" step="5">
+        <small class="ayuda">Si el juego anda lento, bajala un poco.</small>
       </label>
       <div class="columna">
         <button id="btn-cambiar-personaje" class="btn azul">Cambiar personaje</button>
