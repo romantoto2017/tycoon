@@ -1,32 +1,11 @@
 import * as THREE from 'three';
 import { caja, matTex, aleatorio } from './util.js';
 import { TERRENO as T, CALLE_Z } from './constantes.js';
+import { crearCielo } from './cielo.js';
 
 export function crearMundo(escena) {
-  const horizonte = new THREE.Color('#cdeeff');
-  escena.fog = new THREE.Fog(horizonte, 140, 320);
-
-  // Cielo: esfera con degradé por vértice.
-  const geoCielo = new THREE.SphereGeometry(400, 16, 8);
-  const colores = [];
-  const arriba = new THREE.Color('#3f9dff');
-  const pos = geoCielo.attributes.position;
-  const tmp = new THREE.Color();
-  for (let i = 0; i < pos.count; i++) {
-    const k = Math.max(0, pos.getY(i) / 400);
-    tmp.copy(horizonte).lerp(arriba, Math.pow(k, 0.6));
-    colores.push(tmp.r, tmp.g, tmp.b);
-  }
-  geoCielo.setAttribute('color', new THREE.Float32BufferAttribute(colores, 3));
-  escena.add(new THREE.Mesh(geoCielo, new THREE.MeshBasicMaterial({
-    vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false,
-  })));
-
-  // Luces: una hemisférica + un sol, sin sombras.
-  escena.add(new THREE.HemisphereLight('#e8f3ff', '#b9a98f', 1.35));
-  const sol = new THREE.DirectionalLight('#ffeed6', 1.9);
-  sol.position.set(40, 80, 30);
-  escena.add(sol);
+  // Cielo, sol, luna, estrellas, luces y el dirigible: cambian con la hora (cielo.js).
+  const cielo = crearCielo(escena);
 
   // Pasto general (el baseplate del terreno es la primera compra).
   const pasto = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), matTex('pastoLibre', '#79b957', 6));
@@ -44,7 +23,11 @@ export function crearMundo(escena) {
 
   return {
     estaticos,
-    actualizar(dt) { nubes.actualizar(dt); },
+    // t: segundos jugados (para la hora del día). farolas: si ya se compraron.
+    actualizar(dt, t = 0, farolas = false) {
+      nubes.actualizar(dt);
+      cielo.actualizar(dt, t, farolas, nubes.material.color);
+    },
   };
 }
 
@@ -158,5 +141,5 @@ function crearNubes(escena) {
     mesh.instanceMatrix.needsUpdate = true;
   }
   actualizar(0);
-  return { actualizar };
+  return { actualizar, material: mesh.material };
 }

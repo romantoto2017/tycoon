@@ -46,9 +46,13 @@ Para cambiar algo: editá el archivo en GitHub (ícono del lápiz), guardá con 
 
 ## La Schwepa
 
-Cada minuto de juego hay un 5% de chance de que la Schwepa llegue en su Zanella Zapucai, entre por el portón, se baje al lado del cobrador y se lleve el 30% de lo que está esperando ahí. Mientras está en el terreno el cobrador automático se frena: cobrá rápido. Todo está en `js/ladron.js` (probabilidad, porcentaje, recorrido y la moto).
+Cada minuto de juego hay un 5% de chance de que la Schwepa llegue en su Zanella Zapucai, entre por el portón, se baje al lado del cobrador y se lleve TODO: lo que está esperando ahí y la plata que tenés. Mientras está en el terreno el cobrador automático se frena. Todo está en `js/ladron.js` (probabilidad, porcentaje, recorrido y la moto).
 
 A mitad de partida, en el garage, se compra el **AK-47**: aparece un slot abajo (tecla `1`) para sacarla. Con el arma en la mano se dispara con clic izquierdo (la cámara gira con el derecho) o con el botón rojo en el celu. Cuando a la Schwepa se le acaba la vida sale rajando, te devuelve lo que robó y no vuelve por 15 minutos de juego.
+
+## Día y noche
+
+Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.
 
 ## La Mazza
 

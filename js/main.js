@@ -420,7 +420,7 @@ async function iniciar() {
     ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     actualizarArma(dt);
-    mundo.actualizar(dt);
+    mundo.actualizar(dt, estado.tiempoJugado, estado.compras.includes('farolas'));
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);

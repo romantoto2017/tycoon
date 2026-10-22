@@ -7,7 +7,7 @@ import { sfx } from './sfx.js';
 
 // La Schwepa: cada tanto (5% por minuto jugado) llega por la calle en su Zanella Zapucai,
 // entra por el portón, estaciona cerca del cobrador, se baja, camina hasta el botón de cobrar
-// y se lleva el 30% de lo que está esperando ahí. Con el AK-47 se la echa: cuando se le
+// y se lleva todo: lo que está esperando ahí y la plata que tenés. Con el AK-47 se la echa: cuando se le
 // acaba la vida sale rajando en la moto, devuelve lo robado y no vuelve por 15 minutos. Mientras está en el terreno el cobrador
 // automático no anda (si no, nunca habría nada para robar).
 const SCHWEPA = {
@@ -16,7 +16,7 @@ const SCHWEPA = {
 };
 const CADA = 60;          // segundos de juego entre tiradas
 const PROBABILIDAD = 0.05;
-const ROBO = 0.3;
+const ROBO = 1; // se lleva todo: lo del cobrador y la plata que tenés
 const VEL_CALLE = 26;
 const VEL_TERRENO = 13;
 const VEL_PIE = 9;
@@ -263,12 +263,14 @@ export class Ladron {
   }
 
   robar() {
-    const banco = this.tycoon.estado.banco;
-    const robo = Math.floor(banco * ROBO);
+    const e = this.tycoon.estado;
+    const robo = Math.floor((e.banco + e.plata) * ROBO);
     if (robo >= 1) {
-      this.tycoon.estado.banco -= robo;
+      const delBanco = Math.min(e.banco, robo);
+      e.banco -= delBanco;
+      e.plata = Math.max(0, e.plata - (robo - delBanco));
       this.robado = robo;
-      this.ui.toast(`¡La Schwepa te robó ${formato(robo)} del cobrador!`, 'error');
+      this.ui.toast(`¡La Schwepa te robó TODO: ${formato(robo)}!`, 'error');
       sfx.robo();
     } else {
       this.ui.toast('La Schwepa no encontró nada para robar', 'info');
