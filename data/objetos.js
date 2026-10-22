@@ -33,10 +33,11 @@ export const MEJORAS_VELOCIDAD = ['Cinta Turbo', 'Droppers Rápidos', 'Motor Vec
 //   6 living, 7 primer piso, 8 segundo piso, 9 tercer piso, 10 terraza
 // Cada uno tiene una forma distinta según su posición en la lista
 // (trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete).
+// forma (opcional): 'lapiz', 'papa' o 'stm' usan su modelo; sin forma, una figura de relleno.
 export const OBJETOS_VECIBANDA = [
-  { nombre: 'Objeto Vecibanda 1', precio: 300,    etapa: 4,  descripcion: 'Descripción corta 1' },
-  { nombre: 'Objeto Vecibanda 2', precio: 1400,   etapa: 5,  descripcion: 'Descripción corta 2' },
-  { nombre: 'Objeto Vecibanda 3', precio: 2800,   etapa: 6,  descripcion: 'Descripción corta 3' },
+  { nombre: 'Lápiz de Nico', precio: 300, etapa: 4, descripcion: 'Staedtler Mars Lumograph 9B', forma: 'lapiz' },
+  { nombre: 'Papa Podrida', precio: 1400, etapa: 5, descripcion: 'Nadie sabe hace cuánto está', forma: 'papa' },
+  { nombre: 'STM de la Schwepa', precio: 2800, etapa: 6, descripcion: 'Boleto estudiante', forma: 'stm' },
   { nombre: 'Objeto Vecibanda 4', precio: 35000,  etapa: 7,  descripcion: 'Descripción corta 4' },
   { nombre: 'Objeto Vecibanda 5', precio: 40000, etapa: 7,  descripcion: 'Descripción corta 5' },
   { nombre: 'Objeto Vecibanda 6', precio: 5.5e6,   etapa: 8,  descripcion: 'Descripción corta 6' },

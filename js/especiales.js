@@ -11,13 +11,56 @@ export function slotCuadro(i) {
 }
 
 const FORMAS = [trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete];
+const FORMAS_PROPIAS = { lapiz, papa, stm };
+
+// Lápiz Staedtler azul, hexagonal, con punta de madera y mina negra, inclinado.
+function lapiz(k, p) {
+  const l = k.grupo();
+  l.add(k.cilindro(0.22, 0.22, 3.6, '#2b6cc4', 0, 0, 0, 6));
+  l.add(k.cilindro(0.225, 0.225, 0.5, '#1d1f22', 0, 2.05, 0, 6));
+  l.add(k.cilindro(0.226, 0.226, 0.06, '#f5f5f5', 0, 1.78, 0, 6));
+  const madera = k.cono(0.22, 0.6, '#e2c194', 0, -2.1, 0, 6);
+  madera.rotation.x = Math.PI;
+  l.add(madera);
+  const mina = k.cono(0.075, 0.2, '#1d1f22', 0, -2.47, 0, 6);
+  mina.rotation.x = Math.PI;
+  l.add(mina);
+  const texto = k.cartel('STAEDTLER  Mars Lumograph 100', 2.4, 0.2, '#ffffff', '#2b6cc4');
+  texto.position.set(0, 0.3, 0.2);
+  texto.rotation.z = Math.PI / 2;
+  l.add(texto);
+  l.position.y = 1.6;
+  l.rotation.z = -1.0;
+  p.add(l);
+}
+
+// Papa podrida: la foto recortada en dos planos cruzados (se ve con volumen desde cualquier lado).
+function papa(k, p) {
+  for (const r of [0, Math.PI / 2]) {
+    const m = k.imagen('assets/especiales/papa_podrida.png', 2.4, 2.35, { dosLados: true });
+    m.position.y = 1.2;
+    m.rotation.y = r;
+    p.add(m);
+  }
+}
+
+// STM de la Schwepa: la tarjeta parada en un soporte (datos personales tapados).
+function stm(k, p) {
+  p.add(k.caja(1.4, 0.3, 0.8, '#3a3f44', 0, 0.15, 0));
+  for (const lado of [1, -1]) {
+    const t = k.imagen('assets/especiales/stm_schwepa.png', 3.4, 2.15);
+    t.position.set(0, 1.4, lado * 0.02);
+    t.rotation.set(-0.08 * lado, lado > 0 ? 0 : Math.PI, 0);
+    p.add(t);
+  }
+}
 
 export function objetoEspecial(k, g, i, obj) {
   const [x, z] = SLOTS_ESPECIALES[i % SLOTS_ESPECIALES.length];
   g.add(k.cajaDe(x - 1.6, 0, z - 1.6, x + 1.6, 1.4, z + 1.6, '#f5f5f5'));
   g.add(k.noSolido(k.cajaDe(x - 1.75, 1.4, z - 1.75, x + 1.75, 1.6, z + 1.75, '#ffc928')));
   const pieza = k.grupo();
-  FORMAS[i % FORMAS.length](k, pieza);
+  (FORMAS_PROPIAS[obj.forma] || FORMAS[i % FORMAS.length])(k, pieza);
   pieza.position.set(x, 1.6, z);
   pieza.userData.girar = 0.6;
   pieza.userData.dinamico = true;
