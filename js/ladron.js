@@ -173,7 +173,7 @@ export class Ladron {
       this.bot.animar(dt, 0, true, false, true);
       if (!this.avisado && this.enTerreno(moto.position)) {
         this.avisado = true;
-        this.ui.toast('¡Llegó la Schwepa en su Zanella Zapucai! Cobrá antes de que te robe', 'error');
+        this.ui.aviso('¡Llegó la Schwepa en su Zanella Zapucai! Cobrá antes de que te robe');
         sfx.moto();
       }
       if (this.avanzar(moto, dt, vel)) this.bajarse();
@@ -246,6 +246,7 @@ export class Ladron {
       this.ui.toast(`¡Recuperaste ${formato(this.robado)}!`, 'plata');
       this.robado = 0;
     }
+    this.ui.aviso(null);
     this.ui.toast('¡La Schwepa salió rajando! No vuelve por 15 minutos', 'ok');
     sfx.moto();
     const bot = this.bot.grupo;
@@ -289,6 +290,7 @@ export class Ladron {
   }
 
   irse() {
+    this.ui.aviso(null);
     this.escena.remove(this.moto.grupo);
     this.tycoon.pausaCobro = false;
     this.estado = 'fuera';

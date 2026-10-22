@@ -13,6 +13,7 @@ import { formato } from './util.js';
 import { cargarModelos, MODELOS } from './modelos.js';
 import { ITEMS } from './progresion.js';
 import { Ladron } from './ladron.js';
+import { Mazza } from './mazza.js';
 import { crearAK } from './arma.js';
 
 async function iniciar() {
@@ -57,6 +58,7 @@ async function iniciar() {
   tycoon.lote.absorber(mundo.estaticos);
   UI.prepararHUD();
   const ladron = new Ladron(escena, tycoon, UI);
+  const mazza = new Mazza(escena, tycoon, UI);
 
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
@@ -314,7 +316,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -416,6 +418,7 @@ async function iniciar() {
     }
     tycoon.actualizar(dt, jugador);
     ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
+    mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     actualizarArma(dt);
     mundo.actualizar(dt);
     if (modo === 'juego') {

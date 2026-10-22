@@ -86,6 +86,13 @@ export function crearPersonaje(p, cabezaTex) {
   const cabeza = new THREE.Mesh(GEO_CABEZA, materiales);
   cabeza.position.y = 4.7 - CADERA;
   cuerpo.add(cabeza);
+  // Pelo largo (data/personajes.js: peloLargo): cae por la espalda y a los costados de la cara.
+  if (p.peloLargo) {
+    const colorPelo = cabezaTex.pelo || p.pelo || '#3b2a20';
+    const yc = cabeza.position.y;
+    cuerpo.add(caja(1.42, 2.4, 0.3, colorPelo, 0, yc - 0.55, -0.72));
+    for (const lado of [-1, 1]) cuerpo.add(caja(0.22, 1.9, 1.1, colorPelo, lado * 0.72, yc - 0.45, -0.15));
+  }
 
   let fase = 0;
   let balanceo = 0;

@@ -30,6 +30,16 @@ export function toast(texto, tipo = 'ok') {
   setTimeout(() => el.remove(), 2300);
 }
 
+// Cartel fijo arriba (no se va solo): para avisos que duran mientras pasa algo.
+// aviso(texto, tipo) lo muestra o lo cambia; aviso(null) lo saca.
+export function aviso(texto, tipo = 'error') {
+  const el = $('aviso');
+  el.classList.toggle('oculto', !texto);
+  if (!texto) return;
+  el.textContent = texto;
+  el.className = `aviso ${tipo}`;
+}
+
 export function mostrar(id, visible) {
   $(id).classList.toggle('oculto', !visible);
 }

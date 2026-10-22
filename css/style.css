@@ -238,6 +238,30 @@ html, body {
 .modal p { margin: 0 0 18px; font-size: 17px; color: #333; }
 .fila { display: flex; gap: 12px; justify-content: center; }
 
+/* ---------- Aviso fijo (Schwepa) ---------- */
+.aviso {
+  position: fixed;
+  top: calc(118px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92vw, 640px);
+  padding: 8px 16px;
+  border-radius: 14px;
+  border: 3px solid rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 9;
+  animation: latido 1.4s ease-in-out infinite;
+}
+.aviso.error { background: #d32f2f; }
+.aviso.amor { background: #ec407a; }
+@keyframes latido { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.04); } }
+
 /* ---------- Toasts ---------- */
 #toasts {
   position: fixed;
@@ -478,6 +502,7 @@ html, body {
   #progreso { font-size: 11px; }
   .btn-config { width: 38px; height: 38px; }
   #toasts { top: 70px; }
+  .aviso { top: 66px; font-size: 14px; padding: 5px 12px; }
   .toast { font-size: 15px; padding: 4px 12px; }
   .toast.info { font-size: 14px; }
   .titulo { font-size: 34px; }
@@ -504,6 +529,7 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   #girar svg { animation: none; }
+  .aviso { animation: none; }
   .toast { animation: none; }
   .btn, .carta, .btn-config { transition: none; }
   .carta:hover { transform: none; }

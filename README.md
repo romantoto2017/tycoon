@@ -50,6 +50,10 @@ Cada minuto de juego hay un 5% de chance de que la Schwepa llegue en su Zanella 
 
 A mitad de partida, en el garage, se compra el **AK-47**: aparece un slot abajo (tecla `1`) para sacarla. Con el arma en la mano se dispara con clic izquierdo (la cámara gira con el derecho) o con el botón rojo en el celu. Cuando a la Schwepa se le acaba la vida sale rajando, te devuelve lo que robó y no vuelve por 15 minutos de juego.
 
+## La Mazza
+
+Cada minuto de juego hay un 3% de chance de que caiga la Mazza (está enamorada de Juanma). Si estás jugando con Juanma te persigue por toda la mansión (escaleras incluidas) y le salen corazones al verte; si no, entra a preguntar por él. No se la puede echar: se va sola a los 5 minutos. Todo está en `js/mazza.js`.
+
 ## Moneda
 
 Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (en el HUD y en los bloques).
