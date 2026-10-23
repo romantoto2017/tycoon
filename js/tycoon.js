@@ -66,6 +66,42 @@ function crearKit() {
     esfera: (r, c, x, y, z) => malla(geo(`e${r}`, () => new THREE.SphereGeometry(r, 14, 10)), c, x, y, z),
     grupo: () => new THREE.Group(),
     etiqueta: (lineas, ancho) => crearEtiqueta(lineas, ancho).sprite,
+    // Pizarrón de tiza con un título y renglones (menú del restaurante).
+    pizarra(titulo, lineas, ancho, alto) {
+      const h = 512;
+      const w = Math.round((h * ancho) / alto);
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const g = c.getContext('2d');
+      g.fillStyle = '#6b4a35';
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#23302a';
+      g.fillRect(18, 18, w - 36, h - 36);
+      g.fillStyle = 'rgba(255,255,255,0.04)';
+      for (let i = 0; i < 40; i++) g.fillRect(Math.random() * w, Math.random() * h, 60, 3);
+      g.textAlign = 'center';
+      g.fillStyle = '#ffe9a8';
+      g.font = `700 ${h * 0.12}px Fredoka, sans-serif`;
+      g.fillText(titulo, w / 2, h * 0.17);
+      g.strokeStyle = 'rgba(255,233,168,0.6)';
+      g.lineWidth = 3;
+      g.beginPath(); g.moveTo(w * 0.2, h * 0.22); g.lineTo(w * 0.8, h * 0.22); g.stroke();
+      g.font = `600 ${h * 0.068}px Fredoka, sans-serif`;
+      g.textAlign = 'left';
+      lineas.forEach((l, i) => {
+        g.fillStyle = i % 2 ? '#f4f1ea' : '#cfe8d6';
+        g.fillText(`• ${l}`, w * 0.1, h * (0.33 + i * 0.1));
+      });
+      g.textAlign = 'center';
+      g.fillStyle = '#ff9e80';
+      g.font = `700 ${h * 0.06}px Fredoka, sans-serif`;
+      g.fillText('Con su vaso de agua · Sin cargo', w / 2, h * 0.93);
+      const tex = texturaDeCanvas(c);
+      tex.anisotropy = 4;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: tex }));
+      return kit.noSolido(m);
+    },
     // Cartel con su chapa: el plano con el dibujo y atrás una placa con canto, así no
     // parece una calcomanía pegada.
     cartel(texto, ancho, alto, color, fondo) {

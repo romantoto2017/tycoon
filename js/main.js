@@ -15,6 +15,8 @@ import { ITEMS } from './progresion.js';
 import { momento, hastaLaManana } from './cielo.js';
 import { Ladron } from './ladron.js';
 import { Mazza } from './mazza.js';
+import { Restaurante } from './restaurante.js';
+import { PLATOS } from './resto.js';
 import { crearAK } from './arma.js';
 
 async function iniciar() {
@@ -70,6 +72,7 @@ async function iniciar() {
   UI.prepararHUD();
   const ladron = new Ladron(escena, tycoon, UI);
   const mazza = new Mazza(escena, tycoon, UI);
+  const resto = new Restaurante(escena, tycoon, UI);
 
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
@@ -141,7 +144,17 @@ async function iniciar() {
     UI.toast('¡Buen día!', 'info');
   };
   // Un solo botón de acción (como los avisos de Roblox): manejar o dormir, con la E.
-  const accion = () => (camaCerca() ? dormir() : subirOBajar());
+  const accion = () => {
+    if (resto.accion(jugador)) {
+      if (resto.hacer(jugador) === 'menu') {
+        controles.activo = false;
+        UI.abrirMenuResto(PLATOS, (id) => resto.pedir(id, jugador), () => { controles.activo = modo === 'juego'; });
+      }
+      return;
+    }
+    if (camaCerca()) dormir();
+    else subirOBajar();
+  };
   btnManejar.addEventListener('click', accion);
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyE' && modo === 'juego' && controles.activo) accion();
@@ -391,7 +404,7 @@ async function iniciar() {
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'Escape' || modo !== 'juego') return;
     if (UI.visible('config')) cerrarConfig();
-    else if (!UI.visible('confirmar') && !UI.visible('final')) abrirConfig();
+    else if (!UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto')) abrirConfig();
   });
 
   // Personaje de fondo mientras se ve el menú.
@@ -409,7 +422,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -495,7 +508,7 @@ async function iniciar() {
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
     }
-    const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : camaCerca() ? 'Dormir (E)' : '';
+    const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : '');
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -510,6 +523,7 @@ async function iniciar() {
     tycoon.actualizar(dt, jugador);
     ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
+    resto.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     brillos.actualizar(dt);
     mundo.actualizar(dt, hora(), estado.compras.includes('farolas'));

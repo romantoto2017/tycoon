@@ -54,6 +54,10 @@ Alrededor del 20% de la partida, en el garage, se compra el **AK-47** (y despué
 
 Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. De noche, al lado de una cama comprada aparece "Dormir (E)": se funde a negro y te despertás a la mañana. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.
 
+## Lo de Lourdes (restaurante)
+
+Atrás a la izquierda de la mansión, pasando el jardín, se construye el restaurante de Lourdes. Se compra en cadena: el edificio, las mesas, la fila de microondas, Lourdes con su radio y la decoración. Lourdes está sentada en su mesita con una radio vieja que pasa cumbia mientras estás adentro. Al lado de ella aparece "Pedir comida (E)": elegís un plato del menú, ella lo calienta en un microondas y te lo lleva a la mesa más cercana con un vaso de agua. No se paga y es un plato por visita (al salir y volver a entrar podés pedir otro). Los platos están en `PLATOS` de `js/resto.js` (el edificio y los muebles también); Lourdes y el servicio, en `js/restaurante.js`.
+
 ## La Mazza
 
 Cada minuto de juego hay un 3% de chance de que caiga la Mazza (está enamorada de Juanma). Si estás jugando con Juanma te persigue por toda la mansión (escaleras incluidas) y le salen corazones al verte; si no, entra a preguntar por él. No se la puede echar: se va sola a los 5 minutos. Todo está en `js/mazza.js`.

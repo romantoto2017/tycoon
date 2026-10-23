@@ -156,6 +156,39 @@ export function crearPersonaje(p, cabezaTex) {
     kipa.rotation.x = -0.25;
     cuerpo.add(kipa);
   }
+  // Lentes (lentes: color del marco): marco rectangular, puente y patillas.
+  if (p.lentes) {
+    const yc = cabeza.position.y + 0.14;
+    const zc = 0.665;
+    const m = p.lentes;
+    for (const lado of [-1, 1]) {
+      const cx = lado * 0.3;
+      cuerpo.add(caja(0.42, 0.05, 0.04, m, cx, yc + 0.13, zc));
+      cuerpo.add(caja(0.42, 0.05, 0.04, m, cx, yc - 0.13, zc));
+      cuerpo.add(caja(0.05, 0.3, 0.04, m, cx - 0.19, yc, zc));
+      cuerpo.add(caja(0.05, 0.3, 0.04, m, cx + 0.19, yc, zc));
+      cuerpo.add(caja(0.04, 0.04, 0.6, m, lado * 0.665, yc + 0.1, zc - 0.3));
+    }
+    cuerpo.add(caja(0.2, 0.04, 0.04, m, 0, yc + 0.06, zc));
+  }
+  // Pelo atado en una colita (colita: true) con la gomita.
+  if (p.colita) {
+    const colorPelo = p.pelo || cabezaTex.pelo || '#1b1411';
+    const yc = cabeza.position.y;
+    cuerpo.add(caja(0.42, 0.42, 0.3, colorPelo, 0, yc + 0.25, -0.78));
+    cuerpo.add(caja(0.26, 0.12, 0.26, '#7b1fa2', 0, yc + 0.05, -0.84));
+    const cola = caja(0.3, 1.25, 0.26, colorPelo, 0, yc - 0.6, -0.92);
+    cola.rotation.x = 0.18;
+    cuerpo.add(cola);
+  }
+  // Remera de otro color abajo de una campera abierta (cuello: color).
+  if (p.cuello) {
+    const z = fondoTorso / 2 + (gordo ? 0.43 : 0.01);
+    cuerpo.add(caja(0.7, 0.55, 0.04, p.cuello, 0, 1.72, fondoTorso / 2 + 0.01));
+    cuerpo.add(caja(0.06, gordo ? 1.3 : 1.6, 0.03, '#c9ced3', 0.04, gordo ? 0.8 : 0.9, z));
+  }
+  // Aritos plateados.
+  if (p.aros) for (const lado of [-1, 1]) cuerpo.add(caja(0.08, 0.14, 0.08, '#d9dde2', lado * 0.69, cabeza.position.y - 0.2, 0.05));
   // Pelo largo (data/personajes.js: peloLargo): cae por la espalda y a los costados de la cara.
   if (p.peloLargo) {
     const colorPelo = cabezaTex.pelo || p.pelo || '#3b2a20';
@@ -172,6 +205,7 @@ export function crearPersonaje(p, cabezaTex) {
     grupo,
     manoD: brazoD, // para colgarle el arma (la mano está en y = -1.9)
     apuntar: false, // con el arma en la mano: brazos al frente
+    brazosSentado: -1.2, // sentado: -1.2 llega al manubrio de la moto; menos, manos en la falda
     // velocidad: unidades/seg en el plano. enSuelo: para la pose de salto.
     // agachado: rodillas dobladas, cadera abajo, torso hacia adelante y brazos al frente.
     // sentado: arriba de una moto (piernas dobladas hacia adelante, manos al manubrio).
@@ -202,8 +236,8 @@ export function crearPersonaje(p, cabezaTex) {
       piernaD.muslo.position.y = yCadera;
       cuerpo.position.y = yCadera;
       cuerpo.rotation.x = 0.5 * agache;
-      brazoI.rotation.x = sentado ? -1.2 : -a - 0.7 * agache;
-      brazoD.rotation.x = sentado ? -1.2 : a - 0.7 * agache;
+      brazoI.rotation.x = sentado ? modelo.brazosSentado : -a - 0.7 * agache;
+      brazoD.rotation.x = sentado ? modelo.brazosSentado : a - 0.7 * agache;
       if (sentado) cuerpo.rotation.x = 0.2;
       const abrir = enSuelo ? 0 : 0.5;
       brazoI.rotation.z += (-abrir - brazoI.rotation.z) * Math.min(1, dt * 10);

@@ -119,3 +119,36 @@ export function prepararConfig(ajustes, alCambiar) {
     alCambiar(ajustes);
   });
 }
+
+// ---------- Menú del restaurante ----------
+// Íconos de cada plato (SVG dibujado acá: plato blanco y la comida encima).
+const ICONOS_PLATO = {
+  mila_pure: '<ellipse cx="25" cy="32" rx="13" ry="9" fill="#c88a3a"/><ellipse cx="25" cy="31" rx="10" ry="6" fill="#d9a35a"/><circle cx="42" cy="34" r="8" fill="#f3e3a0"/>',
+  mila_fritas: '<ellipse cx="24" cy="32" rx="13" ry="9" fill="#c88a3a"/><g stroke="#f2c84b" stroke-width="3.5" stroke-linecap="round"><path d="M38 26l8 14M42 25l2 16M46 27l-4 13"/></g>',
+  fideos: '<circle cx="32" cy="32" r="15" fill="#ecd28c"/><path d="M21 30q5-5 10 0t10 0M21 36q5-5 10 0t10 0" stroke="#d9b86a" stroke-width="2" fill="none"/><circle cx="32" cy="31" r="7" fill="#c0392b"/>',
+  guiso: '<circle cx="32" cy="32" r="16" fill="#7a4a2a"/><rect x="24" y="25" width="5" height="5" fill="#e67e22"/><rect x="35" y="30" width="5" height="5" fill="#e67e22"/><rect x="28" y="36" width="5" height="5" fill="#d9b37a"/><rect x="37" y="22" width="4" height="4" fill="#d9b37a"/>',
+  pollo_arroz: '<ellipse cx="25" cy="32" rx="12" ry="8" fill="#e2b07a"/><circle cx="42" cy="33" r="9" fill="#fbfaf5" stroke="#e6e1d3"/>',
+  strogonoff: '<ellipse cx="26" cy="32" rx="12" ry="10" fill="#d8b48a"/><rect x="20" y="28" width="5" height="4" fill="#7a4a2a"/><rect x="27" y="33" width="5" height="4" fill="#7a4a2a"/><circle cx="43" cy="33" r="8" fill="#fbfaf5" stroke="#e6e1d3"/>',
+};
+
+export function abrirMenuResto(platos, alElegir, alCerrar) {
+  const lista = $('platos');
+  lista.innerHTML = '';
+  const cerrar = () => {
+    mostrar('menu-resto', false);
+    window.removeEventListener('keydown', teclas);
+    alCerrar();
+  };
+  const teclas = (e) => { if (e.code === 'Escape') cerrar(); };
+  for (const p of platos) {
+    const b = document.createElement('button');
+    b.className = 'plato';
+    b.innerHTML = `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="#ffffff" stroke="#d6d9de" stroke-width="2"/><circle cx="32" cy="32" r="22" fill="#f4f6f8"/>${ICONOS_PLATO[p.id] || ''}</svg><span>${p.nombre}</span>`;
+    b.addEventListener('click', () => { cerrar(); alElegir(p.id); });
+    lista.appendChild(b);
+  }
+  $('btn-cerrar-resto').onclick = cerrar;
+  window.addEventListener('keydown', teclas);
+  mostrar('menu-resto', true);
+  lista.firstChild?.focus();
+}

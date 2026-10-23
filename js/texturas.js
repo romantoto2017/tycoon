@@ -607,6 +607,19 @@ function ruido(g, w, h, cantidad, alfa, semilla) {
 }
 
 const DIBUJOS = {
+  // Piso de bodegón: damero blanco y negro (cada repetición tiene 2 x 2 baldosas).
+  damero(g, s) {
+    const m = s / 2;
+    g.fillStyle = '#f2efe8';
+    g.fillRect(0, 0, s, s);
+    g.fillStyle = '#26272b';
+    g.fillRect(0, 0, m, m);
+    g.fillRect(m, m, m, m);
+    g.strokeStyle = 'rgba(0,0,0,0.25)';
+    g.lineWidth = 2;
+    g.strokeRect(0, 0, s, s);
+    g.beginPath(); g.moveTo(m, 0); g.lineTo(m, s); g.moveTo(0, m); g.lineTo(s, m); g.stroke();
+  },
   // Alfombra de arcade: fondo violeta con figuritas de neón (estrellas, rayos, círculos).
   alfombraArcade(g, s) {
     g.fillStyle = '#3a0f4f';

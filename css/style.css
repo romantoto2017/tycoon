@@ -566,3 +566,77 @@ html, body {
   min-height: 48px;
 }
 .btn-manejar:active { transform: translateX(-50%) translateY(4px); }
+
+/* ---------- Menú del restaurante (paleta Restaurant/Food Service: rojo + dorado) ---------- */
+.menu-resto { background: rgba(40, 12, 8, 0.55); }
+.carta-resto {
+  --resto-rojo: #c62828;
+  --resto-crema: #fff8ee;
+  --resto-texto: #450a0a;
+  --resto-dorado: #a16207;
+  width: min(720px, 100%);
+  background: var(--resto-crema);
+  border-radius: 22px;
+  border: 4px solid #7a1f1f;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  color: var(--resto-texto);
+}
+.carta-resto header {
+  background: repeating-linear-gradient(90deg, var(--resto-rojo) 0 28px, #d84343 28px 56px);
+  color: #fff;
+  text-align: center;
+  padding: 12px 16px 10px;
+}
+.carta-resto h2 { margin: 0; font-size: 30px; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
+.carta-resto header p { margin: 2px 0 0; font-size: 17px; font-weight: 700; color: #ffe9a8; }
+.platos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+.plato {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  border: 2px solid #f1d9b8;
+  background: #ffffff;
+  color: var(--resto-texto);
+  font-family: var(--fuente);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #f1d9b8;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.plato svg { flex: none; width: 52px; height: 52px; }
+.plato:hover { border-color: var(--resto-dorado); transform: translateY(-2px); box-shadow: 0 5px 0 #e9c58f; }
+.plato:active { transform: translateY(2px); box-shadow: 0 1px 0 #e9c58f; }
+.plato:focus-visible { outline: 3px solid var(--resto-rojo); outline-offset: 2px; }
+.carta-resto footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--resto-dorado);
+}
+@media (max-width: 560px) { .platos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-height: 500px) {
+  .carta-resto header { padding: 6px 12px; }
+  .carta-resto h2 { font-size: 22px; }
+  .carta-resto header p { font-size: 14px; }
+  .platos { gap: 8px; padding: 10px 12px; }
+  .plato { min-height: 56px; font-size: 14px; padding: 6px 10px; }
+  .plato svg { width: 40px; height: 40px; }
+  .carta-resto footer { padding: 0 12px 10px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .plato { transition: none; } }

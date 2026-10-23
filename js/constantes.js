@@ -33,3 +33,11 @@ export const GARAGE = { x0: 47, x1: 70.5, z0: -12, z1: 20, alto: 9 };
 
 // Ascensor: una plataforma por piso, en el fondo del núcleo.
 export const ASCENSOR = { x: -6, z: -31 };
+
+// Restaurante "Lo de Lourdes", detrás a la izquierda de la mansión. La puerta mira a +z.
+export const RESTO = { x0: -70, x1: -40, z0: -86, z1: -62, alto: 8, pared: 0.6 };
+// Mesas del comedor (centros) y microondas (centro de cada mesita, contra la pared del fondo).
+export const RESTO_MESAS = [[-62, -77], [-55, -77], [-48, -77], [-62, -70], [-55, -70], [-48, -70]];
+export const RESTO_MICROONDAS = [-65, -60, -55, -50, -45];
+// Rincón de Lourdes: su mesita con la radio (adelante a la derecha) y dónde se sienta.
+export const RESTO_LOURDES = { mesa: [-43.4, -64.6], silla: [-41.4, -64.6] }; // sentada de costado, mirando al salón

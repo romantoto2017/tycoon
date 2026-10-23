@@ -3,6 +3,8 @@ let ctx = null;
 let maestro = null;
 let busMusica = null;
 let busEfectos = null;
+let busRadio = null; // la radio de Lourdes: suena filtrada, como una radio vieja
+let radio = false;
 const volumenes = { general: 0.8, musica: 0.5, efectos: 0.8 };
 
 export function iniciarAudio() {
@@ -13,6 +15,13 @@ export function iniciarAudio() {
       busMusica = ctx.createGain();
       busEfectos = ctx.createGain();
       busMusica.connect(maestro);
+      const banda = ctx.createBiquadFilter();
+      banda.type = 'bandpass';
+      banda.frequency.value = 1100;
+      banda.Q.value = 0.9;
+      busRadio = ctx.createGain();
+      busRadio.gain.value = 1.6;
+      busRadio.connect(banda).connect(busMusica);
       busEfectos.connect(maestro);
       maestro.connect(ctx.destination);
       aplicarVolumenes();
@@ -34,6 +43,13 @@ function aplicarVolumenes() {
   maestro.gain.value = volumenes.general;
   busMusica.gain.value = volumenes.musica * 0.35;
   busEfectos.gain.value = volumenes.efectos;
+}
+
+// En el restaurante suena la radio de Lourdes en vez de la música del juego.
+export function setRadio(v) {
+  if (v === radio) return;
+  radio = v;
+  paso = 0;
 }
 
 export function pausarAudio(pausa) {
@@ -68,10 +84,33 @@ export const sfx = {
   gol() { efecto([392, 523, 659, 784, 1047, 1319].map((f, i) => [f, i * 0.09, 0.3, 'square', 0.05])); },
   brillo() { efecto([1568, 2093, 2637, 3136].map((f, i) => [f, 0.05 + i * 0.05, 0.25, 'sine', 0.035])); },
   disparo() { efecto([[150, 0, 0.06, 'square', 0.05], [70, 0.01, 0.08, 'sawtooth', 0.05]]); },
+  microondas() { efecto([[120, 0, 3.4, 'sawtooth', 0.012]]); },
+  pip() { efecto([[1760, 0, 0.18, 'sine', 0.06], [1760, 0.3, 0.18, 'sine', 0.06], [1760, 0.6, 0.18, 'sine', 0.06]]); },
+  comer() { efecto([[300, 0, 0.08, 'triangle', 0.05], [260, 0.15, 0.08, 'triangle', 0.05], [320, 0.3, 0.08, 'triangle', 0.05]]); },
   moto() { efecto([[70, 0, 0.5, 'sawtooth', 0.04], [95, 0.12, 0.6, 'sawtooth', 0.04], [120, 0.3, 0.7, 'sawtooth', 0.035]]); },
   robo() { efecto([[660, 0, 0.12, 'square', 0.05], [440, 0.1, 0.12, 'square', 0.05], [220, 0.2, 0.3, 'square', 0.05]]); },
   final() { efecto([523, 659, 784, 1047, 784, 1047, 1319, 1568].map((f, i) => [f, i * 0.14, 0.4, 'square', 0.06])); },
 };
+
+// ---------- Radio de Lourdes: cumbia vieja (Am - Dm - G - C) con güiro ----------
+const CORCHEA_RADIO = 60 / 96 / 2;
+const ACORDES_RADIO = [
+  [110.0, [220.0, 261.63, 329.63]],
+  [146.83, [293.66, 349.23, 440.0]],
+  [98.0, [196.0, 246.94, 293.66]],
+  [130.81, [261.63, 329.63, 392.0]],
+];
+const MELODIA = [4, 3, 2, 3, 4, 4, 2, 0, 1, 2, 3, 2, 1, 0, 1, 2];
+const ESCALA = [220, 246.94, 261.63, 293.66, 329.63];
+function tocarRadio() {
+  const [bajo, notas] = ACORDES_RADIO[Math.floor(paso / 8) % ACORDES_RADIO.length];
+  const p = paso % 8;
+  if (p === 0 || p === 3 || p === 4 || p === 7) tono(p % 4 === 0 ? bajo : bajo * 1.5, proximo, CORCHEA_RADIO * 0.9, 'triangle', 0.3, busRadio);
+  if (p % 2 === 1) for (const n of notas) tono(n, proximo, CORCHEA_RADIO * 0.6, 'square', 0.025, busRadio);
+  if (paso % 2 === 0) tono(ESCALA[MELODIA[(paso / 2) % MELODIA.length]] * 2, proximo, CORCHEA_RADIO * 1.7, 'sawtooth', 0.03, busRadio);
+  tono(4800, proximo, 0.02, 'square', p % 2 ? 0.02 : 0.008, busRadio);
+  tono(3600, proximo + CORCHEA_RADIO / 2, 0.015, 'square', 0.008, busRadio);
+}
 
 // ---------- Música ----------
 // Progresión alegre C - Am - F - G, bajo + arpegio + percusión suave.
@@ -93,7 +132,12 @@ function programarMusica() {
     return;
   }
   if (proximo < ctx.currentTime) proximo = ctx.currentTime + 0.05;
-  while (proximo < ctx.currentTime + 0.3) {
+  while (radio && proximo < ctx.currentTime + 0.3) {
+    tocarRadio();
+    proximo += CORCHEA_RADIO;
+    paso++;
+  }
+  while (!radio && proximo < ctx.currentTime + 0.3) {
     const [bajo, notas] = ACORDES[Math.floor(paso / 8) % ACORDES.length];
     const p = paso % 8;
     if (p === 0 || p === 4) tono(bajo, proximo, NEGRA * 1.6, 'triangle', 0.35, busMusica);
