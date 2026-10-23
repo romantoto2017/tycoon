@@ -607,6 +607,19 @@ function ruido(g, w, h, cantidad, alfa, semilla) {
 }
 
 const DIBUJOS = {
+  // Piso de goma de gimnasio: gris casi negro con pintitas claras.
+  goma(g, s) {
+    g.fillStyle = '#323438';
+    g.fillRect(0, 0, s, s);
+    let semilla = 7;
+    const rnd = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647; };
+    for (let i = 0; i < s * 3; i++) {
+      const v = 70 + Math.floor(rnd() * 90);
+      g.fillStyle = `rgba(${v},${v},${v + 4},${0.35 + rnd() * 0.5})`;
+      const r = 0.6 + rnd() * 1.3;
+      g.fillRect(rnd() * s, rnd() * s, r, r);
+    }
+  },
   // Piso de bodegón: damero blanco y negro (cada repetición tiene 2 x 2 baldosas).
   damero(g, s) {
     const m = s / 2;

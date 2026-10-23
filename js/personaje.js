@@ -63,9 +63,15 @@ export function crearPersonaje(p, cabezaTex) {
   const matPiel = new THREE.MeshBasicMaterial({ color: cabezaTex.piel || p.piel || '#f1c27d' });
   matPiel.color.multiplyScalar(0.87);
 
-  const gordo = p.cuerpo === 'gordo';
-  const anchoTorso = gordo ? 2.7 : 2;
-  const fondoTorso = gordo ? 1.7 : 1;
+  // Contextura: gordura de 0 a 1 (cuerpo 'gordo' = 1) y músculo de 0 a 1 (Bauti en el gym).
+  // Con gordura el torso es más ancho y profundo, con panza y extremidades gruesas; con
+  // músculo, espalda y pecho más anchos, hombros y brazos grandes.
+  const gordura = p.gordura ?? (p.cuerpo === 'gordo' ? 1 : 0);
+  const musculo = p.musculo || 0;
+  const segun = (flaco, gordo) => flaco + (gordo - flaco) * gordura;
+  const anchoTorso = segun(2, 2.7) + 0.9 * musculo;
+  const fondoTorso = segun(1, 1.7) + 0.35 * musculo;
+  const anchoPanza = segun(1.5, 2.2);
   const extras = []; // texturas y materiales propios, para liberar al cambiar de personaje
 
   // Remera con foto: frente con el diseño y el resto (espalda, costados, mangas) con la tela.
@@ -78,7 +84,7 @@ export function crearPersonaje(p, cabezaTex) {
     const tela = lambert(tex(cabezaTex.ropa.tela));
     torso = [tela, tela, tela, tela, lambert(tex(cabezaTex.ropa.frente)), tela];
     // La panza muestra la parte del frente que tapa, así el diseño sigue continuo.
-    const u0 = (anchoTorso / 2 - 1.1) / anchoTorso;
+    const u0 = (anchoTorso / 2 - anchoPanza / 2) / anchoTorso;
     const frentePanza = lambert(tex(recorteCanvas(cabezaTex.ropa.frente, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2)));
     panzaFrente = [tela, tela, tela, tela, frentePanza, tela];
     remera = tela;
@@ -88,11 +94,18 @@ export function crearPersonaje(p, cabezaTex) {
   cuerpo.position.y = 2;
   grupo.add(cuerpo);
   const CADERA = 2;
+  // Brazo con codo a la mitad (y = -1): manga arriba y piel abajo. pivote.codo dobla el
+  // antebrazo (los ejercicios del gym lo usan; caminando queda derecho).
   const extremidad = (padre, x, y, colorArriba, colorAbajo, largoArriba, grosor = 0.95) => {
     const pivote = new THREE.Group();
     pivote.position.set(x, y, 0);
     pivote.add(caja(grosor, largoArriba, grosor, colorArriba, 0, -largoArriba / 2, 0));
-    if (colorAbajo) pivote.add(caja(grosor, 2 - largoArriba, grosor, colorAbajo, 0, -largoArriba - (2 - largoArriba) / 2, 0));
+    pivote.add(caja(grosor, 1 - largoArriba, grosor, colorAbajo, 0, -largoArriba - (1 - largoArriba) / 2, 0));
+    const codo = new THREE.Group();
+    codo.position.y = -1;
+    codo.add(caja(grosor * 0.97, 1, grosor * 0.97, colorAbajo, 0, -0.5, 0));
+    pivote.add(codo);
+    pivote.codo = codo;
     padre.add(pivote);
     return pivote;
   };
@@ -109,12 +122,14 @@ export function crearPersonaje(p, cabezaTex) {
     return { muslo, rodilla };
   };
 
-  // Cuerpo normal o 'gordo' (torso más ancho y profundo, panza, extremidades más gruesas).
-  const xBrazo = anchoTorso / 2 + (gordo ? 0.55 : 0.5);
-  const piernaI = pierna(gordo ? -0.65 : -0.5, gordo ? 1.25 : 0.95);
-  const piernaD = pierna(gordo ? 0.65 : 0.5, gordo ? 1.25 : 0.95);
-  const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
-  const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, remera, matPiel, 0.8, gordo ? 1.1 : 0.95);
+  const grosorBrazo = segun(0.95, 1.1) + 0.5 * musculo;
+  const grosorPierna = segun(0.95, 1.25) + 0.15 * musculo;
+  const xBrazo = anchoTorso / 2 + segun(0.5, 0.55) + 0.25 * musculo;
+  const xPierna = segun(0.5, 0.65) + 0.06 * musculo;
+  const piernaI = pierna(-xPierna, grosorPierna);
+  const piernaD = pierna(xPierna, grosorPierna);
+  const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, remera, matPiel, 0.8, grosorBrazo);
+  const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, remera, matPiel, 0.8, grosorBrazo);
   const bloque = (w, h, d, material, x, y, z) => {
     if (!Array.isArray(material)) return caja(w, h, d, material, x, y, z);
     const m = new THREE.Mesh(GEO_CAJA, material);
@@ -123,7 +138,22 @@ export function crearPersonaje(p, cabezaTex) {
     return m;
   };
   cuerpo.add(bloque(anchoTorso, 2, fondoTorso, torso || p.remera, 0, 3 - CADERA, 0));
-  if (gordo) cuerpo.add(bloque(2.2, 1.4, 0.45, panzaFrente || p.remera, 0, 2.75 - CADERA, fondoTorso / 2 + 0.2));
+  if (gordura > 0.05) {
+    const fondoPanza = 0.45 * gordura;
+    cuerpo.add(bloque(anchoPanza, segun(0.9, 1.4), fondoPanza, panzaFrente || p.remera, 0, 2.75 - CADERA, fondoTorso / 2 + fondoPanza / 2 - 0.025));
+  }
+  if (musculo > 0.05) {
+    // Hombros (van con el brazo) y pectorales marcados.
+    for (const brazo of [brazoI, brazoD]) {
+      brazo.add(bloque(grosorBrazo + 0.3 * musculo, 0.8, grosorBrazo + 0.3 * musculo, remera, 0, -0.3, 0));
+      // Bíceps: bulto adelante del brazo, en la parte de piel.
+      brazo.add(bloque(grosorBrazo * 0.7, 0.5, 0.25 * musculo, matPiel, 0, -0.9, grosorBrazo / 2 + 0.1 * musculo));
+    }
+    // Trapecios: del cuello a los hombros.
+    cuerpo.add(bloque(anchoTorso * 0.55, 0.3 * musculo, fondoTorso * 0.7, remera, 0, 2.08, -0.05));
+    const fondoPecho = 0.22 * musculo;
+    for (const lado of [-1, 1]) cuerpo.add(bloque(anchoTorso * 0.4, 0.8, fondoPecho, remera, lado * anchoTorso * 0.22, 1.45, fondoTorso / 2 + fondoPecho / 2 - 0.02));
+  }
 
   // Sin iluminación: la foto se ve siempre con sus colores reales. Los costados y la nuca
   // van un poco más oscuros para que se note el volumen del bloque.
@@ -183,9 +213,14 @@ export function crearPersonaje(p, cabezaTex) {
   }
   // Remera de otro color abajo de una campera abierta (cuello: color).
   if (p.cuello) {
-    const z = fondoTorso / 2 + (gordo ? 0.43 : 0.01);
+    const z = fondoTorso / 2 + 0.01 + 0.42 * gordura;
     cuerpo.add(caja(0.7, 0.55, 0.04, p.cuello, 0, 1.72, fondoTorso / 2 + 0.01));
-    cuerpo.add(caja(0.06, gordo ? 1.3 : 1.6, 0.03, '#c9ced3', 0.04, gordo ? 0.8 : 0.9, z));
+    cuerpo.add(caja(0.06, segun(1.6, 1.3), 0.03, '#c9ced3', 0.04, segun(0.9, 0.8), z));
+  }
+  // Buzo con capucha (capucha: color): la capucha caída en la espalda y los cordones.
+  if (p.capucha) {
+    cuerpo.add(caja(1.5, 0.8, 0.5, p.capucha, 0, cabeza.position.y - 0.62, -fondoTorso / 2 - 0.12));
+    for (const lado of [-1, 1]) cuerpo.add(caja(0.06, 0.65, 0.04, '#e6e6e6', lado * 0.24, 1.62, fondoTorso / 2 + 0.03));
   }
   // Aritos plateados.
   if (p.aros) for (const lado of [-1, 1]) cuerpo.add(caja(0.08, 0.14, 0.08, '#d9dde2', lado * 0.69, cabeza.position.y - 0.2, 0.05));
@@ -203,6 +238,8 @@ export function crearPersonaje(p, cabezaTex) {
 
   const modelo = {
     grupo,
+    // Articulaciones (el gym arma las poses de los ejercicios moviéndolas a mano).
+    partes: { cuerpo, cabeza, brazoI, brazoD, piernaI, piernaD, xBrazo, fondoTorso },
     manoD: brazoD, // para colgarle el arma (la mano está en y = -1.9)
     apuntar: false, // con el arma en la mano: brazos al frente
     llevar: false, // llevando algo con las dos manos (un plato)

@@ -98,6 +98,25 @@
     </div>
   </div>
 
+  <!-- Gym Power Camp: panel mientras entrenás (no tapa el juego: va abajo) -->
+  <section id="panel-gym" class="panel-gym oculto" aria-label="Entrenando">
+    <header class="pg-cabeza">
+      <span class="pg-logo" aria-hidden="true"></span>
+      <h2 id="pg-nombre">Press de banca</h2>
+      <p class="pg-reps" aria-live="polite"><b id="pg-reps">0</b> reps</p>
+    </header>
+    <div id="pg-pesos" class="pg-pesos" role="group" aria-label="Peso"></div>
+    <div id="pg-bauti" class="pg-bauti oculto">
+      <div class="pg-barra" role="progressbar" aria-label="Progreso de Bauti"><i id="pg-barra"></i></div>
+      <span id="pg-bauti-texto"></span>
+    </div>
+    <div class="pg-botones">
+      <button id="pg-rep" class="pg-rep" type="button">Repetición</button>
+      <button id="pg-salir" class="btn gris" type="button">Salir (E)</button>
+    </div>
+    <p class="pg-ayuda">Mantené apretado (o la barra espaciadora) para seguir haciendo repeticiones</p>
+  </section>
+
   <div id="confirmar" class="pantalla oculto">
     <div class="modal">
       <h2>¿Reiniciar partida?</h2>

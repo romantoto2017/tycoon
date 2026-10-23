@@ -3,12 +3,14 @@ import { DROPPERS } from '../data/objetos.js';
 import { ITEMS, ITEMS_POR_ID, MIGRAR } from './progresion.js';
 import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA, ASCENSOR, GARAGE, RESTO_ABRE, nivel } from './constantes.js';
 import * as Re from './resto.js';
+import * as Gy from './gym.js';
 import { caja, mat, matTex, formato, GEO_CAJA } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
 import { Auto } from './auto.js';
 import { crearAK } from './arma.js';
 import { crearModelo, medidaModelo } from './modelos.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel,
   texturaCascada, obtenerCara, cargarImagen,
@@ -33,6 +35,7 @@ const MAT_HAZ = new THREE.MeshBasicMaterial({ color: '#7dff6a', transparent: tru
 function crearKit() {
   const brillos = new Map();
   const imagenes = new Map();
+  const materialesLisos = new Map();
   const material = (c) => (c instanceof THREE.Material ? c : mat(c));
   const malla = (geo, c, x, y, z) => {
     const m = new THREE.Mesh(geo, material(c));
@@ -186,6 +189,24 @@ function crearKit() {
       g.add(borde, lienzo);
       return g;
     },
+    // Junta muchas geometrías en una (se dibujan de una vez: menos trabajo para la compu).
+    unir: (geos) => mergeGeometries(geos.map((x) => (x.index ? x.toNonIndexed() : x)).map((x) => { for (const n of Object.keys(x.attributes)) if (!['position', 'normal', 'uv'].includes(n)) x.deleteAttribute(n); return x; })),
+    // Material liso con luz (cacheado por color).
+    material(c) {
+      if (!materialesLisos.has(c)) materialesLisos.set(c, new THREE.MeshLambertMaterial({ color: c }));
+      return materialesLisos.get(c);
+    },
+    // Lámina de 1 x 1 con un dibujo hecho en un canvas: dibujar(ctx, ancho, alto).
+    imagenCanvas(dibujar, w, h) {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      dibujar(c.getContext('2d'), w, h);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      return kit.noSolido(new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ map: tex })));
+    },
     // Lámina con una imagen (PNG con transparencia recortada). Misma imagen y medida
     // comparten geometría y material, así muchas (banderines) se dibujan juntas.
     imagen(ruta, ancho, alto, { dosLados = false } = {}) {
@@ -301,6 +322,18 @@ export class Tycoon {
     }
     this.refrescarBotones(false);
     this.abrirResto(false);
+    this.construirGym();
+  }
+
+  // El gym Power Camp está desde el principio (no se compra): edificio y equipamiento.
+  construirGym() {
+    if (this.gymHecho) return;
+    this.gymHecho = true;
+    for (const [construir, muebles] of [[Gy.edificio, false], [Gy.mostrador, true], [Gy.mancuernas, true], [Gy.maquinas, true]]) {
+      const g = new THREE.Group();
+      construir(this.kit, g);
+      this.agregarPieza(g, false, { muebles });
+    }
   }
 
   // El restaurante de Lourdes no se compra: aparece entero (con Lourdes) cuando la mansión

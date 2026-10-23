@@ -48,5 +48,20 @@ export const RESTO_LOURDES = { mesa: [RESTO.x0 + 32.5, RESTO.z0 + 25.5], silla: 
 // Parrilla Vecibanda (de ladrillo, como la de la foto), al lado del restaurante: centro del
 // frente; mira a la calle (+z).
 export const PARRILLA = { x: RESTO.x1 + 12, z: 50 };
-// Hasta dónde se puede ir caminando o en auto (el restaurante queda lejos).
-export const LIMITE_MAPA = 215;
+// Gimnasio Power Camp: a unos 450 m de la mansión para el otro lado (izquierda, mirando desde
+// la calle), sobre la misma calle. La entrada mira a la calle (+z). Siempre está abierto.
+export const GYM = { x0: -480, x1: -430, z0: 14, z1: 55.5, alto: 12, pared: 0.8 };
+// Entrada: puerta abierta en el medio del frente, con la alfombra START hacia adentro.
+export const GYM_PUERTA = { a: -460, b: -450, alto: 8.5 };
+// Kelvin, detrás del mostrador (a la derecha de la alfombra al entrar), mirando a la alfombra.
+export const GYM_KELVIN = { x: -448.3, z: 48 };
+// Estaciones de ejercicio: dónde se pone el jugador (y hacia dónde mira: angulo, 0 = +z).
+export const GYM_ESTACIONES = {
+  curl: { x: -472.5, z: 31, angulo: -Math.PI / 2 }, // parado frente al espejo, al lado del stand de mancuernas
+  banca: { x: -444, z: 26.2 }, // banco plano: la cabeza hacia -z, donde están los soportes
+  dominadas: { x: -434.5, z: 22 }, // barra de dominadas del rack de la pared derecha
+  pecdec: { x: -463, z: 15.5 }, // torre contra la pared del fondo: el asiento mira a +z
+  jalon: { x: -451, z: 15.5 }, // torre alta contra el fondo: se sienta mirando a la torre
+};
+// Hasta dónde se puede ir caminando o en auto (el restaurante y el gym quedan lejos).
+export const LIMITE_MAPA = 520;

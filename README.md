@@ -64,6 +64,16 @@ Sobre la vereda hay faroles de hierro: de noche, al acercarte, la cuadra se ilum
 
 Al lado del restaurante se compra la Parrilla Vecibanda: de ladrillo a la vista con chimenea, fogón, mesada de cemento y leñero (`parrilla` en `js/exterior.js`).
 
+## Gym Power Camp
+
+A unos 450 metros de la mansión para el otro lado de la calle (al revés que el restaurante) está el gym Power Camp, abierto desde el principio. Está hecho en base a las fotos de `assets/especiales/` (gym1 a gym8, las capturas de la entrada y `gymlogo.png`): fachada negra con POWER en letras blancas, la alfombra START de la entrada, el mostrador de madera, techo negro con aros de luz, el espejo con el stand largo de mancuernas POWER (de 2,5 a 40 kg), racks negros y amarillos, torres de máquinas con la placa POWER y discos con el logo. Edificio y equipamiento en `js/gym.js`.
+
+Kelvin atiende en el mostrador (cara y buzo sacados del video `kelvincara.mp4` con `herramientas/kelvin.py`, acá en el contenedor). Cada vez que entrás te dice "¿Todo bien bro?" y te ofrece la mano: "Chocar la mano (E)".
+
+Hay cinco ejercicios que se hacen de verdad (`js/gimnasio.js`): curl de bíceps con mancuernas frente al espejo, press de banca, dominadas, peck deck y jalón al pecho. Te parás al lado de la máquina, "Entrenar (E)", elegís el peso en el panel y hacés repeticiones con el botón grande (o la barra espaciadora / el botón de saltar), manteniéndolo apretado para seguir. Se mueven los hombros, los codos y las rodillas, y también la barra, el cable o los brazos de la máquina y las placas. Si el peso es demasiado para vos, la barra no sube. Moverse o "Salir (E)" te saca.
+
+Solo Bauti cambia de cuerpo: cada repetición le suma puntos (`estado.bautiGym`); con unas 1000 repeticiones adelgaza (y camina más rápido) y, ya flaco, con unas 2400 más se pone musculoso. El progreso se ve en el panel y se guarda con la partida. Los números están en `BAUTI_GYM` de `js/gimnasio.js`.
+
 ## La Mazza
 
 Cada minuto de juego hay un 3% de chance de que caiga la Mazza (está enamorada de Juanma). Si estás jugando con Juanma te persigue por toda la mansión (escaleras incluidas) y le salen corazones al verte; si no, entra a preguntar por él. No se la puede echar: se va sola a los 5 minutos. Todo está en `js/mazza.js`.

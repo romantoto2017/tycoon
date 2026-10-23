@@ -16,8 +16,9 @@ import { momento, hastaLaManana } from './cielo.js';
 import { Ladron } from './ladron.js';
 import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
+import { Gimnasio, fisico } from './gimnasio.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA } from './constantes.js';
+import { RESTO, PARRILLA, GYM } from './constantes.js';
 import { crearAK } from './arma.js';
 
 async function iniciar() {
@@ -74,6 +75,7 @@ async function iniciar() {
   const ladron = new Ladron(escena, tycoon, UI);
   const mazza = new Mazza(escena, tycoon, UI);
   const resto = new Restaurante(escena, tycoon, UI);
+  const gym = new Gimnasio(escena, UI);
 
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
@@ -146,6 +148,10 @@ async function iniciar() {
   };
   // Un solo botón de acción (como los avisos de Roblox): manejar o dormir, con la E.
   const accion = () => {
+    if (gym.accion(jugador)) {
+      gym.hacer(jugador);
+      return;
+    }
     if (resto.accion(jugador)) {
       if (resto.hacer(jugador) === 'menu') {
         controles.activo = false;
@@ -163,6 +169,7 @@ async function iniciar() {
 
   const ir = (nuevo) => {
     if (nuevo !== 'juego' && conduciendo) subirOBajar();
+    if (nuevo !== 'juego' && gym.entrenando) gym.dejar(jugador);
     modo = nuevo;
     UI.mostrar('menu', nuevo === 'menu');
     UI.mostrar('seleccion', nuevo === 'seleccion');
@@ -204,7 +211,7 @@ async function iniciar() {
   let cadencia = 0;
   let ultimoArma = null;
   const sacarArma = (v) => {
-    armaEnMano = v && tycoon.tieneArma && !conduciendo;
+    armaEnMano = v && tycoon.tieneArma && !conduciendo && !gym.entrenando;
     if (armaEnMano) jugador.modelo.manoD.add(ak);
     else ak.parent?.remove(ak);
     jugador.modelo.apuntar = armaEnMano;
@@ -337,9 +344,13 @@ async function iniciar() {
   const ponerPersonaje = async (p) => {
     const enMano = armaEnMano;
     if (enMano) sacarArma(false);
-    jugador.setModelo(crearPersonaje(p, await cargarCabeza(p)));
+    // Bauti cambia de cuerpo entrenando en el gym (gimnasio.js: fisico).
+    const pf = fisico(p, estado);
+    jugador.setModelo(crearPersonaje(pf, await cargarCabeza(p)));
+    jugador.personaje = pf;
+    jugador.estado = estado;
     if (enMano) sacarArma(true);
-    jugador.factorVel = p.velocidad || 1;
+    jugador.factorVel = pf.velocidad || 1;
     jugador.setEscala(p.alto || 1);
     puedeAgacharse = (p.alto || 1) > 1;
     controles.agacharse = false;
@@ -347,6 +358,12 @@ async function iniciar() {
     guardarAhora();
   };
   const personajeGuardado = () => PERSONAJES.find((p) => p.id === estado.personaje);
+  gym.alEntrar = () => { if (armaEnMano) sacarArma(false); };
+  gym.alCambiarFisico = async (mensaje) => {
+    await ponerPersonaje(personajeGuardado());
+    UI.toast(mensaje, 'plata');
+    sfx.brillo();
+  };
 
   const abrirSeleccion = async () => {
     await UI.armarSeleccion(PERSONAJES, estado.personaje, async (p) => {
@@ -405,6 +422,7 @@ async function iniciar() {
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'Escape' || modo !== 'juego') return;
     if (UI.visible('config')) cerrarConfig();
+    else if (gym.entrenando) gym.dejar(jugador);
     else if (!UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto')) abrirConfig();
   });
 
@@ -423,7 +441,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -491,13 +509,12 @@ async function iniciar() {
     camara.lookAt(0, 16, -17);
   };
 
-  // Los faroles del restaurante iluminan su cuadra de noche: la luz sube de a poco al acercarse.
+  // Los faroles del restaurante y las luces del gym iluminan su cuadra de noche: la luz sube
+  // de a poco al acercarse.
   const centroResto = new THREE.Vector3((RESTO.x0 + PARRILLA.x) / 2, 0, RESTO.z1);
-  const luzResto = () => {
-    if (!tycoon.restoAbierto) return 0;
-    const d = Math.hypot(jugador.pos.x - centroResto.x, jugador.pos.z - centroResto.z);
-    return THREE.MathUtils.clamp((95 - d) / 40, 0, 1);
-  };
+  const centroGym = new THREE.Vector3((GYM.x0 + GYM.x1) / 2, 0, (GYM.z0 + GYM.z1) / 2);
+  const cerca = (c, r) => THREE.MathUtils.clamp((r + 40 - Math.hypot(jugador.pos.x - c.x, jugador.pos.z - c.z)) / 40, 0, 1);
+  const luzBarrio = () => Math.max(tycoon.restoAbierto ? cerca(centroResto, 55) : 0, cerca(centroGym, 60));
 
   // ---------- Bucle ----------
   const reloj = new THREE.Clock();
@@ -511,6 +528,11 @@ async function iniciar() {
     if (conduciendo) {
       tycoon.auto.actualizar(dt, controles.ejes(ejes), colisiones);
       jugador.pos.copy(tycoon.auto.pos);
+    } else if (gym.entrenando) {
+      // Entrenando en el gym: moverse lo saca de la máquina; saltar (o el botón) hace la repetición.
+      controles.direccion(dir);
+      if (dir.lengthSq() > 0.04) gym.dejar(jugador);
+      else gym.sostener(dt, jugador, controles.saltar || UI.repGymApretado());
     } else if (resto.asiento) {
       // Sentado en el restaurante: moverse o saltar lo levanta de la silla.
       controles.direccion(dir);
@@ -522,7 +544,7 @@ async function iniciar() {
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
     }
-    const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : '');
+    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -538,9 +560,10 @@ async function iniciar() {
     ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     resto.actualizar(dt, jugador, modo === 'juego');
+    gym.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     brillos.actualizar(dt);
-    mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzResto());
+    mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzBarrio(), camara.position);
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);

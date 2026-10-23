@@ -152,3 +152,45 @@ export function abrirMenuResto(platos, alElegir, alCerrar) {
   mostrar('menu-resto', true);
   lista.firstChild?.focus();
 }
+
+// ---------- Panel del gym (mientras entrenás) ----------
+let repApretado = false;
+export const repGymApretado = () => repApretado;
+function marcarPeso(kg) {
+  for (const b of $('pg-pesos').children) b.setAttribute('aria-pressed', String(Number(b.dataset.kg) === kg));
+}
+// pesos: [{ kg, texto, pesado }]. alPeso(kg) al tocar un peso; alSalir() al salir.
+export function abrirPanelGym({ nombre, pesos, peso, alPeso, alSalir }) {
+  $('pg-nombre').textContent = nombre;
+  const lista = $('pg-pesos');
+  lista.innerHTML = '';
+  for (const p of pesos) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `pg-peso${p.pesado ? ' pesado' : ''}`;
+    b.dataset.kg = p.kg;
+    b.innerHTML = `<span>${p.texto}</span>${p.pesado ? '<small>muy pesado</small>' : ''}`;
+    b.addEventListener('click', () => { alPeso(p.kg); marcarPeso(p.kg); b.blur(); });
+    lista.appendChild(b);
+  }
+  marcarPeso(peso);
+  const rep = $('pg-rep');
+  rep.onpointerdown = (e) => { e.preventDefault(); repApretado = true; rep.classList.add('apretado'); };
+  rep.onpointerup = rep.onpointerleave = rep.onpointercancel = () => { repApretado = false; rep.classList.remove('apretado'); };
+  $('pg-salir').onclick = () => alSalir();
+  mostrar('panel-gym', true);
+}
+export function actualizarPanelGym({ reps, peso, bauti }) {
+  $('pg-reps').textContent = reps;
+  marcarPeso(peso);
+  const el = $('pg-bauti');
+  el.classList.toggle('oculto', !bauti);
+  if (!bauti) return;
+  el.dataset.fase = bauti.fase;
+  $('pg-barra').style.width = `${Math.round(bauti.fraccion * 100)}%`;
+  $('pg-bauti-texto').textContent = bauti.texto;
+}
+export function cerrarPanelGym() {
+  repApretado = false;
+  mostrar('panel-gym', false);
+}

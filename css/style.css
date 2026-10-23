@@ -640,3 +640,73 @@ html, body {
   .carta-resto footer { padding: 0 12px 10px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { .plato { transition: none; } }
+
+/* ---------- Panel del gym Power Camp (negro, blanco y el limón de las máquinas) ---------- */
+/* Va al costado izquierdo, así se ve al personaje entrenando en el medio. */
+.panel-gym {
+  --pg-limon: #c9d220;
+  --pg-dorado: #d29a2c;
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  width: min(300px, calc(100% - 32px));
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(14, 15, 17, 0.9);
+  border: 2px solid #2f3136;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  color: #f2f2f2;
+  pointer-events: auto;
+}
+.pg-cabeza { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pg-logo {
+  width: 18px; height: 24px; flex: none;
+  clip-path: polygon(0 0, 30% 0, 100% 50%, 30% 100%, 0 100%, 62% 50%);
+  background: #f2f2f2;
+  box-shadow: 4px 0 0 var(--pg-dorado);
+}
+.pg-cabeza h2 { margin: 0; font-size: 19px; flex: 1; line-height: 1.1; }
+.pg-reps { margin: 0; font-size: 14px; color: #b9bcc2; white-space: nowrap; }
+.pg-reps b { font-size: 26px; color: var(--pg-limon); margin-right: 2px; }
+.pg-pesos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.pg-peso {
+  min-height: 44px; padding: 2px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 10px; border: 2px solid #3a3d42; background: #1d1f23; color: #f2f2f2;
+  font-family: var(--fuente); font-size: 14px; font-weight: 700; line-height: 1.1; cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.1s ease;
+}
+.pg-peso small { font-size: 9px; font-weight: 600; color: #ff8a80; }
+.pg-peso:hover { border-color: #6b6f76; }
+.pg-peso:active { transform: translateY(2px); }
+.pg-peso[aria-pressed="true"] { background: var(--pg-limon); border-color: var(--pg-limon); color: #111; }
+.pg-peso[aria-pressed="true"] small { color: #7a1010; }
+.pg-peso:focus-visible, .pg-rep:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+.pg-bauti { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; font-size: 14px; font-weight: 700; }
+.pg-barra { height: 12px; border-radius: 6px; background: #2b2d31; overflow: hidden; }
+.pg-barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3ccf4e, var(--pg-limon)); transition: width 0.3s ease; }
+.pg-bauti[data-fase="musculo"] .pg-barra i { background: linear-gradient(90deg, var(--pg-dorado), #ff7043); }
+.pg-botones { display: flex; flex-direction: column; gap: 8px; }
+.pg-rep {
+  min-height: 56px; border: none; border-radius: 14px;
+  background: var(--pg-limon); color: #111; font-family: var(--fuente); font-size: 21px; font-weight: 800;
+  box-shadow: 0 5px 0 #8f9614; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.pg-rep.apretado, .pg-rep:active { transform: translateY(4px); box-shadow: 0 1px 0 #8f9614; }
+.pg-botones .btn { min-height: 44px; }
+.pg-ayuda { margin: 8px 0 0; font-size: 11px; color: #8e9198; text-align: center; }
+@media (max-height: 500px) {
+  .panel-gym { padding: 8px; width: 260px; max-height: calc(100% - 70px); }
+  .pg-cabeza h2 { font-size: 16px; }
+  .pg-reps b { font-size: 20px; }
+  .pg-pesos { gap: 4px; margin-bottom: 6px; }
+  .pg-peso { min-height: 38px; font-size: 12px; }
+  .pg-rep { min-height: 44px; font-size: 17px; }
+  .pg-ayuda { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .pg-barra i, .pg-peso, .pg-rep { transition: none; } }

@@ -124,7 +124,11 @@ export function crearCielo(escena) {
     vertexShader: 'varying float vY; void main() { vY = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: 'uniform vec3 arriba; uniform vec3 horizonte; varying float vY; void main() { gl_FragColor = vec4(mix(horizonte, arriba, pow(max(vY, 0.0), 0.6)), 1.0); }',
   }));
-  escena.add(cielo);
+  // Cúpula: el cielo, el sol, la luna y las estrellas siguen a la cámara (si no, yendo lejos
+  // por la calle se sale de la esfera).
+  const domo = new THREE.Group();
+  escena.add(domo);
+  domo.add(cielo);
 
   const hemi = new THREE.HemisphereLight(p.hemiCielo, p.hemiSuelo, 1.35);
   const luz = new THREE.DirectionalLight(p.luz, 1.9);
@@ -133,13 +137,13 @@ export function crearCielo(escena) {
   const astro = (luna, tam) => {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texturaAstro(luna), fog: false, depthWrite: false, transparent: true }));
     s.scale.set(tam, tam, 1);
-    escena.add(s);
+    domo.add(s);
     return s;
   };
   const sol = astro(false, 70);
   const luna = astro(true, 46);
   const estrellas = crearEstrellas();
-  escena.add(estrellas);
+  domo.add(estrellas);
 
   const zeppelin = crearZeppelin();
   escena.add(zeppelin);
@@ -157,7 +161,8 @@ export function crearCielo(escena) {
   return {
     // t: segundos jugados. farolas: cuánta luz de farolas hay (0 a 1; true = compradas):
     // con luz, la noche se ve mucho más.
-    actualizar(dt, t, farolas, nubes) {
+    actualizar(dt, t, farolas, nubes, centro) {
+      if (centro) domo.position.set(centro.x, 0, centro.z);
       const m = momento(t);
       const f = THREE.MathUtils.clamp(Number(farolas) || 0, 0, 1);
       uniforms.arriba.value.copy(mezclar('arriba', m));
