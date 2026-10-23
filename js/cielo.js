@@ -155,22 +155,24 @@ export function crearCielo(escena) {
   };
 
   return {
-    // t: segundos jugados. farolas: si están compradas, la noche se ve mucho más.
+    // t: segundos jugados. farolas: cuánta luz de farolas hay (0 a 1; true = compradas):
+    // con luz, la noche se ve mucho más.
     actualizar(dt, t, farolas, nubes) {
       const m = momento(t);
+      const f = THREE.MathUtils.clamp(Number(farolas) || 0, 0, 1);
       uniforms.arriba.value.copy(mezclar('arriba', m));
       uniforms.horizonte.value.copy(mezclar('horizonte', m));
       escena.fog.color.copy(uniforms.horizonte.value);
       hemi.color.copy(mezclar('hemiCielo', m));
       hemi.groundColor.copy(mezclar('hemiSuelo', m));
       luz.color.copy(mezclar('luz', m));
-      if (farolas) hemi.color.lerp(tmp.set('#ffcf8a'), m.noche * 0.55);
-      const nocheHemi = farolas ? 0.62 : 0.2;
+      if (f > 0) hemi.color.lerp(tmp.set('#ffcf8a'), m.noche * 0.55 * f);
+      const nocheHemi = THREE.MathUtils.lerp(0.2, 0.62, f);
       hemi.intensity = THREE.MathUtils.lerp(1.35, nocheHemi, m.noche);
-      luz.intensity = THREE.MathUtils.lerp(1.9, farolas ? 0.35 : 0.22, m.noche) * (1 - m.ocaso * 0.35);
-      // Niebla: de noche, sin farolas, se ve poquito.
-      escena.fog.near = THREE.MathUtils.lerp(140, farolas ? 55 : 16, m.noche);
-      escena.fog.far = THREE.MathUtils.lerp(320, farolas ? 210 : 80, m.noche);
+      luz.intensity = THREE.MathUtils.lerp(1.9, THREE.MathUtils.lerp(0.22, 0.35, f), m.noche) * (1 - m.ocaso * 0.35);
+      // Niebla: de noche, sin luz de farolas, se ve poquito.
+      escena.fog.near = THREE.MathUtils.lerp(140, THREE.MathUtils.lerp(16, 55, f), m.noche);
+      escena.fog.far = THREE.MathUtils.lerp(320, THREE.MathUtils.lerp(80, 210, f), m.noche);
 
       sol.visible = m.sol <= 1;
       luna.visible = m.luna <= 1;

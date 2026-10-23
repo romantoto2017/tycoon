@@ -1,7 +1,7 @@
 // Restaurante "Lo de Lourdes": edificio, mesas, microondas, el rincón de Lourdes y la
 // decoración. Coordenadas del mundo, relativas a RESTO (constantes.js). No se compra:
 // abre solo cuando la mansión llega a RESTO_ABRE (ver Tycoon.abrirResto).
-import { RESTO as R, RESTO_MESAS, RESTO_MICROONDAS, RESTO_LOURDES } from './constantes.js';
+import { RESTO as R, RESTO_MESAS, RESTO_MICROONDAS, RESTO_LOURDES, PARRILLA } from './constantes.js';
 import { pared } from './arquitectura.js';
 
 // Paleta (UI/UX Pro Max, "Restaurant/Food Service": rojo apetitoso + dorado cálido),
@@ -31,6 +31,23 @@ export const PLATOS = [
   { id: 'pollo_arroz', nombre: 'Pechuga de pollo con arroz' },
   { id: 'strogonoff', nombre: 'Strogonoff con arroz' },
 ];
+
+// Faroles de la vereda: a los costados del restaurante, entre las vidrieras y la puerta, y
+// frente a la parrilla (sin tapar la puerta ni la mesita de afuera).
+export const FAROLES = [R.x0 - 0.5, R.x0 + 13, R.x0 + 27, R.x1 + 1, PARRILLA.x - 5, PARRILLA.x + 6];
+
+// Farol antiguo: base, poste negro, brazo y farolito con vidrio que brilla y techito.
+function farol(k, g, x, z) {
+  const negro = '#1d1f22';
+  g.add(k.cajaDe(x - 0.35, 0, z - 0.35, x + 0.35, 0.6, z + 0.35, negro));
+  g.add(k.cilindro(0.13, 0.17, 6.4, negro, x, 3.8, z, 8));
+  g.add(k.noSolido(k.cajaDe(x - 0.06, 6.6, z - 0.06, x + 0.06, 6.72, z + 0.06, negro)));
+  g.add(k.noSolido(k.cajaDe(x - 0.42, 6.95, z - 0.42, x + 0.42, 7.05, z + 0.42, negro)));
+  g.add(k.noSolido(k.cajaDe(x - 0.34, 7.05, z - 0.34, x + 0.34, 7.95, z + 0.34, k.brillo('#ffd58a'))));
+  for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(k.noSolido(k.cajaDe(x + dx * 0.36 - 0.04, 7.05, z + dz * 0.36 - 0.04, x + dx * 0.36 + 0.04, 7.95, z + dz * 0.36 + 0.04, negro)));
+  g.add(k.noSolido(k.cono(0.62, 0.45, negro, x, 8.18, z, 4)));
+  g.add(k.noSolido(k.esfera(0.1, negro, x, 8.45, z)));
+}
 
 // ---------- Edificio ----------
 export function edificio(k, g) {
@@ -118,6 +135,8 @@ export function edificio(k, g) {
     pl.position.set(x, 0.12, R.z1 + 1.4);
     g.add(pl);
   }
+  // Faroles de hierro sobre la vereda (de noche iluminan la cuadra: ver main.js).
+  for (const x of FAROLES) farol(k, g, x, R.z1 + 3.3);
   // Mesita de afuera con sombrilla.
   const mx = R.x0 + 4.5;
   const mz = R.z1 + 2.6;

@@ -17,6 +17,7 @@ import { Ladron } from './ladron.js';
 import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
 import { PLATOS } from './resto.js';
+import { RESTO, PARRILLA } from './constantes.js';
 import { crearAK } from './arma.js';
 
 async function iniciar() {
@@ -490,6 +491,14 @@ async function iniciar() {
     camara.lookAt(0, 16, -17);
   };
 
+  // Los faroles del restaurante iluminan su cuadra de noche: la luz sube de a poco al acercarse.
+  const centroResto = new THREE.Vector3((RESTO.x0 + PARRILLA.x) / 2, 0, RESTO.z1);
+  const luzResto = () => {
+    if (!tycoon.restoAbierto) return 0;
+    const d = Math.hypot(jugador.pos.x - centroResto.x, jugador.pos.z - centroResto.z);
+    return THREE.MathUtils.clamp((95 - d) / 40, 0, 1);
+  };
+
   // ---------- Bucle ----------
   const reloj = new THREE.Clock();
   const dir = new THREE.Vector3();
@@ -531,7 +540,7 @@ async function iniciar() {
     resto.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     brillos.actualizar(dt);
-    mundo.actualizar(dt, hora(), estado.compras.includes('farolas'));
+    mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzResto());
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);

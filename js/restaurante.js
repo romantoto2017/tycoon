@@ -11,7 +11,7 @@ import { sfx, setRadio } from './sfx.js';
 // agua: si estás sentado, a tu lugar; si no, a una silla cualquiera y te tenés que sentar
 // ahí para comer. No se paga. Mientras estás adentro suena su radio.
 export const LOURDES = {
-  id: 'lourdes', nombre: 'Lourdes', foto: 'lourdes2.jpeg', recorte: [0.37, 0.125, 0.16],
+  id: 'lourdes', nombre: 'Lourdes', foto: 'lourdes_juego.jpeg', // ya recortada con los ojos en los lentes (herramientas/lourdes_cara.py)
   piel: '#5a3726', pelo: '#16110e', peinado: 'liso', cuerpo: 'gordo',
   remera: '#f4f4f2', pantalon: '#ecebe7', lentes: '#3b2a20', colita: true, cuello: '#1d1d22', aros: true,
 };

@@ -60,6 +60,8 @@ El restaurante de Lourdes queda afuera del terreno, a unos 150 metros sobre la m
 
 Lourdes está sentada en su mesa con una radio vieja que pasa cumbia mientras estás adentro. Al lado de ella aparece "Pedir comida (E)": elegís un plato del menú y ella lo calienta en un microondas. Al lado de cualquier silla aparece "Sentarse (E)" (moverse o saltar te levanta). Si estás sentado, Lourdes te lleva el plato con un vaso de agua a tu lugar; si no, lo deja en una silla cualquiera (marcada con una flecha amarilla) y te tenés que sentar ahí para que aparezca "Comer (E)". No se paga y es un plato por visita (al salir y volver a entrar podés pedir otro). El edificio, las mesas y los asientos están en `js/resto.js`; Lourdes, el servicio y el sentarse, en `js/restaurante.js`.
 
+Sobre la vereda hay faroles de hierro: de noche, al acercarte, la cuadra se ilumina sola aunque no hayas comprado las farolas de la mansión (`luzResto` en `js/main.js`). La cara de Lourdes sale de `assets/caras/lourdes_cara.jpeg`, recortada con `herramientas/lourdes_cara.py` para que los ojos caigan detrás de los lentes.
+
 Al lado del restaurante se compra la Parrilla Vecibanda: de ladrillo a la vista con chimenea, fogón, mesada de cemento y leñero (`parrilla` en `js/exterior.js`).
 
 ## La Mazza
