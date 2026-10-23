@@ -245,8 +245,8 @@ export function crearPersonaje(p, cabezaTex) {
       brazoD.rotation.z += (abrir - brazoD.rotation.z) * Math.min(1, dt * 10);
       if (modelo.llevar) {
         // Llevando un plato: los dos brazos al frente, un poco cerrados hacia el plato.
-        brazoI.rotation.set(-1.45, 0, 0.28);
-        brazoD.rotation.set(-1.45, 0, -0.28);
+        brazoI.rotation.set(-1.45, 0, 0.45);
+        brazoD.rotation.set(-1.45, 0, -0.45);
       }
       if (modelo.apuntar) {
         brazoD.rotation.x = -1.5;

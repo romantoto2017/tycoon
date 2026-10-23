@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { caja, mat } from './util.js';
+import { LIMITE_MAPA } from './constantes.js';
 
 const RADIO = 2.3;
 const VEL_MAX = 34;
 const VEL_ATRAS = -10;
-const LIMITE = 150;
 
 // Auto deportivo manejable. Mira hacia +Z en su marco; `angulo` es el rumbo (0 = +Z).
 export class Auto {
@@ -109,8 +109,8 @@ export class Auto {
     this.angulo -= this.direccion * 3.6 * THREE.MathUtils.clamp(this.vel / 10, -1, 1) * dt;
 
     const p = this.pos;
-    p.x = THREE.MathUtils.clamp(p.x + Math.sin(this.angulo) * this.vel * dt, -LIMITE, LIMITE);
-    p.z = THREE.MathUtils.clamp(p.z + Math.cos(this.angulo) * this.vel * dt, -LIMITE, LIMITE);
+    p.x = THREE.MathUtils.clamp(p.x + Math.sin(this.angulo) * this.vel * dt, -LIMITE_MAPA, LIMITE_MAPA);
+    p.z = THREE.MathUtils.clamp(p.z + Math.cos(this.angulo) * this.vel * dt, -LIMITE_MAPA, LIMITE_MAPA);
     let choque = false;
     for (const b of colisiones) {
       if (b === this.caja || b.max.y < 0.35 || b.min.y > 2.5) continue;

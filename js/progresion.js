@@ -11,7 +11,7 @@
 // Este archivo no importa three: lo usa también la simulación de balance.
 import { DROPPERS, MEJORAS_VALOR, MEJORAS_VELOCIDAD, OBJETOS_VECIBANDA, CUADROS, OBRAS_DE_ARTE, LUJOS } from '../data/objetos.js';
 import { PERSONAJES } from '../data/personajes.js';
-import { SLOTS_DROPPER, ASCENSOR, nivel } from './constantes.js';
+import { SLOTS_DROPPER, ASCENSOR, PARRILLA, nivel } from './constantes.js';
 import { PRECIOS } from './precios.js';
 import * as A from './arquitectura.js';
 import * as Mu from './muebles.js';
@@ -178,7 +178,8 @@ obra('piscina', 'Piscina', ['piso_2'], suelo(0, -36), Ex.piscina);
 dropper(7, ['dropper7', 'cine']);
 obra('reposeras', 'Reposeras y Sombrillas', ['piscina'], suelo(-20, -50), Ex.reposeras, { muebles: true });
 obra('trampolin', 'Trampolín', ['piscina'], suelo(20, -50), Ex.trampolin);
-obra('parrilla', 'Parrilla Vecibanda', ['jardin', 'piso_2'], suelo(-23.5, -47), Ex.parrilla);
+// La parrilla queda afuera, al lado del restaurante de Lourdes (hay que ir hasta allá).
+obra('parrilla', 'Parrilla Vecibanda', ['jardin', 'piso_2'], suelo(PARRILLA.x - 8.5, PARRILLA.z + 5.5), Ex.parrilla);
 
 estructuraPiso(3, salasPiso[2], subir(2), [
   () => mejora('valor', ['valor5', 'piso_3']),

@@ -502,6 +502,11 @@ async function iniciar() {
     if (conduciendo) {
       tycoon.auto.actualizar(dt, controles.ejes(ejes), colisiones);
       jugador.pos.copy(tycoon.auto.pos);
+    } else if (resto.asiento) {
+      // Sentado en el restaurante: moverse o saltar lo levanta de la silla.
+      controles.direccion(dir);
+      if (dir.lengthSq() > 0.04 || controles.saltar) resto.levantar(jugador);
+      else resto.sostener(dt, jugador);
     } else {
       controles.direccion(dir);
       jugador.autoSalto = controles.esTactil;

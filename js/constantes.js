@@ -34,15 +34,19 @@ export const GARAGE = { x0: 47, x1: 70.5, z0: -12, z1: 20, alto: 9 };
 // Ascensor: una plataforma por piso, en el fondo del núcleo.
 export const ASCENSOR = { x: -6, z: -31 };
 
-// Restaurante "Lo de Lourdes", detrás a la izquierda de la mansión. La puerta mira a +z.
+// Restaurante "Lo de Lourdes": afuera del terreno, unos 150 m a la derecha de la mansión
+// sobre la misma calle (se llega caminando o en auto). La puerta mira a la calle (+z).
 // No se compra: abre solo cuando la mansión llega al RESTO_ABRE (30%).
-export const RESTO = { x0: -70.5, x1: -32, z0: -86.5, z1: -56, alto: 13, pared: 0.7 };
+export const RESTO = { x0: 140, x1: 178.5, z0: 25, z1: 55.5, alto: 13, pared: 0.7 };
 export const RESTO_ABRE = 0.3;
 // Mesas del comedor (centros) y microondas (centro de cada mesita, contra la pared del fondo).
-export const RESTO_MESAS = [[-64, -76], [-56, -76], [-48, -76], [-64, -67], [-56, -67], [-48, -67]];
-export const RESTO_MICROONDAS = [-65, -59, -53, -47, -41];
+export const RESTO_MESAS = [10.5, 19.5].flatMap((dz) => [6.5, 14.5, 22.5].map((dx) => [RESTO.x0 + dx, RESTO.z0 + dz]));
+export const RESTO_MICROONDAS = [5.5, 11.5, 17.5, 23.5, 29.5].map((dx) => RESTO.x0 + dx);
 // Rincón de Lourdes (adelante a la derecha): su mesa con la radio y su silla, al costado,
 // así se sienta mirando al salón.
-export const RESTO_LOURDES = { mesa: [-38, -61], silla: [-34.2, -61] };
-// Parrilla Vecibanda (de ladrillo, como la de la foto): centro del frente; mira a +z.
-export const PARRILLA = { x: -23.5, z: -56.5 };
+export const RESTO_LOURDES = { mesa: [RESTO.x0 + 32.5, RESTO.z0 + 25.5], silla: [RESTO.x0 + 36.3, RESTO.z0 + 25.5] };
+// Parrilla Vecibanda (de ladrillo, como la de la foto), al lado del restaurante: centro del
+// frente; mira a la calle (+z).
+export const PARRILLA = { x: RESTO.x1 + 12, z: 50 };
+// Hasta dónde se puede ir caminando o en auto (el restaurante queda lejos).
+export const LIMITE_MAPA = 215;

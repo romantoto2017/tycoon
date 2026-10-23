@@ -1,5 +1,5 @@
 // Restaurante "Lo de Lourdes": edificio, mesas, microondas, el rincón de Lourdes y la
-// decoración. Todo en coordenadas del mundo (ver RESTO en constantes.js). No se compra:
+// decoración. Coordenadas del mundo, relativas a RESTO (constantes.js). No se compra:
 // abre solo cuando la mansión llega a RESTO_ABRE (ver Tycoon.abrirResto).
 import { RESTO as R, RESTO_MESAS, RESTO_MICROONDAS, RESTO_LOURDES } from './constantes.js';
 import { pared } from './arquitectura.js';
@@ -19,9 +19,9 @@ const P = PALETA_RESTO;
 export const PISO_RESTO = 0.25;
 const F = PISO_RESTO;
 // Huecos del frente (puerta en el medio y dos vidrieras) y de las ventanas de los costados.
-const DOOR = { a: -55, b: -47, alto: 9 };
-const VIDRIERAS = [{ a: -67, b: -58, y0: 2, y1: 8 }, { a: -44, b: -35, y0: 2, y1: 8 }];
-const LATERAL = { a: -79, b: -67, y0: 2.5, y1: 8 };
+const DOOR = { a: R.x0 + 15.5, b: R.x0 + 23.5, alto: 9 };
+const VIDRIERAS = [{ a: R.x0 + 3.5, b: R.x0 + 12.5, y0: 2, y1: 8 }, { a: R.x0 + 26.5, b: R.x0 + 35.5, y0: 2, y1: 8 }];
+const LATERAL = { a: R.z0 + 7.5, b: R.z0 + 19.5, y0: 2.5, y1: 8 };
 const ZOCALO = 3;
 export const PLATOS = [
   { id: 'mila_pure', nombre: 'Milanesa con puré' },
@@ -129,21 +129,37 @@ export function edificio(k, g) {
 }
 
 // ---------- Mesas del comedor ----------
+// Cuatro sillas por mesa, dos de cada lado. Cada asiento sabe dónde va el plato (en la mesa,
+// delante de la silla) y hacia dónde mira quien se sienta (angulo: 0 = +z).
+export function asientos() {
+  const lista = [];
+  for (const [x, z] of RESTO_MESAS) {
+    for (const lado of [-1, 1]) {
+      for (const dx of [-0.85, 0.85]) {
+        lista.push({ mesa: [x, z], x: x + dx, z: z + lado * 1.85, lado, dx, angulo: lado > 0 ? Math.PI : 0, plato: [x + dx, z + lado * 0.4] });
+      }
+    }
+  }
+  return lista;
+}
+
 export function mesas(k, g) {
   for (const [x, z] of RESTO_MESAS) {
-    const mesa = k.modelo('tableCloth', { ancho: 3.4, fondo: 2.2, alto: 2.3, tela: P.rojo });
+    // Mesa de madera con mantel rojo (que cae por los costados) y camino crema.
+    const mesa = k.modelo('table', { ancho: 3.4, fondo: 2.2, alto: 2.15 });
     mesa.position.set(x, F, z);
     g.add(mesa);
+    g.add(k.cajaDe(x - 1.78, F + 2.15, z - 1.18, x + 1.78, F + 2.3, z + 1.18, P.rojo));
+    g.add(k.noSolido(k.cajaDe(x - 1.8, F + 1.75, z - 1.2, x + 1.8, F + 2.15, z + 1.2, P.rojo)));
+    g.add(k.noSolido(k.cajaDe(x - 1.82, F + 2.3, z - 0.32, x + 1.82, F + 2.31, z + 0.32, P.crema)));
     g.add(k.noSolido(k.cilindro(0.09, 0.09, 0.35, '#ffffff', x + 0.2, F + 2.48, z, 8)));
     g.add(k.noSolido(k.cilindro(0.09, 0.09, 0.35, '#3a3f44', x + 0.45, F + 2.48, z, 8)));
     g.add(k.noSolido(k.cajaDe(x - 0.6, F + 2.32, z - 0.15, x - 0.2, F + 2.7, z + 0.15, '#ffffff')));
-    for (const lado of [-1, 1]) {
-      for (const dx of [-0.85, 0.85]) {
-        const silla = k.modelo('chairCushion', { tela: P.rojo });
-        silla.position.set(x + dx, F, z + lado * 1.85);
-        silla.rotation.y = lado > 0 ? Math.PI : 0;
-        g.add(silla);
-      }
+    for (const a of asientos().filter((a) => a.mesa[0] === x && a.mesa[1] === z)) {
+      const silla = k.modelo('chairCushion', { tela: P.rojo, solido: false });
+      silla.position.set(a.x, F, a.z);
+      silla.rotation.y = a.angulo;
+      g.add(silla);
     }
     // Lámpara colgante sobre la mesa.
     g.add(k.noSolido(k.cajaDe(x - 0.03, 8.2, z - 0.03, x + 0.03, R.alto, z + 0.03, '#24282c')));
@@ -222,24 +238,25 @@ export function rinconLourdes(k, g) {
 export function decoracion(k, g) {
   const xi = R.x0 + R.pared + 0.08;
   const pizarra = k.pizarra('MENÚ DEL DÍA', PLATOS.map((p) => p.nombre), 6.4, 4.4);
-  pizarra.position.set(xi, F + 5.6, -62.5);
+  pizarra.position.set(xi, F + 5.6, R.z1 - 6.5);
   pizarra.rotation.y = Math.PI / 2;
   g.add(pizarra);
   const cuadro = k.pintura('cafe_noche.jpg', 3.4);
-  cuadro.position.set(R.x1 - R.pared - 0.12, F + 6.4, -61.5);
+  cuadro.position.set(R.x1 - R.pared - 0.12, F + 6.4, R.z1 - 5.5);
   cuadro.rotation.y = -Math.PI / 2;
   g.add(cuadro);
   const cuadro2 = k.pintura('grande_jatte.jpg', 3.2);
-  cuadro2.position.set(-56, F + 7.6, R.z0 + R.pared + 0.12);
+  cuadro2.position.set(R.x0 + 14.5, F + 7.6, R.z0 + R.pared + 0.12);
   g.add(cuadro2);
   // Reloj de pared.
   const xr = R.x0 + R.pared;
-  const reloj = k.cilindro(0.7, 0.7, 0.08, '#ffffff', xr + 0.1, F + 8.4, -82, 20);
+  const zr = R.z0 + 4.5;
+  const reloj = k.cilindro(0.7, 0.7, 0.08, '#ffffff', xr + 0.1, F + 8.4, zr, 20);
   reloj.rotation.z = Math.PI / 2;
   g.add(k.noSolido(reloj));
-  g.add(k.noSolido(k.cajaDe(xr + 0.12, F + 8.35, -82.03, xr + 0.16, F + 8.85, -81.97, '#111111')));
-  g.add(k.noSolido(k.cajaDe(xr + 0.12, F + 8.37, -82.03, xr + 0.16, F + 8.43, -81.6, '#111111')));
-  for (const [x, z] of [[R.x0 + 1.8, R.z0 + 2.2], [R.x0 + 1.8, R.z1 - 2.2], [R.x1 - 2, -76]]) {
+  g.add(k.noSolido(k.cajaDe(xr + 0.12, F + 8.35, zr - 0.03, xr + 0.16, F + 8.85, zr + 0.03, '#111111')));
+  g.add(k.noSolido(k.cajaDe(xr + 0.12, F + 8.37, zr - 0.03, xr + 0.16, F + 8.43, zr + 0.4, '#111111')));
+  for (const [x, z] of [[R.x0 + 1.8, R.z0 + 2.2], [R.x0 + 1.8, R.z1 - 2.2], [R.x1 - 2, R.z0 + 10.5]]) {
     const pl = k.modelo('pottedPlant', { alto: 4.2 });
     pl.position.set(x, F, z);
     g.add(pl);

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { caja, matTex, aleatorio } from './util.js';
-import { TERRENO as T, CALLE_Z } from './constantes.js';
+import { TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA } from './constantes.js';
 import { crearCielo } from './cielo.js';
 
 export function crearMundo(escena) {
@@ -76,10 +76,11 @@ function crearArboles(escena) {
   const rnd = aleatorio(7);
   const puntos = [];
   while (puntos.length < 70) {
-    const x = (rnd() - 0.5) * 360;
+    const x = (rnd() - 0.5) * 440;
     const z = (rnd() - 0.5) * 360;
     if (x > T.x0 - 6 && x < T.x1 + 6 && z > T.z0 - 6 && z < T.z1 + 6) continue; // terreno
     if (z > CALLE_Z - 10 && z < CALLE_Z + 34) continue;                          // calle y casas
+    if (x > R.x0 - 8 && x < PA.x + 14 && z > R.z0 - 8 && z < CALLE_Z) continue;    // restaurante y parrilla
     puntos.push([x, z, 0.8 + rnd() * 0.6]);
   }
   const n = puntos.length;

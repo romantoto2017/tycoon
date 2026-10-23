@@ -313,7 +313,7 @@ export class Tycoon {
       construir(this.kit, g);
       this.agregarPieza(g, animar, { muebles });
     }
-    if (animar) this.ui.toast('¡Abrió Lo de Lourdes! El restaurante está atrás de la mansión, a la izquierda', 'info');
+    if (animar) this.ui.toast('¡Abrió Lo de Lourdes! Salí por el portón y seguí la calle para el lado del garage, unos 150 metros', 'info');
   }
 
   get ingresoPorSegundo() {

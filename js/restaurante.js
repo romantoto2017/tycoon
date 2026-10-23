@@ -1,27 +1,31 @@
 import * as THREE from 'three';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, crearEtiqueta } from './texturas.js';
-import { RESTO as R, RESTO_MESAS, RESTO_LOURDES } from './constantes.js';
-import { PISO_RESTO as F, PLATOS } from './resto.js';
+import { RESTO as R, RESTO_MICROONDAS, RESTO_LOURDES } from './constantes.js';
+import { PISO_RESTO as F, PLATOS, asientos } from './resto.js';
 import { caja, mat } from './util.js';
 import { sfx, setRadio } from './sfx.js';
 
-// Lourdes atiende el restaurante: está sentada en su mesita con la radio. Si le pedís
-// comida (una vez por visita) calienta el plato en un microondas y te lo lleva a la mesa
-// más cercana con un vaso de agua. No se paga. Mientras estás adentro suena su radio.
+// Lourdes atiende el restaurante: está sentada en su mesita con la radio. Le pedís comida
+// (una vez por visita), la calienta en un microondas y te la lleva a la mesa con un vaso de
+// agua: si estás sentado, a tu lugar; si no, a una silla cualquiera y te tenés que sentar
+// ahí para comer. No se paga. Mientras estás adentro suena su radio.
 export const LOURDES = {
   id: 'lourdes', nombre: 'Lourdes', foto: 'lourdes2.jpeg', recorte: [0.37, 0.125, 0.16],
   piel: '#5a3726', pelo: '#16110e', peinado: 'liso', cuerpo: 'gordo',
   remera: '#f4f4f2', pantalon: '#ecebe7', lentes: '#3b2a20', colita: true, cuello: '#1d1d22', aros: true,
 };
 const VEL = 7;
-const PASILLO_X = -42;
-const FONDO_Z = -81;
-const FRENTE_Z = -63.4;
-const MICRO = { x: -47, z: -82.9 };
-const PARADA = { x: -34.2, z: -63.9 }; // al lado de su silla
-const MICRO_PUERTA = { x: -47, y: F + 3.05, z: R.z0 + R.pared + 1.7 };
-const SEPARACION = 3.6; // de la mesa al servir: el plato (en la punta de los brazos) queda sobre el borde
+// Recorridos de Lourdes (pasillos libres entre las mesas).
+const PASILLO_X = R.x0 + 28.5; // entre la última columna de mesas y su rincón
+const FONDO_Z = R.z0 + 5.5; // delante de los microondas
+const FRENTE_Z = R.z0 + 23.1; // delante de la fila de mesas de adelante
+const MICRO = { x: RESTO_MICROONDAS[3], z: R.z0 + 3.6 };
+const PARADA = { x: RESTO_LOURDES.silla[0], z: RESTO_LOURDES.silla[1] - 2.9 }; // al lado de su silla
+const MICRO_PUERTA = { x: MICRO.x, y: F + 3.05, z: R.z0 + R.pared + 1.7 };
+const AL_COSTADO = 3.1; // sirve parada en la punta de la mesa, sin meterse en el mantel
+const EN_MANOS = { y: 4.33, z: 1.8 }; // el plato apoyado en las manos (pose "llevar")
+const ASIENTOS = asientos();
 
 const v = (x, z) => new THREE.Vector3(x, F, z);
 
@@ -73,7 +77,7 @@ function plato(id) {
   vaso.position.set(0.8, 0, -0.15);
   g.add(vaso);
   g.scale.setScalar(1.25);
-  return { grupo: g, comida };
+  return { grupo: g, comida, vaso };
 }
 
 export class Restaurante {
@@ -83,12 +87,18 @@ export class Restaurante {
     this.ui = ui;
     this.estado = 'nada';
     this.pedido = false; // ya pidió en esta visita
-    this.servido = null; // { grupo, comida, pos, comido }
+    this.servido = null; // { grupo, comida, vaso, asiento, comido }
+    this.asiento = null; // dónde está sentado el jugador
     this.adentro = false;
     this.luz = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.55, 0.05), new THREE.MeshBasicMaterial({ color: '#ffd27a' }));
     this.luz.position.set(MICRO_PUERTA.x, MICRO_PUERTA.y, MICRO_PUERTA.z);
     this.luz.visible = false;
     escena.add(this.luz);
+    // Flecha que marca la silla donde quedó la comida (si no estabas sentado).
+    this.flecha = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 4), mat('#ffd23f'));
+    this.flecha.rotation.x = Math.PI;
+    this.flecha.visible = false;
+    escena.add(this.flecha);
   }
 
   hayLourdes() {
@@ -124,11 +134,57 @@ export class Restaurante {
     return Math.hypot(jugador.pos.x - p.x, jugador.pos.z - p.z) < 4.5 && Math.abs(jugador.pos.y - F) < 2;
   }
 
+  // Silla libre más cercana (a menos de 2,4), o null.
+  sillaCerca(jugador) {
+    let mejor = null;
+    let dMejor = 2.4;
+    for (const a of ASIENTOS) {
+      const d = Math.hypot(jugador.pos.x - a.x, jugador.pos.z - a.z);
+      if (d < dMejor && Math.abs(jugador.pos.y - F) < 2) { mejor = a; dMejor = d; }
+    }
+    return mejor;
+  }
+
+  // ---------- El jugador sentado ----------
+
+  sentarJugador(jugador, a) {
+    this.asiento = a;
+    jugador.vel.set(0, 0, 0);
+    jugador.agachado = false;
+    this.sostener(0, jugador);
+  }
+
+  // Lo deja quieto en la silla, mirando a la mesa (main.js lo llama en vez de mover al jugador).
+  sostener(dt, jugador) {
+    const a = this.asiento;
+    const p = jugador.pos;
+    p.set(a.x + Math.sin(a.angulo) * 0.15, F - 0.45, a.z + Math.cos(a.angulo) * 0.15);
+    jugador.angulo = a.angulo;
+    jugador.enSuelo = true;
+    jugador.suelo = F;
+    jugador.contenedor.position.copy(p);
+    jugador.contenedor.rotation.y = a.angulo;
+    jugador.sombra.position.set(p.x, F + 0.06, p.z);
+    jugador.modelo?.animar(dt, 0, true, false, true);
+  }
+
+  levantar(jugador) {
+    const a = this.asiento;
+    if (!a) return;
+    this.asiento = null;
+    // Queda parado detrás de la silla.
+    jugador.pos.set(a.x - Math.sin(a.angulo) * 1.3, F, a.z - Math.cos(a.angulo) * 1.3);
+  }
+
   // Texto del botón de acción, o '' si no hay nada que hacer acá.
   accion(jugador) {
     if (!this.modelo || !this.adentro) return '';
-    if (this.servido && !this.servido.comido && jugador.pos.distanceTo(this.servido.pos) < 4) return 'Comer (E)';
+    if (this.asiento) {
+      if (this.servido && !this.servido.comido && this.servido.asiento === this.asiento) return 'Comer (E)';
+      return 'Levantarse (E)';
+    }
     if (!this.pedido && this.cercaDeLourdes(jugador)) return 'Pedir comida (E)';
+    if (this.sillaCerca(jugador)) return 'Sentarse (E)';
     return '';
   }
 
@@ -138,44 +194,38 @@ export class Restaurante {
     if (t.startsWith('Comer')) {
       this.servido.comido = true;
       this.servido.comida.visible = false;
+      this.servido.vaso.children[1].visible = false;
       sfx.comer();
       this.ui.toast('¡Riquísimo! Gracias, Lourdes', 'ok');
-      return '';
+    } else if (t.startsWith('Levantarse')) {
+      this.levantar(jugador);
+    } else if (t.startsWith('Sentarse')) {
+      this.sentarJugador(jugador, this.sillaCerca(jugador));
     }
     return t.startsWith('Pedir') ? 'menu' : '';
   }
 
-  pedir(idPlato, jugador) {
+  pedir(idPlato) {
     if (this.pedido || this.estado !== 'sentada') return;
     this.pedido = true;
     this.platoPedido = idPlato;
-    // La mesa más cercana al jugador.
-    let mejor = RESTO_MESAS[0];
-    for (const m of RESTO_MESAS) if (Math.hypot(m[0] - jugador.pos.x, m[1] - jugador.pos.z) < Math.hypot(mejor[0] - jugador.pos.x, mejor[1] - jugador.pos.z)) mejor = m;
-    this.mesa = mejor;
     const nombre = PLATOS.find((p) => p.id === idPlato)?.nombre || 'la comida';
-    this.ui.toast(`Lourdes: "¡Ya te caliento ${nombre.toLowerCase()}!"`, 'info');
+    this.ui.toast(`Lourdes: "¡Ya te caliento ${nombre.toLowerCase()}! Sentate que te lo llevo"`, 'info');
     this.modelo.grupo.position.y = F;
     this.camino = [v(PARADA.x, PARADA.z), v(PASILLO_X, FRENTE_Z - 1), v(PASILLO_X, FONDO_Z), v(MICRO.x, FONDO_Z), v(MICRO.x, MICRO.z)];
     this.estado = 'yendo_micro';
   }
 
+  // Elige adónde lleva el plato: a tu silla si estás sentado; si no, a una cualquiera.
   caminoMesa() {
-    const [tx, tz] = this.mesa;
-    const atras = tz < (RESTO_MESAS[0][1] + RESTO_MESAS[3][1]) / 2;
-    this.dejar = v(tx - 0.35, atras ? tz - 0.75 : tz + 0.75);
-    this.dejar.y = F + 2.32;
-    return atras
-      ? [v(MICRO.x, FONDO_Z), v(tx, FONDO_Z), v(tx, tz - SEPARACION)]
-      : [v(MICRO.x, FONDO_Z), v(PASILLO_X, FONDO_Z), v(PASILLO_X, FRENTE_Z), v(tx, FRENTE_Z), v(tx, tz + SEPARACION)];
+    const a = this.asiento || ASIENTOS[Math.floor(Math.random() * ASIENTOS.length)];
+    this.destino = a;
+    this.paradaMesa = v(a.mesa[0] + Math.sign(a.dx) * AL_COSTADO, a.plato[1]);
+    return [v(MICRO.x, FONDO_Z), v(this.paradaMesa.x, FONDO_Z), this.paradaMesa.clone()];
   }
 
   caminoVuelta() {
-    const [tx, tz] = this.mesa;
-    const atras = tz < (RESTO_MESAS[0][1] + RESTO_MESAS[3][1]) / 2;
-    return atras
-      ? [v(tx, FONDO_Z), v(PASILLO_X, FONDO_Z), v(PASILLO_X, FRENTE_Z - 1), v(PARADA.x, PARADA.z)]
-      : [v(tx, FRENTE_Z), v(PASILLO_X, FRENTE_Z), v(PARADA.x, PARADA.z)];
+    return [v(this.paradaMesa.x, FRENTE_Z), v(PASILLO_X, FRENTE_Z), v(PARADA.x, PARADA.z)];
   }
 
   // Camina por this.camino; devuelve true al llegar.
@@ -214,6 +264,22 @@ export class Restaurante {
     g.rotation.y += a * Math.min(1, dt * 8);
   }
 
+  // Deja el plato en la mesa, delante de la silla, con el vaso del lado de adentro.
+  servir() {
+    const a = this.destino;
+    const p = this.platoEnMano;
+    this.modelo.grupo.remove(p.grupo);
+    p.grupo.position.set(a.plato[0], F + 2.32, a.plato[1]);
+    p.grupo.rotation.y = 0;
+    p.vaso.position.set(-Math.sign(a.dx) * 0.8, 0, -a.lado * 0.2);
+    this.escena.add(p.grupo);
+    this.servido = { ...p, asiento: a, comido: false };
+    this.platoEnMano = null;
+    this.modelo.llevar = false;
+    if (this.asiento === a) this.ui.toast('Lourdes: "¡Buen provecho!"', 'ok');
+    else this.ui.toast('Lourdes: "Te lo dejé en esa mesa, sentate ahí para comer"', 'info');
+  }
+
   actualizar(dt, jugador, jugando) {
     this.adentro = jugando && this.dentro(jugador.pos);
     setRadio(this.adentro && this.hayLourdes());
@@ -225,6 +291,14 @@ export class Restaurante {
       this.pedido = false;
       if (this.servido) this.escena.remove(this.servido.grupo);
       this.servido = null;
+    }
+    // Flecha arriba de la comida mientras no estés sentado ahí.
+    const s = this.servido;
+    this.flecha.visible = !!s && !s.comido && this.asiento !== s.asiento;
+    if (this.flecha.visible) {
+      this.reloj = (this.reloj || 0) + dt;
+      this.flecha.position.set(s.asiento.x, F + 4.2 + Math.sin(this.reloj * 4) * 0.25, s.asiento.z);
+      this.flecha.rotation.y += dt * 2;
     }
     const g = this.modelo.grupo;
     if (this.estado === 'sentada') {
@@ -248,10 +322,10 @@ export class Restaurante {
       if (this.espera <= 0) {
         this.luz.visible = false;
         sfx.pip();
+        // Lo lleva apoyado en las manos, con el vaso arriba del plato del lado de ella.
         this.platoEnMano = plato(this.platoPedido);
-        // En la punta de los brazos (no adentro de la panza), con el vaso adelante.
-        this.platoEnMano.grupo.position.set(0, 4.35, 2.15);
-        this.platoEnMano.grupo.rotation.y = -Math.PI / 2;
+        this.platoEnMano.grupo.position.set(0, EN_MANOS.y, EN_MANOS.z);
+        this.platoEnMano.vaso.position.set(0, 0.06, -0.42);
         g.add(this.platoEnMano.grupo);
         this.modelo.llevar = true;
         this.camino = this.caminoMesa();
@@ -259,14 +333,8 @@ export class Restaurante {
       }
     } else if (this.estado === 'llevando') {
       if (this.caminar(dt)) {
-        g.remove(this.platoEnMano.grupo);
-        this.platoEnMano.grupo.position.copy(this.dejar);
-        this.platoEnMano.grupo.rotation.y = 0;
-        this.escena.add(this.platoEnMano.grupo);
-        this.servido = { ...this.platoEnMano, pos: this.dejar.clone(), comido: false };
-        this.platoEnMano = null;
-        this.modelo.llevar = false;
-        this.ui.toast('Lourdes: "¡Buen provecho!"', 'ok');
+        this.mirar(this.destino.mesa[0], this.paradaMesa.z, 1);
+        this.servir();
         this.camino = this.caminoVuelta();
         this.estado = 'volviendo';
       }

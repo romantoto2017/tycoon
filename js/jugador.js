@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { texturaSombra } from './texturas.js';
-import { SPAWN } from './constantes.js';
+import { SPAWN, LIMITE_MAPA } from './constantes.js';
 
 const RADIO = 0.75;
 const ALTO = 5.3;
@@ -13,7 +13,6 @@ const VEL_CAMINAR = 16;
 const VEL_SALTO = 50;
 const CAIDA_MAX = 120;
 const ALTO_AUTOSALTO = 5; // en el celu salta solo al chocar contra algo más bajo que esto
-const LIMITE = 150;
 
 export class Jugador {
   constructor(escena) {
@@ -117,8 +116,8 @@ export class Jugador {
 
   moverHorizontal(dt, colisiones) {
     const p = this.pos;
-    p.x = THREE.MathUtils.clamp(p.x + this.vel.x * dt, -LIMITE, LIMITE);
-    p.z = THREE.MathUtils.clamp(p.z + this.vel.z * dt, -LIMITE, LIMITE);
+    p.x = THREE.MathUtils.clamp(p.x + this.vel.x * dt, -LIMITE_MAPA, LIMITE_MAPA);
+    p.z = THREE.MathUtils.clamp(p.z + this.vel.z * dt, -LIMITE_MAPA, LIMITE_MAPA);
     this.trabado = 0;
     for (const b of colisiones) {
       if (b.max.y <= p.y + PASO || b.min.y >= p.y + this.alto) continue;
