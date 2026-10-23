@@ -828,31 +828,156 @@ const cine = [
 
 const gimnasio = [
   LUZ(0, 4, (k, s) => {
-    s.cartel('VECIBANDA FIT', 6, 1.2, -1, 5.5, -6.55, 0, '#ffeb3b', '#212121');
-    s.plano(k.imagen('assets/especiales/ladosis_banderin.png', 2.4, 3.5, { dosLados: true }), 8.6, 5, -3, -Math.PI / 2);
+    s.cartel('VECIBANDA FIT', 7, 1.4, 0.5, 7.5, -6.68, 0, '#ff3d3d', '#141516');
+    s.plano(k.imagen('assets/especiales/ladosis_banderin.png', 2.4, 3.5, { dosLados: true }), -8.6, 5.5, 4.6, Math.PI / 2);
+    // Tiras de neón en el techo (rojo y blanco, los colores del gym).
+    [['#ff3d3d', -4.5], ['#f5f5f5', -0.5], ['#ff3d3d', 3.5]].forEach(([c, z]) => s.d(-7.8, 9.3, z - 0.1, 7.8, 9.4, z + 0.1, brillo(k, c)));
   }),
-  M('piso', 'Piso de goma', 0, -1.5, (k, s) => s.d(-8, 0, -6.6, 8, 0.06, 3, '#263238')),
-  M('cinta', 'Cinta de correr', -6.5, -4.4, (k, s) => {
-    s.b(-8, 0, -6.4, -5, 1, -2.4, '#333333');
-    s.d(-7.8, 0.9, -6.2, -5.2, 1.02, -2.6, '#616161');
-    s.b(-8, 1, -6.6, -7.6, 3.5, -2.2, '#9e9e9e');
+  M('piso', 'Piso de goma', 0, -1.5, (k, s) => {
+    s.d(-8.8, 0, -6.75, 8.8, 0.06, 6.75, k.tex('goma', '#ffffff', 3));
+    // Camino libre de la puerta, marcado con pintura.
+    for (const x of [-3.2, 3.2]) s.d(x - 0.06, 0.06, 0.6, x + 0.06, 0.08, 6.75, '#cfd3d6');
   }),
-  M('pesas', 'Banco de pesas', 2, -4.8, (k, s) => {
-    s.b(0, 0, -5.4, 4, 1.2, -4.2, '#212121');
-    s.d(-0.5, 2.6, -6.2, 4.5, 2.75, -6, '#bdbdbd');
-    [-0.4, 4.4].forEach((x) => s.cil(0.8, 0.4, '#424242', x, 2.6, -6.1, 12).rotation.z = Math.PI / 2);
-    s.b(0.3, 0, -6.6, 0.6, 2.7, -6.2, '#9e9e9e');
-    s.b(3.4, 0, -6.6, 3.7, 2.7, -6.2, '#9e9e9e');
+  M('cinta', 'Cintas de correr', -5.7, 0.2, (k, s) => {
+    cintaCorrer(k, s, -7.05);
+    cintaCorrer(k, s, -4.45);
   }),
-  M('mancuernas', 'Mancuernas', 6.4, -4.6, (k, s) => {
-    s.b(5, 0, -6.6, 7.8, 2, -5.6, '#555555');
-    [5.5, 6.4, 7.3].forEach((x) => s.d(x - 0.3, 2, -6.3, x + 0.3, 2.4, -5.9, '#e53935'));
-  }),
-  M('bolsa', 'Bolsa de boxeo', 5.5, 1, (k, s) => {
-    s.cil(0.75, 3, '#c62828', 5.5, 2.8, 1, 10);
-    s.d(5.45, 5.8, 0.95, 5.55, 7.6, 1.05, '#757575');
+  M('pesas', 'Banco de press', 0.5, -0.5, (k, s) => bancoPress(k, s, 0.5)),
+  M('mancuernas', 'Rack de mancuernas y espejo', 5.6, -3.5, (k, s) => rackMancuernas(k, s)),
+  M('bolsa', 'Bolsa de boxeo', 3.9, 2.6, (k, s) => bolsaBoxeo(k, s, 6.1, 2.6)),
+  M('rack', 'Rack de sentadillas', -3.4, 2.2, (k, s) => rackSentadillas(k, s, -6.55, 2.2)),
+  M('parlantes', 'Parlantes', 2.4, -1.2, (k, s) => {
+    parlante(k, s, -2.6, -6.05);
+    parlante(k, s, 4.4, -6.05);
   }),
 ];
+
+// ---------- Equipos del gym de la mansión (estilo gym de Roblox) ----------
+
+// Disco de color (bumper) con el centro blanco, en una barra que va a lo largo de x.
+function disco(s, r, ancho, color, x, y, z) {
+  s.cil(r, ancho, color, x, y - ancho / 2, z, 18).rotation.z = Math.PI / 2;
+  s.cil(0.2, ancho + 0.03, '#e8e8e8', x, y - (ancho + 0.03) / 2, z, 10).rotation.z = Math.PI / 2;
+}
+// Barra olímpica a lo largo de x con dos discos por lado.
+function barra(s, x, y, z, largo = 5.6) {
+  s.cil(0.07, largo, '#c9ced3', x, y - largo / 2, z, 8).rotation.z = Math.PI / 2;
+  for (const lado of [-1, 1]) {
+    disco(s, 0.85, 0.26, '#d32f2f', x + lado * 2.05, y, z);
+    disco(s, 0.66, 0.2, '#1e88e5', x + lado * 2.3, y, z);
+    s.cil(0.11, 0.12, '#24282c', x + lado * 2.5, y - 0.06, z, 8).rotation.z = Math.PI / 2;
+  }
+}
+// Contorno pintado en el piso alrededor de un equipo.
+function contorno(s, x0, z0, x1, z1) {
+  const c = '#cfd3d6';
+  const t = 0.07;
+  s.d(x0, 0.06, z0, x1, 0.08, z0 + t, c);
+  s.d(x0, 0.06, z1 - t, x1, 0.08, z1, c);
+  s.d(x0, 0.06, z0, x0 + t, 0.08, z1, c);
+  s.d(x1 - t, 0.06, z0, x1, 0.08, z1, c);
+}
+
+// Cinta de correr mirando a la pared del fondo: base, banda negra, barandas, parantes con
+// los manubrios y el tablero con la pantalla.
+function cintaCorrer(k, s, x) {
+  const z0 = -5.4;
+  const z1 = -1.5;
+  contorno(s, x - 1.15, z0 - 0.5, x + 1.15, z1 + 0.35);
+  s.b(x - 0.85, 0, z0, x + 0.85, 0.5, z1, '#2b2e33');
+  s.d(x - 0.6, 0.5, z0 + 0.45, x + 0.6, 0.56, z1 - 0.12, '#0f1011');
+  for (let i = 0; i < 9; i++) s.d(x - 0.6, 0.56, z0 + 0.6 + i * 0.42, x + 0.6, 0.57, z0 + 0.64 + i * 0.42, '#1f2124');
+  for (const lado of [-1, 1]) {
+    const xr = x + lado * 0.72;
+    s.d(xr - 0.12, 0.5, z0, xr + 0.12, 0.64, z1, '#8d949b');
+    s.b(xr - 0.08, 0.5, z0 + 0.1, xr + 0.08, 3.7, z0 + 0.3, '#8d949b');
+    // Manubrio que sale hacia el que corre.
+    s.d(xr - 0.07, 3.0, z0 + 0.2, xr + 0.07, 3.14, z0 + 1.5, '#8d949b');
+    s.d(xr - 0.09, 2.98, z0 + 1.0, xr + 0.09, 3.16, z0 + 1.5, '#141516');
+  }
+  s.d(x - 0.85, 0.5, z0 - 0.15, x + 0.85, 0.95, z0 + 0.45, '#3a3d42');
+  s.d(x - 0.8, 3.55, z0 - 0.05, x + 0.8, 4.25, z0 + 0.45, '#24282c');
+  s.d(x - 0.6, 3.65, z0 + 0.46, x + 0.6, 4.15, z0 + 0.48, brillo(k, '#1d3b5c'));
+  s.d(x - 0.45, 3.8, z0 + 0.485, x - 0.05, 3.9, z0 + 0.49, brillo(k, '#7cff5a'));
+  s.d(x + 0.1, 3.8, z0 + 0.485, x + 0.45, 3.9, z0 + 0.49, brillo(k, '#ff3d3d'));
+}
+
+// Banco plano con los soportes y la barra cargada (la cabeza hacia la pared del fondo).
+function bancoPress(k, s, x) {
+  contorno(s, x - 3.1, -5.6, x + 3.1, -1.1);
+  s.b(x - 0.55, 1.0, -4.3, x + 0.55, 1.32, -1.5, '#141516');
+  s.d(x - 0.5, 1.32, -4.25, x + 0.5, 1.36, -1.55, '#c62828');
+  s.d(x - 0.18, 0, -4.0, x + 0.18, 1.0, -3.6, '#5f6368');
+  s.d(x - 0.18, 0, -2.0, x + 0.18, 1.0, -1.6, '#5f6368');
+  s.d(x - 0.7, 0, -4.1, x + 0.7, 0.14, -3.5, '#5f6368');
+  s.d(x - 0.7, 0, -2.1, x + 0.7, 0.14, -1.5, '#5f6368');
+  for (const lado of [-1, 1]) {
+    const xs = x + lado * 1.55;
+    s.b(xs - 0.15, 0, -4.75, xs + 0.15, 3.7, -4.45, '#1b1c1e');
+    s.d(xs - 0.5, 0, -5.1, xs + 0.5, 0.14, -4.1, '#1b1c1e');
+    s.d(xs - 0.17, 3.15, -4.45, xs + 0.17, 3.3, -4.1, '#ffd23f');
+  }
+  barra(s, x, 3.42, -4.28);
+}
+
+// Rack de dos pisos contra la pared +x con pares de mancuernas de colores, y el espejo.
+function rackMancuernas(k, s) {
+  const za = -6.2;
+  const zb = -0.8;
+  s.d(8.7, 2.8, za - 0.2, 8.76, 8.4, zb + 0.2, '#1b1c1e');
+  s.d(8.66, 2.95, za - 0.05, 8.7, 8.25, zb + 0.05, brillo(k, '#7f93a6'));
+  for (const z of [za, (za + zb) / 2, zb]) s.b(7.2, 0, z - 0.12, 8.6, 2.5, z + 0.12, '#1b1c1e');
+  s.d(7.1, 1.15, za, 8.6, 1.28, zb, '#3a3d42');
+  s.d(7.5, 2.15, za, 8.6, 2.28, zb, '#3a3d42');
+  const colores = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'];
+  colores.forEach((c, i) => {
+    const z = za + 0.55 + i * 0.85;
+    for (const [y, x0, r] of [[1.28, 7.85, 0.22 + i * 0.015], [2.28, 8.05, 0.19 + i * 0.012]]) {
+      const y0 = y + r;
+      s.cil(0.06, 0.95, '#c9ced3', x0, y0 - 0.475, z, 6).rotation.z = Math.PI / 2;
+      for (const dx of [-0.42, 0.42]) s.cil(r, 0.26, c, x0 + dx, y0 - 0.13, z, 6).rotation.z = Math.PI / 2;
+    }
+  });
+}
+
+// Bolsa de boxeo colgando del techo con su cadena, la franja blanca y el tatami.
+function bolsaBoxeo(k, s, x, z) {
+  s.d(x - 1.7, 0, z - 1.7, x + 1.7, 0.1, z + 1.7, '#b71c1c');
+  s.d(x - 1.5, 0.1, z - 1.5, x + 1.5, 0.11, z + 1.5, '#212121');
+  s.cil(0.72, 3.4, '#c62828', x, 2.3, z, 14);
+  s.cil(0.74, 0.45, '#fafafa', x, 4.2, z, 14);
+  s.cil(0.76, 0.18, '#1b1c1e', x, 5.7, z, 14);
+  s.cil(0.76, 0.18, '#1b1c1e', x, 2.25, z, 14);
+  s.d(x - 0.04, 5.88, z - 0.04, x + 0.04, 9.6, z + 0.04, '#9aa0a6');
+  s.d(x - 0.5, 9.4, z - 0.5, x + 0.5, 9.6, z + 0.5, '#24282c');
+}
+
+// Jaula de sentadillas negra con ganchos amarillos, barra cargada y plataforma de madera.
+function rackSentadillas(k, s, x, z) {
+  s.d(x - 2.2, 0, z - 1.9, x + 2.2, 0.12, z + 1.9, '#8a5a34');
+  s.d(x - 1.3, 0.12, z - 1.9, x + 1.3, 0.14, z + 1.9, '#1b1c1e');
+  for (const dx of [-1.3, 1.3]) {
+    for (const dz of [-1.1, 1.1]) s.b(x + dx - 0.15, 0, z + dz - 0.15, x + dx + 0.15, 7.6, z + dz + 0.15, '#141516');
+    s.d(x + dx - 0.15, 7.45, z - 1.1, x + dx + 0.15, 7.75, z + 1.1, '#141516');
+    s.d(x + dx - 0.16, 4.0, z + 1.1, x + dx + 0.16, 4.18, z + 1.45, '#ffd23f');
+    s.d(x + dx - 0.12, 2.4, z - 1.1, x + dx + 0.12, 2.58, z + 1.4, '#ffd23f');
+  }
+  s.d(x - 1.3, 7.45, z - 1.25, x + 1.3, 7.75, z - 0.95, '#141516');
+  s.cil(0.06, 2.9, '#c9ced3', x, 7.1 - 1.45, z + 1.1, 8).rotation.z = Math.PI / 2;
+  barra(s, x, 4.36, z + 1.3, 5.4);
+}
+
+// Parlante grande de piso: gabinete negro con dos conos, tweeter y una luz arriba.
+function parlante(k, s, x, z) {
+  s.b(x - 0.8, 0, z - 0.6, x + 0.8, 3.4, z + 0.6, '#141516');
+  s.d(x - 0.82, 3.4, z - 0.62, x + 0.82, 3.5, z + 0.62, brillo(k, '#ff3d3d'));
+  for (const [y, r] of [[0.95, 0.6], [2.35, 0.48]]) {
+    s.cil(r, 0.08, '#2b2d30', x, y, z + 0.6, 16).rotation.x = Math.PI / 2;
+    s.cil(r * 0.55, 0.1, '#46494e', x, y, z + 0.62, 12).rotation.x = Math.PI / 2;
+    s.cil(r * 0.18, 0.12, '#9aa0a6', x, y, z + 0.64, 8).rotation.x = Math.PI / 2;
+  }
+  s.cil(0.16, 0.08, '#9aa0a6', x, 3.0, z + 0.6, 10).rotation.x = Math.PI / 2;
+}
 
 const biblioteca = [
   LUZ(0, 0),

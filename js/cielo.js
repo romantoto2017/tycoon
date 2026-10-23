@@ -198,10 +198,11 @@ export function crearCielo(escena) {
       estrellas.material.opacity = THREE.MathUtils.clamp((m.noche - 0.4) / 0.6, 0, 1);
       if (nubes) nubes.copy(mezclar('nubes', m));
 
-      // El dirigible da vueltas despacito alrededor del barrio.
-      anguloZep += dt * 0.018;
+      // El dirigible da vueltas despacito alrededor del barrio (en el sentido en que, visto
+      // desde la mansión, avanza con la trompa para adelante).
+      anguloZep -= dt * 0.018;
       zeppelin.position.set(Math.cos(anguloZep) * 170, 88 + Math.sin(anguloZep * 3) * 3, -15 + Math.sin(anguloZep) * 170);
-      zeppelin.rotation.y = Math.PI / 2 - anguloZep; // la trompa (-x) apunta hacia donde va
+      zeppelin.rotation.y = Math.PI / 2 - anguloZep;
     },
   };
 }
