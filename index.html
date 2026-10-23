@@ -103,8 +103,17 @@
     <header class="pg-cabeza">
       <span class="pg-logo" aria-hidden="true"></span>
       <h2 id="pg-nombre">Press de banca</h2>
-      <p class="pg-reps" aria-live="polite"><b id="pg-reps">0</b> reps</p>
+      <p class="pg-reps" aria-live="polite">Serie <b id="pg-serie">0</b><span>Total <i id="pg-reps">0</i></span></p>
     </header>
+    <div class="pg-energia">
+      <span>Energía</span>
+      <div class="pg-barra" role="progressbar" aria-label="Energía para la serie"><i id="pg-energia"></i></div>
+    </div>
+    <div id="pg-lucha" class="pg-lucha oculto" aria-live="assertive">
+      <p id="pg-lucha-texto">¡Apretá rápido para subirla!</p>
+      <div class="pg-lucha-barra"><i id="pg-lucha-prog"></i></div>
+      <div class="pg-lucha-tiempo"><i id="pg-lucha-tiempo"></i></div>
+    </div>
     <div id="pg-pesos" class="pg-pesos" role="group" aria-label="Peso"></div>
     <div id="pg-bauti" class="pg-bauti oculto">
       <div class="pg-barra" role="progressbar" aria-label="Progreso de Bauti"><i id="pg-barra"></i></div>
@@ -114,7 +123,7 @@
       <button id="pg-rep" class="pg-rep" type="button">Repetición</button>
       <button id="pg-salir" class="btn gris" type="button">Salir (E)</button>
     </div>
-    <p class="pg-ayuda">Mantené apretado (o la barra espaciadora) para seguir haciendo repeticiones</p>
+    <p class="pg-ayuda">Mantené apretado (o la barra espaciadora) para seguir. Cerca del fallo, apretá rápido varias veces</p>
   </section>
 
   <div id="confirmar" class="pantalla oculto">

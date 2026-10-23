@@ -28,9 +28,10 @@ export function crearMundo(escena) {
     estaticos,
     // t: segundos jugados (para la hora del día). farolas: cuánta luz de farolas hay (0 a 1).
     // centro: dónde está la cámara (el cielo la sigue).
-    actualizar(dt, t = 0, farolas = false, centro = null) {
+    // interior: 0 a 1, adentro de un lugar con luces fuertes (ver cielo.js).
+    actualizar(dt, t = 0, farolas = false, centro = null, interior = 0) {
       nubes.actualizar(dt);
-      cielo.actualizar(dt, t, farolas, nubes.material.color, centro);
+      cielo.actualizar(dt, t, farolas, nubes.material.color, centro, interior);
     },
   };
 }

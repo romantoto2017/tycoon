@@ -163,6 +163,11 @@ async function iniciar() {
     else subirOBajar();
   };
   btnManejar.addEventListener('click', accion);
+  // En el gym cada apretada cuenta (el minijuego de las últimas reps): Espacio y el botón de saltar.
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !e.repeat && gym.entrenando && controles.activo) gym.pulsar(jugador);
+  });
+  document.getElementById('btn-saltar')?.addEventListener('pointerdown', () => { if (gym.entrenando) gym.pulsar(jugador); });
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyE' && modo === 'juego' && controles.activo) accion();
   });
@@ -514,6 +519,7 @@ async function iniciar() {
   const centroResto = new THREE.Vector3((RESTO.x0 + PARRILLA.x) / 2, 0, RESTO.z1);
   const centroGym = new THREE.Vector3((GYM.x0 + GYM.x1) / 2, 0, (GYM.z0 + GYM.z1) / 2);
   const cerca = (c, r) => THREE.MathUtils.clamp((r + 40 - Math.hypot(jugador.pos.x - c.x, jugador.pos.z - c.z)) / 40, 0, 1);
+  let luzGym = 0;
   const luzBarrio = () => Math.max(tycoon.restoAbierto ? cerca(centroResto, 55) : 0, cerca(centroGym, 60));
 
   // ---------- Bucle ----------
@@ -563,7 +569,9 @@ async function iniciar() {
     gym.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     brillos.actualizar(dt);
-    mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzBarrio(), camara.position);
+    // Adentro del gym se prenden las luces (sube de a poco al entrar, como un fundido).
+    luzGym += ((modo === 'juego' && gym.dentro(jugador.pos) ? 1 : 0) - luzGym) * Math.min(1, dt * 4);
+    mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzBarrio(), camara.position, luzGym);
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);

@@ -190,7 +190,7 @@ export const anchoPalabra = (texto, alto) => (texto.length * 5 - 1) * (alto / 6)
 // ---------- Edificio ----------
 export function edificio(k, g) {
   const THREE = k.THREE;
-  const concreto = k.tex('concreto', '#3a3d42', 4);
+  const concreto = k.tex('concreto', '#5a5d63', 4);
   const panel = k.tex('panel', P.grafito, 3);
   const alto = G.alto;
   // Piso de goma y vereda.
@@ -237,7 +237,7 @@ export function edificio(k, g) {
       }
     }
   }
-  const malla = new THREE.Mesh(k.unir(aros), k.brillo('#ffe9c4'));
+  const malla = new THREE.Mesh(k.unir(aros), k.brillo('#fff3dc'));
   malla.userData.noSolido = true;
   g.add(malla);
   // Columnas de acero negras.

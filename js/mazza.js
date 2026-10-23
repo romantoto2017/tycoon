@@ -4,7 +4,7 @@ import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, crearEtiqueta } from './texturas.js';
 import { CALLE_Z, MANSION as M, NUCLEO, PASILLO, nivel } from './constantes.js';
 
-// La Mazza: está enamorada de Juanma. Cada minuto de juego hay un 3% de que caiga a la casa.
+// La Mazza: está enamorada de Juanma. Cada minuto de juego hay un 0,5% de que caiga a la casa.
 // Si estás jugando con Juanma, te persigue (y le salen corazones al verte); si no, entra a
 // preguntar por él y te sigue preguntando. No se la puede echar: se va sola a los 5 minutos.
 const MAZZA = {
@@ -13,7 +13,7 @@ const MAZZA = {
   remera: '#e91e63', pantalon: '#263238',
 };
 const CADA = 60;
-const PROBABILIDAD = 0.03;
+const PROBABILIDAD = 0.005;
 const ESTADIA = 5 * 60;
 const VEL_PERSIGUE = 0.8; // proporción de la velocidad del jugador: Juanma se le puede escapar
 const VEL_CAMINA = 0.55;

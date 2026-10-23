@@ -32,17 +32,29 @@ export function fisico(p, estado) {
   return { ...p, gordura: 1 - flaco, musculo, velocidad: 0.5 + 0.5 * flaco };
 }
 // Qué tanto levanta (1 = una persona normal). Bauti gordo levanta menos; musculoso, mucho más.
-const fuerzaDe = (p) => (p.id === 'bauti' ? 0.75 + 0.25 * (1 - (p.gordura ?? 1)) + 0.9 * (p.musculo || 0) : 1);
+const fuerzaDe = (p) => (p.id === 'bauti' ? 0.8 + 0.2 * (1 - (p.gordura ?? 1)) + 0.8 * (p.musculo || 0) : 1);
+// Peso del cuerpo (cuenta en las dominadas): Bauti gordo pesa bastante más.
+const pesoCorporal = (p) => 70 + 40 * (p.gordura ?? (p.cuerpo === 'gordo' ? 1 : 0));
 
 // ---------- Ejercicios ----------
-// pesos: lo que se puede elegir. limite: lo máximo que hace una persona normal (fuerza 1).
+// pesos: lo que se puede elegir (de menor a mayor). rm: lo máximo que levanta una persona
+// normal (fuerza 1) UNA vez; en las dominadas es el total, cuerpo + lastre.
 const EJERCICIOS = {
-  curl: { nombre: 'Curl de bíceps', pesos: [5, 7.5, 10, 12.5, 15, 17.5, 20, 25], limite: 15, texto: (kg) => `${String(kg).replace('.', ',')} kg c/u` },
-  banca: { nombre: 'Press de banca', pesos: [20, 40, 50, 60, 70, 80, 100, 120], limite: 70 },
-  dominadas: { nombre: 'Dominadas', pesos: [0, 5, 10, 20], limite: 10, texto: (kg) => (kg ? `+${kg} kg` : 'Sin peso') },
-  pecdec: { nombre: 'Peck deck', pesos: [20, 30, 40, 50, 60, 70, 80], limite: 50 },
-  jalon: { nombre: 'Jalón al pecho', pesos: [20, 30, 40, 50, 60, 70, 80, 90], limite: 55 },
+  curl: { nombre: 'Curl de bíceps', pesos: [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20], rm: 17, texto: (kg) => `${String(kg).replace('.', ',')} kg c/u` },
+  banca: { nombre: 'Press de banca', pesos: [20, 30, 40, 50, 60, 70, 80, 90, 100], rm: 75 },
+  dominadas: { nombre: 'Dominadas', pesos: [0, 5, 10, 15, 20], rm: 82, cuerpo: true, texto: (kg) => (kg ? `+${kg} kg` : 'Sin peso') },
+  pecdec: { nombre: 'Peck deck', pesos: [10, 20, 30, 40, 50, 60, 70, 80], rm: 60 },
+  jalon: { nombre: 'Jalón al pecho', pesos: [10, 20, 30, 40, 50, 60, 70, 80, 90], rm: 70 },
 };
+// Cuántas repeticiones seguidas (descansado) se hacen con un peso: fórmula de Epley al revés
+// (1RM = peso x (1 + reps / 30)). Con el máximo, una; más pesado, ninguna.
+function repsMaximas(ej, kg, p) {
+  const carga = kg + (ej.cuerpo ? pesoCorporal(p) : 0);
+  const rm = ej.rm * fuerzaDe(p);
+  return carga > rm + 1e-6 ? 0 : 1 + 30 * (rm / carga - 1);
+}
+const LUCHA_DESDE = 3; // las últimas reps antes del fallo se pelean (minijuego)
+const DESCANSO = 35; // segundos quieto para recuperarse del todo
 const ZT = G.z0 + G.pared + 0.75; // frente de las torres de máquinas (ver gym.js)
 // Dónde hay que pararse para que aparezca "Entrenar (E)".
 const ENTRADAS = {
@@ -324,19 +336,22 @@ export class Gimnasio {
   entrar(id, jugador) {
     const p = jugador.personaje || {};
     const ej = EJERCICIOS[id];
-    const fuerza = fuerzaDe(p);
-    // Arranca con el peso más pesado que le sale cómodo.
-    const comodos = ej.pesos.filter((kg) => kg <= ej.limite * fuerza * 0.75);
-    const peso = comodos.length ? comodos[comodos.length - 1] : ej.pesos[0];
+    // Siempre arranca con el peso más liviano.
+    const peso = ej.pesos[0];
     this.alEntrar?.();
-    this.entrenando = { id, peso, reps: 0, rep: null, modelo: null, accesorios: [] };
+    // fatiga: cuánto de la serie ya gastó (0 descansado, 1 al fallo). serie: reps seguidas.
+    this.entrenando = { id, peso, reps: 0, serie: 0, fatiga: 0, quieto: 0, rep: null, modelo: null, accesorios: [] };
     this.cambiarPeso(peso);
     this.ui.abrirPanelGym({
       nombre: ej.nombre,
-      pesos: ej.pesos.map((kg) => ({ kg, texto: ej.texto ? ej.texto(kg) : `${kg} kg`, pesado: kg > ej.limite * fuerza * 1.15 })),
+      pesos: ej.pesos.map((kg) => {
+        const n = Math.floor(repsMaximas(ej, kg, p));
+        return { kg, texto: ej.texto ? ej.texto(kg) : `${kg} kg`, nota: n ? `máx ~${n}` : 'no podés', pesado: !n };
+      }),
       peso,
       alPeso: (kg) => this.cambiarPeso(kg),
       alSalir: () => this.dejar(jugador),
+      alPulsar: () => this.pulsar(jugador),
     });
     this.actualizarPanel(jugador);
   }
@@ -375,6 +390,7 @@ export class Gimnasio {
     this.entrenando = null;
     this.ui.cerrarPanelGym();
     if (e.reps) this.ui.toast(`${EJERCICIOS[e.id].nombre}: ${e.reps} repeticiones`, 'ok');
+    this.ui.luchaGym(null);
   }
 
   sacarAccesorios() {
@@ -437,33 +453,76 @@ export class Gimnasio {
         ? { texto: `Bauti adelgazando: ${Math.floor((pts / A) * 100)}%`, fraccion: pts / A, fase: 'flaco' }
         : { texto: `Bauti musculoso: ${Math.floor(Math.min(1, (pts - A) / BAUTI_GYM.musculo) * 100)}%`, fraccion: Math.min(1, (pts - A) / BAUTI_GYM.musculo), fase: 'musculo' };
     }
-    this.ui.actualizarPanelGym({ reps: e.reps, peso: e.pesoPendiente ?? e.peso, bauti });
+    this.ui.actualizarPanelGym({ reps: e.reps, serie: e.serie, energia: 1 - e.fatiga, peso: e.pesoPendiente ?? e.peso, bauti });
   }
 
-  // Una repetición: tarda más cuanto más pesado; si es demasiado, no sube.
+  // Cuántas reps le quedan en esta serie con el peso actual (cansancio incluido).
+  quedan(jugador) {
+    const e = this.entrenando;
+    return (1 - e.fatiga) * repsMaximas(EJERCICIOS[e.id], e.peso, jugador.personaje || {});
+  }
+
+  // Una repetición. Descansado sube sola (más lenta cuanto más pesada); en las últimas antes
+  // del fallo hay que pelearla apretando rápido; al fallo o con un peso imposible no sube.
   empezarRep(jugador) {
     const e = this.entrenando;
     const ej = EJERCICIOS[e.id];
-    const r = e.peso / (ej.limite * fuerzaDe(jugador.personaje || {}));
-    const falla = r > 1.15;
-    e.rep = { t: 0, dur: 1.25 + 0.9 * Math.min(r, 1.15), falla, r };
+    const p = jugador.personaje || {};
+    const max = repsMaximas(ej, e.peso, p);
+    const quedan = this.quedan(jugador);
+    const r = (e.peso + (ej.cuerpo ? pesoCorporal(p) : 0)) / (ej.rm * fuerzaDe(p));
+    const dur = 1.3 + 0.8 * Math.min(r, 1);
+    if (max === 0 || quedan < 0.35) {
+      e.rep = { t: 0, dur: 1.1, falla: true, r, motivo: max === 0 ? 'pesado' : 'fallo' };
+    } else if (quedan <= LUCHA_DESDE) {
+      // Minijuego: cuanto menos le queda, más rápido hay que apretar.
+      const d = THREE.MathUtils.clamp((LUCHA_DESDE + 0.2 - quedan) / (LUCHA_DESDE - 0.15), 0, 1);
+      e.rep = { t: 0, dur, r, lucha: { prog: 0, tiempo: 0, limite: 6, sube: 0.12 - 0.05 * d, baja: 0.22 + 0.3 * d, arriba: false } };
+      this.ui.luchaGym({ prog: 0, tiempo: 1, dificil: d > 0.6 });
+    } else {
+      e.rep = { t: 0, dur, r };
+    }
+    e.costo = max ? 1 / max : 1;
   }
 
-  terminarRep(jugador) {
+  // Cada apretada (tecla, botón grande o el de saltar): arranca una rep o empuja en la lucha.
+  pulsar(jugador) {
     const e = this.entrenando;
-    const { falla, r } = e.rep;
+    if (!e) return;
+    if (!e.rep) { this.empezarRep(jugador); return; }
+    const l = e.rep.lucha;
+    if (!l || l.arriba) return;
+    l.prog = Math.min(1, l.prog + l.sube);
+    if (l.prog >= 1) { l.arriba = true; e.rep.t = 0.45; } // ¡subió! ahora baja controlado
+  }
+
+  terminarRep(jugador, ok) {
+    const e = this.entrenando;
+    const { r, motivo, lucha } = e.rep;
     e.rep = null;
+    e.quieto = 0;
+    this.ui.luchaGym(null);
     if (e.pesoPendiente != null) this.cambiarPeso(e.pesoPendiente);
-    if (falla) {
+    if (!ok) {
       sfx.error();
-      this.ui.toast('¡Muy pesado! Probá con menos peso', 'error');
+      if (motivo === 'pesado') this.ui.toast('¡No la movés ni una vez! Bajale el peso', 'error');
+      else if (motivo === 'fallo') this.ui.toast('Estás al fallo: descansá un poco (o bajale el peso)', 'error');
+      else {
+        e.fatiga = 1;
+        this.ui.toast('¡Fallo! No subió. Descansá y arrancá otra serie', 'error');
+      }
+      this.actualizarPanel(jugador);
       return;
     }
     e.reps++;
+    e.serie++;
+    e.fatiga = Math.min(1, e.fatiga + e.costo);
     sfx.pesa();
+    if (lucha) this.ui.toast('¡Vamos! Subió', 'ok');
     if (jugador.personaje?.id === 'bauti' && jugador.estado) {
       const antes = fisico(jugador.personaje, jugador.estado);
-      jugador.estado.bautiGym = (jugador.estado.bautiGym || 0) + 1 + 2 * Math.min(r, 1);
+      // Las reps pesadas y las peleadas al fallo valen más.
+      jugador.estado.bautiGym = (jugador.estado.bautiGym || 0) + 1 + 2 * Math.min(r, 1) + (lucha ? 1 : 0);
       const despues = fisico(jugador.personaje, jugador.estado);
       if (antes.gordura !== despues.gordura || antes.musculo !== despues.musculo) {
         this.alCambiarFisico?.(despues.gordura < antes.gordura ? (despues.gordura === 0 ? '¡Bauti quedó flaco! Ahora a ponerse musculoso' : '¡Bauti está más flaco!') : '¡Bauti está más musculoso!');
@@ -472,20 +531,59 @@ export class Gimnasio {
     this.actualizarPanel(jugador);
   }
 
-  // Mientras entrena: main.js no mueve al jugador y llama a esto. apretando: Espacio o el
-  // botón de la repetición.
+  // Mientras entrena: main.js no mueve al jugador y llama a esto. apretando: Espacio, el
+  // botón grande o el de saltar mantenidos (sigue haciendo reps mientras no haya que pelear).
   sostener(dt, jugador, apretando) {
     const e = this.entrenando;
     const m = jugador.modelo;
     if (!e || !m) return;
     if (e.modelo !== m) this.ponerAccesorios(m);
-    if (!e.rep && apretando) this.empezarRep(jugador);
+    if (!e.rep && apretando && this.quedan(jugador) > LUCHA_DESDE) this.empezarRep(jugador);
     let s = 0;
-    if (e.rep) {
+    if (!e.rep) {
+      // Descansando: se recupera (y si descansa un rato, la serie arranca de nuevo).
+      e.quieto += dt;
+      if (e.quieto > 1.5 && e.fatiga > 0) {
+        e.fatiga = Math.max(0, e.fatiga - dt / DESCANSO);
+        if (e.quieto > 8) e.serie = 0;
+        this.tiempoPanel = (this.tiempoPanel || 0) + dt;
+        if (this.tiempoPanel > 0.25) { this.tiempoPanel = 0; this.actualizarPanel(jugador); }
+      }
+    } else if (e.rep.falla) {
+      // Empuja y no sube: tiembla un poco y vuelve.
       e.rep.t += dt / e.rep.dur;
-      if (e.rep.falla) s = Math.min(0.28, curva(Math.min(e.rep.t, 1)) * 0.4) + Math.sin(e.rep.t * 60) * 0.015;
-      else s = curva(Math.min(e.rep.t, 1));
-      if (e.rep.t >= 1) this.terminarRep(jugador);
+      if (e.rep.perdio) s = e.rep.desde * Math.max(0, 1 - (e.rep.t - 0.5) * 2); // se le cae
+      else s = Math.min(0.12, curva(Math.min(e.rep.t, 1)) * 0.25) + Math.sin(e.rep.t * 70) * 0.012;
+      if (e.rep.t >= 1) this.terminarRep(jugador, false);
+    } else if (e.rep.lucha) {
+      const l = e.rep.lucha;
+      if (!l.arriba) {
+        // Subida peleada: el peso tira para abajo y cada apretada lo sube un poco.
+        l.tiempo += dt;
+        l.prog = Math.max(0, l.prog - l.baja * dt);
+        s = l.prog + Math.sin(l.tiempo * 55) * 0.012 * (1 - l.prog);
+        if (l.tiempo >= l.limite) { l.cae = (l.cae ?? l.prog); }
+        this.ui.luchaGym({ prog: l.prog, tiempo: 1 - l.tiempo / l.limite, dificil: l.baja > 0.4 });
+        if (l.cae != null) {
+          // Se acabó el tiempo: el peso vuelve abajo y la serie termina.
+          e.rep.falla = true;
+          e.rep.t = 0.5;
+          e.rep.dur = 0.8;
+          e.rep.lucha = null;
+          e.rep.motivo = null;
+          e.rep.perdio = true;
+          e.rep.desde = l.cae;
+        }
+      } else {
+        // Ya arriba: baja controlado como una rep normal.
+        e.rep.t += dt / e.rep.dur;
+        s = curva(Math.min(e.rep.t, 1));
+        if (e.rep.t >= 1) this.terminarRep(jugador, true);
+      }
+    } else {
+      e.rep.t += dt / e.rep.dur;
+      s = curva(Math.min(e.rep.t, 1));
+      if (e.rep.t >= 1) this.terminarRep(jugador, true);
     }
     this.posar(e.id, jugador, s, e.peso);
   }

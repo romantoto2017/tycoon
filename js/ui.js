@@ -160,7 +160,7 @@ function marcarPeso(kg) {
   for (const b of $('pg-pesos').children) b.setAttribute('aria-pressed', String(Number(b.dataset.kg) === kg));
 }
 // pesos: [{ kg, texto, pesado }]. alPeso(kg) al tocar un peso; alSalir() al salir.
-export function abrirPanelGym({ nombre, pesos, peso, alPeso, alSalir }) {
+export function abrirPanelGym({ nombre, pesos, peso, alPeso, alSalir, alPulsar }) {
   $('pg-nombre').textContent = nombre;
   const lista = $('pg-pesos');
   lista.innerHTML = '';
@@ -169,19 +169,23 @@ export function abrirPanelGym({ nombre, pesos, peso, alPeso, alSalir }) {
     b.type = 'button';
     b.className = `pg-peso${p.pesado ? ' pesado' : ''}`;
     b.dataset.kg = p.kg;
-    b.innerHTML = `<span>${p.texto}</span>${p.pesado ? '<small>muy pesado</small>' : ''}`;
+    b.innerHTML = `<span>${p.texto}</span><small>${p.nota}</small>`;
     b.addEventListener('click', () => { alPeso(p.kg); marcarPeso(p.kg); b.blur(); });
     lista.appendChild(b);
   }
   marcarPeso(peso);
   const rep = $('pg-rep');
-  rep.onpointerdown = (e) => { e.preventDefault(); repApretado = true; rep.classList.add('apretado'); };
+  rep.onpointerdown = (e) => { e.preventDefault(); repApretado = true; rep.classList.add('apretado'); alPulsar(); };
   rep.onpointerup = rep.onpointerleave = rep.onpointercancel = () => { repApretado = false; rep.classList.remove('apretado'); };
   $('pg-salir').onclick = () => alSalir();
   mostrar('panel-gym', true);
 }
-export function actualizarPanelGym({ reps, peso, bauti }) {
+export function actualizarPanelGym({ reps, serie, energia, peso, bauti }) {
   $('pg-reps').textContent = reps;
+  $('pg-serie').textContent = serie;
+  const en = $('pg-energia');
+  en.style.width = `${Math.round(energia * 100)}%`;
+  en.parentElement.dataset.nivel = energia < 0.25 ? 'baja' : energia < 0.6 ? 'media' : 'alta';
   marcarPeso(peso);
   const el = $('pg-bauti');
   el.classList.toggle('oculto', !bauti);
@@ -189,6 +193,17 @@ export function actualizarPanelGym({ reps, peso, bauti }) {
   el.dataset.fase = bauti.fase;
   $('pg-barra').style.width = `${Math.round(bauti.fraccion * 100)}%`;
   $('pg-bauti-texto').textContent = bauti.texto;
+}
+// Minijuego de la última rep: null lo oculta; si no, { prog, tiempo, dificil } (0 a 1).
+export function luchaGym(l) {
+  const el = $('pg-lucha');
+  el.classList.toggle('oculto', !l);
+  $('pg-rep').textContent = l ? '¡EMPUJÁ!' : 'Repetición';
+  $('pg-rep').classList.toggle('lucha', !!l);
+  if (!l) return;
+  $('pg-lucha-prog').style.width = `${Math.round(l.prog * 100)}%`;
+  $('pg-lucha-tiempo').style.width = `${Math.round(Math.max(0, l.tiempo) * 100)}%`;
+  $('pg-lucha-texto').textContent = l.dificil ? '¡Al fallo! Apretá MUY rápido' : '¡Apretá rápido para subirla!';
 }
 export function cerrarPanelGym() {
   repApretado = false;

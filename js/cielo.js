@@ -160,8 +160,9 @@ export function crearCielo(escena) {
 
   return {
     // t: segundos jugados. farolas: cuánta luz de farolas hay (0 a 1; true = compradas):
-    // con luz, la noche se ve mucho más.
-    actualizar(dt, t, farolas, nubes, centro) {
+    // con luz, la noche se ve mucho más. interior: 0 a 1, adentro de un lugar con luces
+    // fuertes prendidas (el gym): la luz ambiente sube a blanco parejo, de día y de noche.
+    actualizar(dt, t, farolas, nubes, centro, interior = 0) {
       if (centro) domo.position.set(centro.x, 0, centro.z);
       const m = momento(t);
       const f = THREE.MathUtils.clamp(Number(farolas) || 0, 0, 1);
@@ -178,6 +179,14 @@ export function crearCielo(escena) {
       // Niebla: de noche, sin luz de farolas, se ve poquito.
       escena.fog.near = THREE.MathUtils.lerp(140, THREE.MathUtils.lerp(16, 55, f), m.noche);
       escena.fog.far = THREE.MathUtils.lerp(320, THREE.MathUtils.lerp(80, 210, f), m.noche);
+      if (interior > 0) {
+        hemi.color.lerp(tmp.set('#fff4e2'), interior);
+        hemi.groundColor.lerp(tmp.set('#c2bcb2'), interior);
+        hemi.intensity = THREE.MathUtils.lerp(hemi.intensity, 3.3, interior);
+        luz.intensity = THREE.MathUtils.lerp(luz.intensity, 0.6, interior);
+        escena.fog.near = THREE.MathUtils.lerp(escena.fog.near, 140, interior);
+        escena.fog.far = THREE.MathUtils.lerp(escena.fog.far, 320, interior);
+      }
 
       sol.visible = m.sol <= 1;
       luna.visible = m.luna <= 1;
