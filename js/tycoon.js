@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { DROPPERS } from '../data/objetos.js';
 import { ITEMS, ITEMS_POR_ID, MIGRAR } from './progresion.js';
-import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA, ASCENSOR, GARAGE, nivel } from './constantes.js';
+import { CINTA, SLOTS_DROPPER, COLECTOR_Z, COBRAR, CANCHA, ASCENSOR, GARAGE, RESTO_ABRE, nivel } from './constantes.js';
+import * as Re from './resto.js';
 import { caja, mat, matTex, formato, GEO_CAJA } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
@@ -299,6 +300,20 @@ export class Tycoon {
       this.reintegro = reintegro;
     }
     this.refrescarBotones(false);
+    this.abrirResto(false);
+  }
+
+  // El restaurante de Lourdes no se compra: aparece entero (con Lourdes) cuando la mansión
+  // llega al RESTO_ABRE. Sale del progreso, así que no se guarda nada.
+  abrirResto(animar) {
+    if (this.restoAbierto || this.progreso < RESTO_ABRE) return;
+    this.restoAbierto = true;
+    for (const [construir, muebles] of [[Re.edificio, false], [Re.mesas, true], [Re.microondas, true], [Re.rinconLourdes, true], [Re.decoracion, true]]) {
+      const g = new THREE.Group();
+      construir(this.kit, g);
+      this.agregarPieza(g, animar, { muebles });
+    }
+    if (animar) this.ui.toast('¡Abrió Lo de Lourdes! El restaurante está atrás de la mansión, a la izquierda', 'info');
   }
 
   get ingresoPorSegundo() {
@@ -348,6 +363,7 @@ export class Tycoon {
     this.quitarBoton(boton);
     this.aplicar(item, true);
     this.refrescarBotones(true);
+    this.abrirResto(true);
     if (item.final) {
       sfx.final();
       this.ui.celebrar(this.estado.tiempoJugado || 0);

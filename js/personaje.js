@@ -205,6 +205,7 @@ export function crearPersonaje(p, cabezaTex) {
     grupo,
     manoD: brazoD, // para colgarle el arma (la mano está en y = -1.9)
     apuntar: false, // con el arma en la mano: brazos al frente
+    llevar: false, // llevando algo con las dos manos (un plato)
     brazosSentado: -1.2, // sentado: -1.2 llega al manubrio de la moto; menos, manos en la falda
     // velocidad: unidades/seg en el plano. enSuelo: para la pose de salto.
     // agachado: rodillas dobladas, cadera abajo, torso hacia adelante y brazos al frente.
@@ -242,6 +243,11 @@ export function crearPersonaje(p, cabezaTex) {
       const abrir = enSuelo ? 0 : 0.5;
       brazoI.rotation.z += (-abrir - brazoI.rotation.z) * Math.min(1, dt * 10);
       brazoD.rotation.z += (abrir - brazoD.rotation.z) * Math.min(1, dt * 10);
+      if (modelo.llevar) {
+        // Llevando un plato: los dos brazos al frente, un poco cerrados hacia el plato.
+        brazoI.rotation.set(-1.45, 0, 0.28);
+        brazoD.rotation.set(-1.45, 0, -0.28);
+      }
       if (modelo.apuntar) {
         brazoD.rotation.x = -1.5;
         brazoI.rotation.x = -1.4;

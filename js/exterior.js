@@ -1,5 +1,5 @@
 // Piezas del terreno alrededor de la mansión (coordenadas del mundo, piso en y = 0).
-import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G } from './constantes.js';
+import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G, PARRILLA as PA } from './constantes.js';
 
 // Cascadas de la entrada: el agua sale de un canal de piedra que se apoya en dos pilares,
 // cae separada del muro (se ve el muro atrás) y llega a una pileta con espuma.
@@ -129,7 +129,7 @@ function palmera(k, g, x, z, s = 1) {
 
 export function jardin(k, g) {
   [[-24, 9], [24, 9], [45.5, 27], [-46, 8], [18, -38], [-18, -38]].forEach(([x, z], i) => palmera(k, g, x, z, 0.95 + (i % 2) * 0.15));
-  [[-44, 48], [-24, 50], [40, 48], [68, 40], [66, -20], [36, -40], [-70, -52], [-30, -80], [0, -78], [12, -80], [-36, -66], [-20, -40]]
+  [[-44, 48], [-24, 50], [40, 48], [68, 40], [66, -20], [36, -40], [-68, -47], [-22, -82], [0, -78], [12, -80], [-24, -71], [-20, -40]]
     .forEach(([x, z], i) => arbol(k, g, x, z, 0.85 + (i % 3) * 0.15));
   // Canteros contra el frente de la casa.
   [[-42, -24], [24, 42]].forEach(([x0, x1]) => {
@@ -206,26 +206,98 @@ export function trampolin(k, g) {
   g.add(k.cajaDe(-0.9, a + 0.8, P.z0 - 2.4, 0.9, a + 1, P.z0 + 4, '#1e88e5'));
 }
 
-export function parrilla(k, grupo) {
-  // Diseñada alrededor de (-28, -46); se corre al lugar actual.
-  const g = k.grupo();
-  g.position.set(-6, 0, -10);
-  grupo.add(g);
-  g.add(k.noSolido(k.cajaDe(-34, 0, -52, -22, 0.1, -40, '#bcaaa4')));
-  g.add(k.cajaDe(-33.5, 0, -51.5, -29.5, 2.2, -49.5, '#b5532f'));
-  g.add(k.noSolido(k.cajaDe(-33.3, 2.2, -51.3, -29.7, 2.3, -49.7, '#424242')));
-  g.add(k.noSolido(k.cajaDe(-33, 1.4, -49.48, -30, 2, -49.44, k.brillo('#ff6d00'))));
-  g.add(k.cajaDe(-32.2, 2.2, -51.5, -30.8, 7, -50.5, '#a1452a'));
-  [[-32.6, -50.4], [-31.4, -50.2], [-30.4, -50.5]].forEach(([x, z], i) => {
-    g.add(k.noSolido(k.cajaDe(x - 0.3, 2.3, z - 0.2, x + 0.3, 2.55, z + 0.2, i === 1 ? '#8d3b2f' : '#6d2c22')));
-  });
-  g.add(k.cajaDe(-30, 1.8, -46.5, -24, 2.1, -43.5, '#8d6e63'));
-  [[-29.6, -46.2], [-24.4, -46.2], [-29.6, -43.8], [-24.4, -43.8]].forEach(([x, z]) => g.add(k.noSolido(k.cajaDe(x - 0.15, 0, z - 0.15, x + 0.15, 1.8, z + 0.15, '#5d4037'))));
-  g.add(k.cajaDe(-30, 0, -48, -24, 1.1, -47.2, '#6d4c41'));
-  g.add(k.cajaDe(-30, 0, -42.8, -24, 1.1, -42, '#6d4c41'));
-  const c = k.cartel('PARRILLA VECIBANDA', 6, 1.1, '#ffd23f', '#3e2723');
-  c.position.set(-31.5, 7.8, -50.9);
+// Parrilla Vecibanda, como la de la foto: torre de ladrillo a la vista con la chimenea a la
+// izquierda, fogón revocado con la parrilla adentro, mesada de cemento, leñero abajo y la
+// chapita del tiraje arriba. Mira a +z (hacia la casa); adelante, mesa con bancos.
+export function parrilla(k, g) {
+  const ladrillo = k.tex('ladrillo', '#c9693f', 2);
+  const cemento = k.tex('concreto', '#e4d9c4', 2);
+  const revoque = '#ece2cf';
+  const fierro = '#1f2124';
+  const x0 = PA.x - 4;
+  const x1 = PA.x + 4;
+  const zf = PA.z; // frente
+  const zb = PA.z - 3.4; // fondo
+  const p = 1.1; // ancho de los pilares
+  const muro = (a, b, y0, y1, za, zb2, m = ladrillo) => g.add(k.cajaDe(a, y0, za, b, y1, zb2, m));
+  const capa = (a, b, y0, y1, za, zb2, m) => g.add(k.noSolido(k.cajaDe(a, y0, za, b, y1, zb2, m)));
+  // Patio de cemento.
+  capa(x0 - 1.5, x1 + 4, 0, 0.08, zb - 0.6, zf + 9, k.tex('concreto', '#cfc9c0', 3));
+  // Abajo: dos pilares, fondo y el leñero con troncos.
+  muro(x0, x0 + p, 0, 3.2, zb, zf);
+  muro(x1 - p, x1, 0, 3.2, zb, zf);
+  muro(x0 + p, x1 - p, 0, 3.2, zb, zb + 0.5);
+  capa(x0 + p, x1 - p, 0.08, 0.2, zb + 0.5, zf + 0.1, cemento);
+  for (let i = 0; i < 7; i++) {
+    const tronco = k.cilindro(0.22, 0.22, 2.4, i % 2 ? '#6d4c41' : '#8d6e63', x0 + p + 0.8 + (i % 4) * 0.48, 0.42 + Math.floor(i / 4) * 0.4, zb + 1.6, 8);
+    tronco.rotation.x = Math.PI / 2;
+    g.add(k.noSolido(tronco));
+  }
+  // Mesada de cemento que sobresale.
+  muro(x0 - 0.15, x1 + 0.15, 3.2, 3.6, zb, zf + 0.45, cemento);
+  // Arriba: pilares, fondo, dintel con la chapita del tiraje y la losa.
+  const yf = 6.4; // techo del fogón
+  muro(x0, x0 + p, 3.6, 7.6, zb, zf);
+  muro(x1 - p, x1, 3.6, 7.6, zb, zf);
+  muro(x0 + p, x1 - p, 3.6, 7.6, zb, zb + 0.5);
+  muro(x0 + p, x1 - p, yf, 7.6, zf - 1.2, zf);
+  muro(x0 - 0.1, x1 + 0.1, 7.6, 7.85, zb - 0.1, zf + 0.1, cemento);
+  // Adentro del fogón, revocado claro; marco de cemento alrededor de la boca.
+  capa(x0 + p, x1 - p, 3.6, yf, zb + 0.5, zb + 0.56, revoque);
+  capa(x0 + p, x0 + p + 0.06, 3.6, yf, zb + 0.5, zf - 0.1, revoque);
+  capa(x1 - p - 0.06, x1 - p, 3.6, yf, zb + 0.5, zf - 0.1, revoque);
+  capa(x0 + p, x1 - p, yf - 0.06, yf, zb + 0.5, zf - 1.2, revoque);
+  capa(x0 + p - 0.12, x1 - p + 0.12, yf - 0.12, yf + 0.1, zf - 0.08, zf + 0.06, cemento);
+  capa(x0 + p - 0.12, x0 + p + 0.08, 3.6, yf, zf - 0.08, zf + 0.06, cemento);
+  capa(x1 - p - 0.08, x1 - p + 0.12, 3.6, yf, zf - 0.08, zf + 0.06, cemento);
+  // Chapita del tiraje: cuadrado negro con la rueda.
+  capa(PA.x - 0.55, PA.x + 0.55, 6.45, 7.5, zf, zf + 0.06, fierro);
+  const rueda = k.cilindro(0.33, 0.33, 0.08, '#cfd3d6', PA.x, 6.98, zf + 0.12, 14);
+  rueda.rotation.x = Math.PI / 2;
+  g.add(k.noSolido(rueda));
+  const centro = k.cilindro(0.18, 0.18, 0.1, fierro, PA.x, 6.98, zf + 0.15, 10);
+  centro.rotation.x = Math.PI / 2;
+  g.add(k.noSolido(centro));
+  capa(PA.x - 0.04, PA.x + 0.04, 6.6, 7.36, zf + 0.16, zf + 0.2, '#cfd3d6');
+  // Chimenea sobre el pilar izquierdo, con sombrerito de cemento.
+  muro(x0, x0 + 2.2, 7.85, 12.6, zb, zf - 0.5);
+  muro(x0 - 0.25, x0 + 2.45, 12.6, 12.95, zb - 0.25, zf - 0.25, cemento);
+  capa(x0 + 0.5, x0 + 1.7, 12.95, 13.0, zb + 0.6, zf - 1.1, '#2b2b2b');
+  // Parrilla: brasas en el piso del fogón, la rejilla con patas y la carne.
+  capa(x0 + p + 0.4, x0 + p + 2.2, 3.6, 3.72, zb + 0.9, zf - 0.6, k.brillo('#ff6d00'));
+  for (let i = 0; i < 6; i++) capa(x0 + p + 0.5 + (i % 3) * 0.55, x0 + p + 0.85 + (i % 3) * 0.55, 3.66, 3.86, zb + 1.0 + Math.floor(i / 3) * 0.8, zb + 1.35 + Math.floor(i / 3) * 0.8, '#2d2a28');
+  const ra = x0 + p + 0.35;
+  const rb = x1 - p - 0.35;
+  const rz0 = zb + 0.8;
+  const rz1 = zf - 0.35;
+  const yr = 4.55;
+  for (const [a, b] of [[ra, ra + 0.1], [rb - 0.1, rb]]) capa(a, b, yr - 0.05, yr + 0.05, rz0, rz1, fierro);
+  for (const z of [rz0, rz1 - 0.1]) capa(ra, rb, yr - 0.05, yr + 0.05, z, z + 0.1, fierro);
+  for (let x = ra + 0.3; x < rb - 0.15; x += 0.28) capa(x - 0.03, x + 0.03, yr - 0.03, yr + 0.03, rz0, rz1, '#3a3d40');
+  for (const [x, z] of [[ra + 0.1, rz0 + 0.1], [rb - 0.1, rz0 + 0.1], [ra + 0.1, rz1 - 0.1], [rb - 0.1, rz1 - 0.1]]) capa(x - 0.05, x + 0.05, 3.6, yr, z - 0.05, z + 0.05, fierro);
+  // Manija para subir y bajar la parrilla.
+  capa(rb - 0.1, rb + 0.25, yr - 0.04, yr + 0.04, rz1 - 0.2, rz1 - 0.12, fierro);
+  for (let i = 0; i < 4; i++) {
+    const chori = k.cilindro(0.13, 0.13, 1.1, '#8d3b2f', ra + 0.8 + i * 0.4, yr + 0.15, (rz0 + rz1) / 2 - 0.3, 8);
+    chori.rotation.x = Math.PI / 2;
+    g.add(k.noSolido(chori));
+  }
+  capa(rb - 2.0, rb - 0.5, yr + 0.05, yr + 0.22, rz0 + 0.4, rz0 + 1.3, '#7b3b2a');
+  capa(rb - 2.2, rb - 0.8, yr + 0.05, yr + 0.2, rz1 - 1.0, rz1 - 0.3, '#6d2c22');
+  // Pared baja de ladrillo que sigue a la derecha (como en la foto).
+  muro(x1, x1 + 3.2, 0, 4.4, zb, zb + 0.6);
+  muro(x1, x1 + 3.2, 4.4, 4.6, zb - 0.05, zb + 0.65, cemento);
+  // Cartel arriba, a la derecha de la chimenea.
+  const c = k.cartel('PARRILLA VECIBANDA', 5.2, 1.05, '#ffd23f', '#3e2723');
+  c.position.set((x0 + 2.2 + x1) / 2, 8.75, zf - 0.3);
   g.add(c);
+  for (const dx of [-1.8, 1.8]) capa((x0 + 2.2 + x1) / 2 + dx - 0.06, (x0 + 2.2 + x1) / 2 + dx + 0.06, 7.85, 8.25, zf - 0.36, zf - 0.24, '#3e2723');
+  // Mesa de madera con dos bancos adelante.
+  const mz = zf + 4.6;
+  muro(PA.x - 3, PA.x + 3, 1.8, 2.1, mz - 1.4, mz + 1.4, '#8d6e63');
+  for (const [x, z] of [[PA.x - 2.6, mz - 1.1], [PA.x + 2.6, mz - 1.1], [PA.x - 2.6, mz + 1.1], [PA.x + 2.6, mz + 1.1]]) capa(x - 0.15, x + 0.15, 0, 1.8, z - 0.15, z + 0.15, '#5d4037');
+  muro(PA.x - 3, PA.x + 3, 0, 1.1, mz - 2.5, mz - 1.8, '#6d4c41');
+  muro(PA.x - 3, PA.x + 3, 0, 1.1, mz + 1.8, mz + 2.5, '#6d4c41');
 }
 
 export function cancha(k, g) {

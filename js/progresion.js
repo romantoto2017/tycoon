@@ -17,8 +17,6 @@ import * as A from './arquitectura.js';
 import * as Mu from './muebles.js';
 import * as Ex from './exterior.js';
 import * as Es from './especiales.js';
-import * as Re from './resto.js';
-import { PISO_RESTO } from './resto.js';
 
 // Posiciones de botones dentro de la casa (por piso), en el hall del frente.
 const H1 = [-4, -3];
@@ -161,14 +159,6 @@ cuarto(4);
 cuarto(5);
 obra('cerca', 'Cerca y Portón', ['camino'], suelo(-30, 22), Ex.cerca);
 obra('jardin', 'Jardín', ['cerca'], suelo(-38, 22), Ex.jardin);
-// Restaurante "Lo de Lourdes" (detrás a la izquierda de la mansión): no da plata, te dan
-// de comer. Lourdes atiende recién cuando está todo lo de adentro.
-const adentroResto = (x, z) => [x, PISO_RESTO, z];
-obra('resto', 'Restaurante Lo de Lourdes', ['jardin'], suelo(-55, -56), Re.edificio);
-obra('resto_mesas', 'Mesas del Restaurante', ['resto'], adentroResto(-55, -73.5), Re.mesas, { muebles: true });
-obra('resto_microondas', 'Fila de Microondas', ['resto_mesas'], adentroResto(-55, -81), Re.microondas, { muebles: true });
-obra('resto_lourdes', 'Lourdes y su Radio', ['resto_microondas'], adentroResto(-46, -67.5), Re.rinconLourdes, { muebles: true });
-obra('resto_deco', 'Decoración del Restaurante', ['resto_lourdes'], adentroResto(-66, -65.5), Re.decoracion, { muebles: true });
 mejora('valor', ['valor3', 'sala_gamer']);
 
 estructuraPiso(2, salasPiso[1], subir(1), [
@@ -188,7 +178,7 @@ obra('piscina', 'Piscina', ['piso_2'], suelo(0, -36), Ex.piscina);
 dropper(7, ['dropper7', 'cine']);
 obra('reposeras', 'Reposeras y Sombrillas', ['piscina'], suelo(-20, -50), Ex.reposeras, { muebles: true });
 obra('trampolin', 'Trampolín', ['piscina'], suelo(20, -50), Ex.trampolin);
-obra('parrilla', 'Parrilla', ['jardin', 'piso_2'], suelo(-28, -44), Ex.parrilla, { muebles: true });
+obra('parrilla', 'Parrilla Vecibanda', ['jardin', 'piso_2'], suelo(-23.5, -47), Ex.parrilla);
 
 estructuraPiso(3, salasPiso[2], subir(2), [
   () => mejora('valor', ['valor5', 'piso_3']),

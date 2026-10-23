@@ -15,12 +15,13 @@ export const LOURDES = {
   remera: '#f4f4f2', pantalon: '#ecebe7', lentes: '#3b2a20', colita: true, cuello: '#1d1d22', aros: true,
 };
 const VEL = 7;
-const PASILLO_X = -44.6;
-const FONDO_Z = -81.3;
-const FRENTE_Z = -66.3;
-const MICRO = { x: -50, z: -82.6 };
-const PARADA = { x: -41.4, z: -66.6 }; // al lado de su silla
-const MICRO_PUERTA = { x: -50, y: F + 3.05, z: -83.7 };
+const PASILLO_X = -42;
+const FONDO_Z = -81;
+const FRENTE_Z = -63.4;
+const MICRO = { x: -47, z: -82.9 };
+const PARADA = { x: -34.2, z: -63.9 }; // al lado de su silla
+const MICRO_PUERTA = { x: -47, y: F + 3.05, z: R.z0 + R.pared + 1.7 };
+const SEPARACION = 3.6; // de la mesa al servir: el plato (en la punta de los brazos) queda sobre el borde
 
 const v = (x, z) => new THREE.Vector3(x, F, z);
 
@@ -91,7 +92,7 @@ export class Restaurante {
   }
 
   hayLourdes() {
-    return this.tycoon.estado.compras.includes('resto_lourdes');
+    return this.tycoon.restoAbierto;
   }
 
   dentro(p, margen = 0) {
@@ -161,17 +162,17 @@ export class Restaurante {
 
   caminoMesa() {
     const [tx, tz] = this.mesa;
-    const atras = tz < -73.5;
+    const atras = tz < (RESTO_MESAS[0][1] + RESTO_MESAS[3][1]) / 2;
     this.dejar = v(tx - 0.35, atras ? tz - 0.75 : tz + 0.75);
     this.dejar.y = F + 2.32;
     return atras
-      ? [v(MICRO.x, FONDO_Z), v(tx, FONDO_Z), v(tx, tz - 3)]
-      : [v(MICRO.x, FONDO_Z), v(PASILLO_X, FONDO_Z), v(PASILLO_X, FRENTE_Z), v(tx, FRENTE_Z), v(tx, tz + 3)];
+      ? [v(MICRO.x, FONDO_Z), v(tx, FONDO_Z), v(tx, tz - SEPARACION)]
+      : [v(MICRO.x, FONDO_Z), v(PASILLO_X, FONDO_Z), v(PASILLO_X, FRENTE_Z), v(tx, FRENTE_Z), v(tx, tz + SEPARACION)];
   }
 
   caminoVuelta() {
     const [tx, tz] = this.mesa;
-    const atras = tz < -73.5;
+    const atras = tz < (RESTO_MESAS[0][1] + RESTO_MESAS[3][1]) / 2;
     return atras
       ? [v(tx, FONDO_Z), v(PASILLO_X, FONDO_Z), v(PASILLO_X, FRENTE_Z - 1), v(PARADA.x, PARADA.z)]
       : [v(tx, FRENTE_Z), v(PASILLO_X, FRENTE_Z), v(PARADA.x, PARADA.z)];
@@ -248,9 +249,11 @@ export class Restaurante {
         this.luz.visible = false;
         sfx.pip();
         this.platoEnMano = plato(this.platoPedido);
-        this.platoEnMano.grupo.position.set(0, 3.1, 1.2);
+        // En la punta de los brazos (no adentro de la panza), con el vaso adelante.
+        this.platoEnMano.grupo.position.set(0, 4.35, 2.15);
+        this.platoEnMano.grupo.rotation.y = -Math.PI / 2;
         g.add(this.platoEnMano.grupo);
-        this.modelo.apuntar = true; // brazos al frente, como llevando la bandeja
+        this.modelo.llevar = true;
         this.camino = this.caminoMesa();
         this.estado = 'llevando';
       }
@@ -262,7 +265,7 @@ export class Restaurante {
         this.escena.add(this.platoEnMano.grupo);
         this.servido = { ...this.platoEnMano, pos: this.dejar.clone(), comido: false };
         this.platoEnMano = null;
-        this.modelo.apuntar = false;
+        this.modelo.llevar = false;
         this.ui.toast('Lourdes: "¡Buen provecho!"', 'ok');
         this.camino = this.caminoVuelta();
         this.estado = 'volviendo';

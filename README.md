@@ -56,7 +56,9 @@ Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y s
 
 ## Lo de Lourdes (restaurante)
 
-Atrás a la izquierda de la mansión, pasando el jardín, se construye el restaurante de Lourdes. Se compra en cadena: el edificio, las mesas, la fila de microondas, Lourdes con su radio y la decoración. Lourdes está sentada en su mesita con una radio vieja que pasa cumbia mientras estás adentro. Al lado de ella aparece "Pedir comida (E)": elegís un plato del menú, ella lo calienta en un microondas y te lo lleva a la mesa más cercana con un vaso de agua. No se paga y es un plato por visita (al salir y volver a entrar podés pedir otro). Los platos están en `PLATOS` de `js/resto.js` (el edificio y los muebles también); Lourdes y el servicio, en `js/restaurante.js`.
+Atrás a la izquierda de la mansión está el restaurante de Lourdes. No se compra: aparece entero (edificio, mesas, microondas, Lourdes con su radio y decoración) cuando la mansión llega al 30% (`RESTO_ABRE` en `js/constantes.js`), con un aviso. Lourdes está sentada en su mesa con una radio vieja que pasa cumbia mientras estás adentro. Al lado de ella aparece "Pedir comida (E)": elegís un plato del menú, ella lo calienta en un microondas y te lo lleva a la mesa más cercana con un vaso de agua. No se paga y es un plato por visita (al salir y volver a entrar podés pedir otro). Los platos están en `PLATOS` de `js/resto.js` (el edificio y los muebles también); Lourdes y el servicio, en `js/restaurante.js`.
+
+Al lado, entre el restaurante y la pileta, se compra la Parrilla Vecibanda: de ladrillo a la vista con chimenea, fogón, mesada de cemento y leñero (`parrilla` en `js/exterior.js`).
 
 ## La Mazza
 
