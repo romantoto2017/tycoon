@@ -86,7 +86,9 @@ function sala(k, g, lugar, piso, nativo) {
     },
     // Mueble 3D (ver kit.modelo) con el frente hacia rotY.
     modelo(nombre, x, y0, z, rotY = 0, opts = {}) {
-      return s.plano(k.modelo(nombre, opts), x, y0, z, rotY);
+      const m = s.plano(k.modelo(nombre, opts), x, y0, z, rotY);
+      if (opts.cama) k.alCama?.(m.position.clone()); // para poder dormir (main.js)
+      return m;
     },
     medida: (nombre, opts) => k.medida(nombre, opts),
     luz: () => colgante(k, g, cx + fx(0), y + ALTO_PISO - LOSA, cz + fz(0)),
@@ -131,7 +133,7 @@ function pieza(s, X, Z, mira) {
 
 // Los muebles son modelos 3D; acá solo se eligen, se miden y se acomodan.
 function cama(k, p, ancho, largo, color) {
-  p.modelo(ancho > 3.2 ? 'bedDouble' : 'bedSingle', 0, 0, { ancho: ancho + 0.3, atras: -largo / 2 - 0.35, tela: color });
+  p.modelo(ancho > 3.2 ? 'bedDouble' : 'bedSingle', 0, 0, { ancho: ancho + 0.3, atras: -largo / 2 - 0.35, tela: color, cama: true });
 }
 
 function mesaLuz(k, p, u, v) {

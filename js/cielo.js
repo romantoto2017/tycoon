@@ -25,6 +25,12 @@ function suave(t) {
   return x * x * (3 - 2 * x);
 }
 
+// Segundos que faltan para la mañana (un ratito después del amanecer), para dormir.
+export function hastaLaManana(t) {
+  const c = ((t + ARRANQUE) % CICLO + CICLO) % CICLO;
+  return (CICLO - c + 25) % CICLO;
+}
+
 // Estado del ciclo en el segundo t: noche (0 = día pleno, 1 = noche cerrada), ocaso (cuánto
 // tiene de atardecer) y en qué parte de su recorrido están el sol y la luna (0 a 1).
 export function momento(t) {

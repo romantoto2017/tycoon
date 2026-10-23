@@ -203,6 +203,8 @@ export class Tycoon {
     this.ui = ui;
     this.guardar = guardar;
     this.kit = crearKit();
+    this.camas = []; // posiciones de las camas compradas (para dormir de noche)
+    this.kit.alCama = (p) => this.camas.push(p);
     this.lote = new Lote(escena);
     this.fuegos = new Fuegos(escena);
 

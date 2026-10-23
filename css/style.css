@@ -264,6 +264,25 @@ html, body {
 .aviso.amor { background: #ec407a; }
 @keyframes latido { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.04); } }
 
+/* ---------- Dormir: fundido a negro ---------- */
+.sueno {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: grid;
+  place-items: center;
+  background: #05060c;
+  color: #c9d4ff;
+  font-size: 44px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s ease;
+}
+.sueno.visible { opacity: 1; }
+.sueno span { animation: zzz 1.2s ease-in-out infinite alternate; }
+@keyframes zzz { from { transform: translateY(0); opacity: 0.6; } to { transform: translateY(-10px); opacity: 1; } }
+
 /* ---------- Toasts ---------- */
 #toasts {
   position: fixed;

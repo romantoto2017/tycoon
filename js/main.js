@@ -12,6 +12,7 @@ import * as UI from './ui.js';
 import { formato } from './util.js';
 import { cargarModelos, MODELOS } from './modelos.js';
 import { ITEMS } from './progresion.js';
+import { momento, hastaLaManana } from './cielo.js';
 import { Ladron } from './ladron.js';
 import { Mazza } from './mazza.js';
 import { crearAK } from './arma.js';
@@ -111,9 +112,39 @@ async function iniciar() {
     jugador.contenedor.visible = !conduciendo;
     jugador.sombra.visible = !conduciendo;
   };
-  btnManejar.addEventListener('click', subirOBajar);
+  // ---------- Dormir ----------
+  // De noche, cerca de una cama comprada aparece "Dormir": fundido a negro y se despierta
+  // a la mañana. La hora va aparte del tiempo jugado (estado.desfaseHora), así no cambian
+  // las estadísticas ni la espera de la Schwepa.
+  const hora = () => estado.tiempoJugado + (estado.desfaseHora || 0);
+  const cartelSueno = document.getElementById('sueno');
+  let durmiendo = false;
+  const camaCerca = () => {
+    if (conduciendo || durmiendo || momento(hora()).noche < 0.5) return null;
+    return tycoon.camas.find((c) => Math.hypot(c.x - jugador.pos.x, c.z - jugador.pos.z) < 5.5 && Math.abs(c.y - jugador.pos.y) < 2.5) || null;
+  };
+  const dormir = async () => {
+    const cama = camaCerca();
+    if (!cama) return;
+    durmiendo = true;
+    controles.activo = false;
+    cartelSueno.classList.remove('oculto');
+    requestAnimationFrame(() => cartelSueno.classList.add('visible'));
+    await new Promise((r) => setTimeout(r, 1800));
+    estado.desfaseHora = (estado.desfaseHora || 0) + hastaLaManana(hora());
+    guardarAhora();
+    cartelSueno.classList.remove('visible');
+    await new Promise((r) => setTimeout(r, 900));
+    cartelSueno.classList.add('oculto');
+    durmiendo = false;
+    controles.activo = modo === 'juego';
+    UI.toast('¡Buen día!', 'info');
+  };
+  // Un solo botón de acción (como los avisos de Roblox): manejar o dormir, con la E.
+  const accion = () => (camaCerca() ? dormir() : subirOBajar());
+  btnManejar.addEventListener('click', accion);
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyE' && modo === 'juego' && controles.activo) subirOBajar();
+    if (e.code === 'KeyE' && modo === 'juego' && controles.activo) accion();
   });
 
   const ir = (nuevo) => {
@@ -464,7 +495,7 @@ async function iniciar() {
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
     }
-    const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : '';
+    const texto = modo !== 'juego' ? '' : conduciendo ? 'Bajar del auto (E)' : cercaDelAuto() ? 'Manejar (E)' : camaCerca() ? 'Dormir (E)' : '';
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -481,7 +512,7 @@ async function iniciar() {
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     actualizarArma(dt);
     brillos.actualizar(dt);
-    mundo.actualizar(dt, estado.tiempoJugado, estado.compras.includes('farolas'));
+    mundo.actualizar(dt, hora(), estado.compras.includes('farolas'));
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);
