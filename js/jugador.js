@@ -30,6 +30,7 @@ export class Jugador {
     this.suelo = 0;
     this.angulo = Math.PI; // mirando a la mansión
     this.modelo = null;
+    this.terreno = null; // (x, z) -> altura del piso natural (la montaña); null = plano
 
     this.contenedor = new THREE.Group();
     escena.add(this.contenedor);
@@ -153,6 +154,11 @@ export class Jugador {
         p.y = b.min.y - this.alto; // cabezazo contra un techo
         this.vel.y = 0;
       }
+    }
+    // La montaña: se camina por arriba (sube y baja siguiendo la ladera).
+    if (this.terreno) {
+      const t = this.terreno(p.x, p.z);
+      if (t > suelo && (t <= yAntes + 4 || this.vel.y <= 0)) suelo = t;
     }
     this.suelo = suelo;
     if (p.y <= suelo) {

@@ -85,7 +85,7 @@ La sección de misiones aparece cuando la mansión llega al 15% (`MISIONES_DESDE
 
 ## La montaña del pelado y la foto Vecibanda
 
-Atrás de la mansión, para el lado del garage, hay una montaña grande (con dos colinas más chicas al lado) y en la cima el pelado con la camiseta de La Dosis, recortado de `peladomontaña.jpeg` con `herramientas/pelado_montana.py` (rembg, acá en la compu, no se manda a ningún servicio). No le afecta la niebla, así se ve desde lejos. Al pie está el bosque del Cusi.
+Atrás de la mansión, para el lado del garage, hay una montaña grande (con dos colinas más chicas al lado) y en la cima el pelado con la camiseta de La Dosis, recortado de `peladomontaña.jpeg` con `herramientas/pelado_montana.py` (rembg, acá en la compu, no se manda a ningún servicio). No le afecta la niebla, así se ve desde lejos. Se sube caminando hasta la cima (el piso sigue exacto la superficie dibujada; el auto no sube) y las piedras van enterradas en la ladera. Al pie está el bosque del Cusi.
 
 La foto de la Vecibanda (`assets/cuadros/fotovecibanda.jpeg`) es un cuadro gigante que ocupa la pared de atrás de la cabina del DJ en el Salón de Fiestas (último mueble que se compra ahí).
 

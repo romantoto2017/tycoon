@@ -68,6 +68,6 @@ export const GYM_ESTACIONES = {
 export const MONTANA = { x: 175, z: -225, r: 125, alto: 92 };
 // Bosque al pie de la montaña, donde se pierde el Cusi (misión de Juanma).
 export const BOSQUE_CUSI = { x: 92, z: -122, r: 20 };
-export const CUSI_ESCONDIDO = { x: 97.5, z: -128.5 };
+export const CUSI_ESCONDIDO = { x: 94.5, z: -124.5 };
 // Hasta dónde se puede ir caminando o en auto (el restaurante y el gym quedan lejos).
 export const LIMITE_MAPA = 520;

@@ -412,6 +412,8 @@ export class Auto {
     this.angulo -= this.direccion * 3.6 * THREE.MathUtils.clamp(this.vel / 10, -1, 1) * dt;
 
     const p = this.pos;
+    const antesX = p.x;
+    const antesZ = p.z;
     p.x = THREE.MathUtils.clamp(p.x + Math.sin(this.angulo) * this.vel * dt, -LIMITE_MAPA, LIMITE_MAPA);
     p.z = THREE.MathUtils.clamp(p.z + Math.cos(this.angulo) * this.vel * dt, -LIMITE_MAPA, LIMITE_MAPA);
     let choque = false;
@@ -425,6 +427,12 @@ export class Auto {
       if (oz1 <= 0 || oz2 <= 0) continue;
       if (Math.min(ox1, ox2) < Math.min(oz1, oz2)) p.x += ox1 < ox2 ? -ox1 : ox2;
       else p.z += oz1 < oz2 ? -oz1 : oz2;
+      choque = true;
+    }
+    // El auto no sube la montaña: choca contra el pie.
+    if (this.terreno && this.terreno(p.x, p.z) > 0.8) {
+      p.x = antesX;
+      p.z = antesZ;
       choque = true;
     }
     if (choque) this.vel *= 0.4;

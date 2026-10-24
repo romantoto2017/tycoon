@@ -22,13 +22,14 @@ export function crearMundo(escena) {
 
   crearCalle(estaticos);
   crearCasasVecinas(estaticos);
-  crearArboles(escena);
   const montana = crearMontana(escena);
+  crearArboles(escena, montana.altura);
   const nubes = crearNubes(escena);
 
   return {
     estaticos,
-    choques: montana.choques, // para no meterse adentro de la montaña
+    choques: montana.choques, // la piedra de la cima
+    altura: montana.altura, // piso de la montaña en (x, z) (0 fuera de ella)
     // t: segundos jugados (para la hora del día). farolas: cuánta luz de farolas hay (0 a 1).
     // centro: dónde está la cámara (el cielo la sigue).
     // interior: 0 a 1, adentro de un lugar con luces fuertes (ver cielo.js).
@@ -82,7 +83,7 @@ function crearCasasVecinas(escena) {
   }
 }
 
-function crearArboles(escena) {
+function crearArboles(escena, altura = () => 0) {
   const rnd = aleatorio(7);
   const puntos = [];
   // Árboles alrededor de la mansión y, más desparramados, por todo el camino hasta el gym.
@@ -119,17 +120,17 @@ function crearArboles(escena) {
   const color = new THREE.Color();
   const verdes = ['#2e7d32', '#388e3c', '#43a047', '#1b5e20'];
   puntos.forEach(([x, z, s], i) => {
-    o.position.set(x, 2 * s, z);
+    o.position.set(x, 2 * s + altura(x, z) - 0.3, z);
     o.scale.set(1.1 * s, 4 * s, 1.1 * s);
     o.updateMatrix();
     troncos.setMatrixAt(i, o.matrix);
     color.set(verdes[i % verdes.length]);
-    o.position.set(x, 5.5 * s, z);
+    o.position.set(x, 5.5 * s + altura(x, z) - 0.3, z);
     o.scale.set(4 * s, 5 * s, 4 * s);
     o.updateMatrix();
     copas.setMatrixAt(i * 2, o.matrix);
     copas.setColorAt(i * 2, color);
-    o.position.set(x, 8.3 * s, z);
+    o.position.set(x, 8.3 * s + altura(x, z) - 0.3, z);
     o.scale.set(2.8 * s, 4 * s, 2.8 * s);
     o.updateMatrix();
     copas.setMatrixAt(i * 2 + 1, o.matrix);
@@ -174,94 +175,142 @@ function crearNubes(escena) {
   return { actualizar, material: mesh.material };
 }
 
-// Montaña del pelado: dos colinas verdes redondeadas (como las de la foto) con piedras grises
-// y, en la cima de la grande, el pelado con la camiseta de La Dosis (siempre de frente). No
-// les afecta la niebla, así se ven desde lejos.
+// Montaña del pelado: colinas verdes redondeadas (como las de la foto) con piedras grises y,
+// en la cima de la grande, el pelado con la camiseta de La Dosis (siempre de frente). No les
+// afecta la niebla, así se ven desde lejos. Se pueden subir caminando: altura(x, z) da el
+// piso exacto de lo que se dibuja (los mismos triángulos), así nada flota ni se hunde.
 function crearMontana(escena) {
   const rnd = aleatorio(23);
   const g = new THREE.Group();
+  const colinas = [];
+  const verde = new THREE.Color('#a6e070');
+  const seco = new THREE.Color('#cfd486');
+  const roca = new THREE.Color('#b4b6b3');
+  const c = new THREE.Color();
+  const ANILLOS = 30;
+  const LADOS = 56;
   const colina = (cx, cz, R, H, semilla) => {
-    const anillos = 26;
-    const lados = 48;
-    // Grilla polar propia: anillos concéntricos con alturas suaves y un poco de ruido.
-    const pos = [];
-    const col = [];
-    const idx = [];
-    const verde = new THREE.Color('#a6e070');
-    const seco = new THREE.Color('#cfd486');
-    const roca = new THREE.Color('#b4b6b3');
-    const c = new THREE.Color();
-    const altura = (r, a) => {
+    // Grilla polar: un punto en la cima y anillos alrededor. El ruido se apaga hacia la cima
+    // (si no, la punta queda llena de picos).
+    const forma = (r, a) => {
       const t = r / R;
       const base = H * Math.pow(Math.max(0, 1 - t * t), 1.35);
       const ruido = Math.sin(a * 3 + semilla) * 0.05 + Math.sin(a * 7 + semilla * 2) * 0.025 + Math.sin(t * 9 + a * 2) * 0.03;
-      return Math.max(0, base * (1 + ruido * (1 - t * 0.5)));
+      return Math.max(0, base * (1 + ruido * Math.min(1, t * 3) * (1 - t * 0.5)));
     };
-    for (let i = 0; i <= anillos; i++) {
-      const r = (i / anillos) * R;
-      for (let j = 0; j < lados; j++) {
-        const a = (j / lados) * Math.PI * 2;
-        const y = altura(r, a);
-        pos.push(cx + Math.cos(a) * r, y, cz + Math.sin(a) * r);
-        const mezcla = rnd();
-        c.copy(verde).lerp(seco, 0.1 + 0.3 * (i / anillos) * mezcla);
-        if (rnd() < 0.08 + 0.12 * (1 - i / anillos)) c.lerp(roca, 0.7);
-        col.push(c.r, c.g, c.b);
+    const pos = [cx, forma(0, 0), cz];
+    const col = [];
+    const idx = [];
+    const pinta = (i) => {
+      c.copy(verde).lerp(seco, 0.1 + 0.3 * (i / ANILLOS) * rnd());
+      if (rnd() < 0.08 + 0.12 * (1 - i / ANILLOS)) c.lerp(roca, 0.7);
+      col.push(c.r, c.g, c.b);
+    };
+    pinta(0);
+    for (let i = 1; i <= ANILLOS; i++) {
+      const r = (i / ANILLOS) * R;
+      for (let j = 0; j < LADOS; j++) {
+        const a = (j / LADOS) * Math.PI * 2;
+        pos.push(cx + Math.cos(a) * r, forma(r, a), cz + Math.sin(a) * r);
+        pinta(i);
       }
     }
-    for (let i = 0; i < anillos; i++) {
-      for (let j = 0; j < lados; j++) {
-        const a = i * lados + j;
-        const b = i * lados + ((j + 1) % lados);
-        const a2 = a + lados;
-        const b2 = b + lados;
-        idx.push(a, a2, b, b, a2, b2);
-      }
+    const v = (i, j) => (i === 0 ? 0 : 1 + (i - 1) * LADOS + (((j % LADOS) + LADOS) % LADOS));
+    for (let j = 0; j < LADOS; j++) idx.push(0, v(1, j + 1), v(1, j));
+    for (let i = 1; i < ANILLOS; i++) {
+      for (let j = 0; j < LADOS; j++) idx.push(v(i, j), v(i, j + 1), v(i + 1, j), v(i, j + 1), v(i + 1, j + 1), v(i + 1, j));
     }
     const m = new THREE.BufferGeometry();
     m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     m.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     m.setIndex(idx);
     m.computeVertexNormals();
-    const malla = new THREE.Mesh(m, new THREE.MeshLambertMaterial({ vertexColors: true, fog: false, flatShading: true, emissive: '#1c2a12' }));
-    g.add(malla);
-    return altura;
+    g.add(new THREE.Mesh(m, new THREE.MeshLambertMaterial({ vertexColors: true, fog: false, flatShading: true, emissive: '#1c2a12' })));
+    colinas.push({ cx, cz, R, pos, v });
   };
-  const alturaGrande = colina(MO.x, MO.z, MO.r, MO.alto, 1.3);
+  // Altura de la superficie dibujada en (x, z): busca el triángulo que lo contiene.
+  const enTriangulo = (pos, ia, ib, ic, x, z) => {
+    const ax = pos[ia * 3]; const az = pos[ia * 3 + 2];
+    const bx = pos[ib * 3]; const bz = pos[ib * 3 + 2];
+    const cx = pos[ic * 3]; const cz = pos[ic * 3 + 2];
+    const d = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz);
+    const l1 = ((bz - cz) * (x - cx) + (cx - bx) * (z - cz)) / d;
+    const l2 = ((cz - az) * (x - cx) + (ax - cx) * (z - cz)) / d;
+    const l3 = 1 - l1 - l2;
+    if (l1 < -1e-4 || l2 < -1e-4 || l3 < -1e-4) return null;
+    return l1 * pos[ia * 3 + 1] + l2 * pos[ib * 3 + 1] + l3 * pos[ic * 3 + 1];
+  };
+  const alturaColina = (k, x, z) => {
+    const dx = x - k.cx;
+    const dz = z - k.cz;
+    const r = Math.hypot(dx, dz);
+    if (r >= k.R) return 0;
+    let a = Math.atan2(dz, dx);
+    if (a < 0) a += Math.PI * 2;
+    const i = Math.floor((r / k.R) * ANILLOS);
+    const j = Math.floor((a / (Math.PI * 2)) * LADOS);
+    // Revisa los triángulos de esta celda y los vecinos (los bordes son rectos, no curvos).
+    for (const di of [0, -1, 1]) {
+      const ii = i + di;
+      if (ii < 0 || ii >= ANILLOS) continue;
+      for (const dj of [0, -1, 1]) {
+        const jj = j + dj;
+        const tris = ii === 0
+          ? [[0, k.v(1, jj + 1), k.v(1, jj)]]
+          : [[k.v(ii, jj), k.v(ii, jj + 1), k.v(ii + 1, jj)], [k.v(ii, jj + 1), k.v(ii + 1, jj + 1), k.v(ii + 1, jj)]];
+        for (const [ta, tb, tc] of tris) {
+          const h = enTriangulo(k.pos, ta, tb, tc, x, z);
+          if (h !== null) return h;
+        }
+      }
+    }
+    return 0;
+  };
+  const altura = (x, z) => {
+    let h = 0;
+    for (const k of colinas) h = Math.max(h, alturaColina(k, x, z));
+    return h;
+  };
+  colina(MO.x, MO.z, MO.r, MO.alto, 1.3);
   colina(MO.x + 105, MO.z - 70, MO.r * 0.75, MO.alto * 0.62, 4.1);
   colina(MO.x - 120, MO.z - 85, MO.r * 0.6, MO.alto * 0.45, 2.2);
-  // Piedras grises por las laderas (una sola malla).
+  // Piedras grises por las laderas, enterradas en la superficie (una sola malla). Se apoyan
+  // en el punto más bajo de debajo de ellas, así del lado de abajo de la pendiente no flotan.
   const piedras = [];
-  for (let i = 0; i < 90; i++) {
+  for (let n = 0; n < 90; n++) {
     const a = rnd() * Math.PI * 2;
-    const r = (0.15 + rnd() * 0.8) * MO.r;
-    const y = alturaGrande(r, a);
-    const p = new THREE.DodecahedronGeometry(1.2 + rnd() * 2.8, 0);
-    p.scale(1.2, 0.6 + rnd() * 0.4, 1);
+    const r = (0.12 + rnd() * 0.8) * MO.r;
+    const x = MO.x + Math.cos(a) * r;
+    const z = MO.z + Math.sin(a) * r;
+    const tam = 1.2 + rnd() * 2.6;
+    const alto = 0.6 + rnd() * 0.4;
+    let piso = Infinity;
+    for (let k = 0; k < 8; k++) {
+      const b = (k / 8) * Math.PI * 2;
+      piso = Math.min(piso, altura(x + Math.cos(b) * tam * 1.2, z + Math.sin(b) * tam));
+    }
+    const p = new THREE.DodecahedronGeometry(tam, 0);
+    p.scale(1.2, alto, 1);
     p.rotateY(rnd() * 3);
-    p.translate(MO.x + Math.cos(a) * r, y + 0.4, MO.z + Math.sin(a) * r);
+    p.translate(x, piso + tam * alto * 0.15, z);
     piedras.push(p);
   }
-  const roca = new THREE.Mesh(mergeGeometries(piedras), new THREE.MeshLambertMaterial({ color: '#b9bbb8', fog: false, flatShading: true }));
-  g.add(roca);
-  // El pelado en la cima, bien grande para que se vea desde la mansión.
+  g.add(new THREE.Mesh(mergeGeometries(piedras), new THREE.MeshLambertMaterial({ color: '#b9bbb8', fog: false, flatShading: true })));
+  // El pelado en la cima, parado arriba de una piedra grande (la piedra choca: no se lo atraviesa).
+  const cima = altura(MO.x, MO.z);
+  const base = new THREE.DodecahedronGeometry(5.5, 0);
+  base.scale(1.25, 0.55, 1.1);
+  base.translate(MO.x, cima + 0.6, MO.z);
+  g.add(new THREE.Mesh(base, new THREE.MeshLambertMaterial({ color: '#a9aba8', fog: false, flatShading: true })));
   const tex = new THREE.TextureLoader().load('assets/especiales/pelado_cima.png');
   tex.colorSpace = THREE.SRGBColorSpace;
   const pelado = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, fog: false, alphaTest: 0.4 }));
-  const alto = 44;
-  pelado.scale.set(alto * 519 / 843, alto, 1);
+  const altoPelado = 40;
+  pelado.scale.set(altoPelado * 519 / 843, altoPelado, 1);
   pelado.center.set(0.5, 0.02);
-  pelado.position.set(MO.x, alturaGrande(0, 0) - 0.5, MO.z);
+  pelado.position.set(MO.x, cima + 3, MO.z);
   g.add(pelado);
   escena.add(g);
-  // Choques: una cruz de cajas que cubre casi toda la base (no se puede meter adentro).
-  const choques = [];
-  const caja = (x0, z0, x1, z1) => {
-    const b = new THREE.Box3(new THREE.Vector3(x0, 0, z0), new THREE.Vector3(x1, MO.alto, z1));
-    b.camara = false;
-    choques.push(b);
-  };
-  const r = MO.r * 0.8;
-  for (const [w, h] of [[r, r * 0.42], [r * 0.42, r], [r * 0.72, r * 0.72]]) caja(MO.x - w, MO.z - h, MO.x + w, MO.z + h);
-  return { choques };
+  const piedraCima = new THREE.Box3(new THREE.Vector3(MO.x - 5.5, cima - 2, MO.z - 5), new THREE.Vector3(MO.x + 5.5, cima + 3.4, MO.z + 5));
+  return { choques: [piedraCima], altura };
 }

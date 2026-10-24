@@ -82,6 +82,7 @@ async function iniciar() {
   tycoon.reconstruir();
   tycoon.lote.absorber(mundo.estaticos);
   colisiones.push(...mundo.choques);
+  jugador.terreno = mundo.altura;
   UI.prepararHUD();
   const ladron = new Ladron(escena, tycoon, UI);
   const mazza = new Mazza(escena, tycoon, UI);
@@ -537,7 +538,9 @@ async function iniciar() {
       // Acercarse al toque si hay una pared; alejarse suave.
       distActual = libre < distActual ? libre : distActual + (libre - distActual) * Math.min(1, dt * 5);
       deseada.copy(cabeza).addScaledVector(dir, distActual);
-      if (deseada.y < 0.6) deseada.y = 0.6; // el pasto no choca: que no se meta abajo
+      // Ni abajo del pasto ni adentro de la montaña.
+      const piso = mundo.altura(deseada.x, deseada.z) + 0.8;
+      if (deseada.y < Math.max(0.6, piso)) deseada.y = Math.max(0.6, piso);
       camara.position.copy(deseada);
       camara.lookAt(cabeza);
     }
@@ -573,6 +576,7 @@ async function iniciar() {
     const dt = Math.min(real, 0.05);
 
     if (conduciendo) {
+      tycoon.auto.terreno = mundo.altura;
       tycoon.auto.actualizar(dt, controles.ejes(ejes), colisiones);
       jugador.pos.copy(tycoon.auto.pos);
     } else if (gym.entrenando) {
