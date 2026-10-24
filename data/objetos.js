@@ -35,13 +35,13 @@ export const MEJORAS_VELOCIDAD = ['Cinta Turbo', 'Droppers Rápidos', 'Motor Vec
 // (trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete).
 // Son caros a propósito (más o menos 20 veces lo que se gana en ese momento, unos 10 a 25
 // minutos juntando) y no hacen falta para el cartel final: son los trofeos difíciles.
-// forma (opcional): 'lapiz', 'papa', 'stm' o 'boxer' usan su modelo; sin forma, una figura de relleno.
+// forma (opcional): 'lapiz', 'papa', 'stm', 'boxer' o 'flauta' usan su modelo; sin forma, una figura de relleno.
 export const OBJETOS_VECIBANDA = [
   { nombre: 'Lápiz de Nico', precio: 5000, etapa: 4, descripcion: 'Staedtler Mars Lumograph 9B', forma: 'lapiz' },
   { nombre: 'Papa Podrida', precio: 25000, etapa: 5, descripcion: 'Nadie sabe hace cuánto está', forma: 'papa' },
   { nombre: 'STM de la Schwepa', precio: 60000, etapa: 6, descripcion: 'Boleto estudiante', forma: 'stm' },
   { nombre: 'Boxer Supreme', precio: 900000, etapa: 7, descripcion: 'Original, sin estrenar', forma: 'boxer' },
-  { nombre: 'Objeto Vecibanda 5', precio: 1.2e6,  etapa: 7,  descripcion: 'Descripción corta 5' },
+  { nombre: 'Flauta del Pelado', precio: 1.2e6, etapa: 7, descripcion: 'La que sonó en la cancha', forma: 'flauta' },
   { nombre: 'Objeto Vecibanda 6', precio: 8e7,      etapa: 8,  descripcion: 'Descripción corta 6' },
   { nombre: 'Objeto Vecibanda 7', precio: 4e9,     etapa: 9,  descripcion: 'Descripción corta 7' },
   { nombre: 'Objeto Vecibanda 8', precio: 4.5e10,    etapa: 10, descripcion: 'Descripción corta 8' },
@@ -66,17 +66,17 @@ export const CUADROS = [
   { nombre: 'Patito', precio: 4.6e5, archivo: 'trolleado.jpg' }, // el nombre real es 'Trolleado'
 ];
 
-// Obras de arte famosas (dominio público) que se compran y se cuelgan en los pasillos.
-// Van de a dos por piso: 1-2 planta baja, 3-4 primer piso, etc. Imagen en assets/pinturas/.
+// Cuadros grandes de los pasillos (dos por piso: 1-2 planta baja, 3-4 primer piso, etc.).
+// De las obras famosas solo quedó la Gioconda (con la cara de Bauti, hecha con
+// herramientas/gioconda_bauti.py), con su cartel. Los demás son de la Vecibanda: sin cartel.
+// - carpeta: dónde está la imagen dentro de assets/ (por defecto, pinturas). Un .mp4 se ve animado.
+// - cartel: true = lleva la placa con el nombre abajo.
 export const OBRAS_DE_ARTE = [
-  { nombre: 'La noche estrellada (Van Gogh)',  precio: 1600,  archivo: 'noche_estrellada.jpg' },
-  { nombre: 'La joven de la perla (Vermeer)',  precio: 1700,  archivo: 'joven_perla.jpg' },
-  { nombre: 'La gran ola (Hokusai)',           precio: 3.4e5, archivo: 'gran_ola.jpg' },
-  { nombre: 'Los girasoles (Van Gogh)',        precio: 3.5e5, archivo: 'girasoles.jpg' },
-  { nombre: 'La Gioconda (Da Vinci)',          precio: 2.6e7, archivo: 'mona_lisa.jpg' },
-  { nombre: 'El grito (Munch)',                precio: 2.7e7, archivo: 'el_grito.jpg' },
-  { nombre: 'El nacimiento de Venus (Botticelli)', precio: 3e9, archivo: 'venus.jpg' },
-  { nombre: 'El beso (Klimt)',                 precio: 3.1e9, archivo: 'el_beso.jpg' },
+  { nombre: 'Masacre',                 precio: 1600,  archivo: 'masacre.jpeg',     carpeta: 'cuadros' },
+  { nombre: 'Toto lindo',              precio: 1700,  archivo: 'totolindo.jpeg',   carpeta: 'cuadros' },
+  { nombre: 'Veneca',                  precio: 3.4e5, archivo: 'veneca.jpeg',      carpeta: 'cuadros' },
+  { nombre: 'La flauta del pelado (video)', precio: 3.5e5, archivo: 'flautapelado.mp4', carpeta: 'cuadros' },
+  { nombre: 'La Gioconda (Da Vinci)',  precio: 2.6e7, archivo: 'mona_lisa_bauti.jpg', cartel: true },
 ];
 
 // Lujos de millonario. Cada uno tiene su lugar fijo (no cambies el id).

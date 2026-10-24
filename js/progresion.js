@@ -244,7 +244,7 @@ CUADROS.forEach((c, i) => {
   });
 });
 
-// Obras de arte famosas: dos por piso en las paredes de los pasillos.
+// Cuadros grandes: dos por piso en las paredes de los pasillos.
 OBRAS_DE_ARTE.slice(0, 8).forEach((o, i) => {
   const { piso, lado } = Es.slotObra(i);
   const previo = `paredes_int_${SUF[piso]}`;

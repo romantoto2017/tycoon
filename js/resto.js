@@ -253,20 +253,13 @@ export function rinconLourdes(k, g) {
   g.add(cartel);
 }
 
-// ---------- Decoración: pizarrón con el menú, cuadros, plantas y reloj ----------
+// ---------- Decoración: pizarrón con el menú, plantas y reloj ----------
 export function decoracion(k, g) {
   const xi = R.x0 + R.pared + 0.08;
   const pizarra = k.pizarra('MENÚ DEL DÍA', PLATOS.map((p) => p.nombre), 6.4, 4.4);
   pizarra.position.set(xi, F + 5.6, R.z1 - 6.5);
   pizarra.rotation.y = Math.PI / 2;
   g.add(pizarra);
-  const cuadro = k.pintura('cafe_noche.jpg', 3.4);
-  cuadro.position.set(R.x1 - R.pared - 0.12, F + 6.4, R.z1 - 5.5);
-  cuadro.rotation.y = -Math.PI / 2;
-  g.add(cuadro);
-  const cuadro2 = k.pintura('grande_jatte.jpg', 3.2);
-  cuadro2.position.set(R.x0 + 14.5, F + 7.6, R.z0 + R.pared + 0.12);
-  g.add(cuadro2);
   // Reloj de pared.
   const xr = R.x0 + R.pared;
   const zr = R.z0 + 4.5;

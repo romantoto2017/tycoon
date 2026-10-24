@@ -111,3 +111,10 @@ El progreso se guarda solo en el navegador (localStorage). "Reiniciar partida" e
 
 - Los muebles son modelos 3D del **Furniture Kit de Kenney** (kenney.nl), licencia CC0 (dominio público). Están en `assets/muebles/` y se cargan al empezar (`js/modelos.js`): ahí se cambian los colores (madera, metal, tapizados) y qué modelos se usan. Cada habitación los acomoda en `js/muebles.js`.
 - Las pinturas famosas son obras de dominio público tomadas de Wikimedia Commons; la lista está en `assets/pinturas/CREDITOS.md`.
+
+## Dufre, la moneda y los cuadros de los pasillos
+
+- **Dufre** (`js/dufre.js`) camina por la vereda de enfrente de la mansión, de punta a punta, con el buzo de entrenamiento negro (franjas blancas, logo y escudo, armado con `herramientas/dufre.py`), el cierre hasta la pera y las manos en los bolsillos. Si te acercás, frena, te mira y te dice "¿Vamo a ver el interno?" (vuelve a decirlo cuando te alejás y volvés).
+- **La moneda** tiene la cara del Negro Bebé: `assets/moneda.png`, hecha con `herramientas/moneda.py` desde `assets/especiales/moneda.jpeg`.
+- **Pasillos:** de las pinturas famosas solo quedó la Gioconda, con la cara de Bauti (bautizoom) puesta acá con OpenCV (`herramientas/gioconda_bauti.py`, sin servicios de IA externos) y su cartel de siempre. En los otros lugares van Masacre, Toto lindo, Veneca y el video de la flauta del pelado, sin cartel. Las pinturas famosas de las habitaciones y del restaurante se sacaron.
+- **Flauta del Pelado:** objeto Vecibanda nuevo (flauta dulce verde lima en su pedestal).

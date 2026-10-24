@@ -18,6 +18,7 @@ import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico } from './gimnasio.js';
 import { Misiones } from './misiones.js';
+import { Dufre } from './dufre.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM } from './constantes.js';
 import { crearAK } from './arma.js';
@@ -89,6 +90,7 @@ async function iniciar() {
   const resto = new Restaurante(escena, tycoon, UI);
   const gym = new Gimnasio(escena, UI);
   const misiones = new Misiones(escena, tycoon, UI);
+  const dufre = new Dufre(escena, UI);
 
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
@@ -486,7 +488,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -613,6 +615,7 @@ async function iniciar() {
     resto.actualizar(dt, jugador, modo === 'juego');
     gym.actualizar(dt, jugador, modo === 'juego');
     misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
+    dufre.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     brillos.actualizar(dt);
     // Adentro del gym se prenden las luces (sube de a poco al entrar, como un fundido).

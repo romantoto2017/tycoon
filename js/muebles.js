@@ -277,10 +277,6 @@ function alfombra(s, x0, z0, x1, z1, color) {
   s.modelo('rugRectangle', (x0 + x1) / 2, 0.02, (z0 + z1) / 2, 0, { ancho: x1 - x0, fondo: z1 - z0, alto: 0.05, tela: color, solido: false });
 }
 
-function pintura(k, p, archivo, u, y, v, alto = 2.8) {
-  p.plano(k.pintura(archivo, alto), u, y, v);
-}
-
 const brillo = (k, c) => k.brillo(c);
 
 // ---------- Diseños: cada mueble se compra por separado ----------
@@ -296,7 +292,6 @@ const P0 = (s) => pieza(s, 0, 0, '+z');
 const living = [
   LUZ(0, 0),
   M('alfombra', 'Alfombra', -3, 2.5, (k, s) => alfombra(s, -6.4, -3.9, 3.4, 3.9, '#cbbba5')),
-  M('cuadro', 'Cuadro', 6.5, -2, (k, s) => pintura(k, pieza(s, 8.62, 0, '-x'), 'impresion.jpg', 0, 4.8, 0, 3)),
   M('tele', 'Televisor', -7, 0, (k, s) => tele(k, pieza(s, -8.1, 0, '+x'), 6)),
   M('biblioteca', 'Biblioteca', -6, -5.4, (k, s) => estanteria(k, pieza(s, -6, -6.2, '+z'), 4)),
   M('sillon', 'Sillón grande', 1.3, 0, (k, s) => sofa(k, pieza(s, 1.6, 0, '-x'), 6.6, '#7d8a96')),
@@ -356,7 +351,6 @@ const comedor = [
     ap.cil(0.3, 1, '#4fc3f7', -1.8, 2.4, 0, 8);
     ap.cil(0.25, 1.4, '#ffffff', 1.8, 2.4, 0, 8);
   }),
-  M('cuadro', 'Cuadro', -4, 5, (k, s) => pintura(k, pieza(s, -8.62, 0, '+x'), 'ronda_nocturna.jpg', 0, 5.4, 0, 3)),
   M('sillas', 'Sillas', 0, 4.8, (k, s) => {
     for (const u of [-3.3, -1.1, 1.1, 3.3]) {
       silla(k, pieza(s, u, -2.1, '+z'));
@@ -982,7 +976,6 @@ function parlante(k, s, x, z) {
 const biblioteca = [
   LUZ(0, 0),
   M('alfombra', 'Alfombra', -1.5, 3, (k, s) => alfombra(s, -6, -4, 3, 4, '#8d6e63')),
-  M('cuadro', 'Cuadro', 6.6, -2, (k, s) => pintura(k, pieza(s, 8.62, 0, '-x'), 'ronda_nocturna.jpg', -2, 5, 0, 2.6)),
   M('estante1', 'Biblioteca', -6, -5.3, (k, s) => estanteria(k, pieza(s, -6, -6.1, '+z'), 4.4)),
   M('estante2', 'Otra biblioteca', 6, -5.3, (k, s) => estanteria(k, pieza(s, 6, -6.1, '+z'), 4.4)),
   M('mesa', 'Mesa de lectura', -1.5, 0, (k, s) => {
@@ -1003,11 +996,10 @@ const biblioteca = [
 ];
 
 // Suite (piso 2) y Suite VIP (piso 3): cama grande, mesas de luz, tele, sillón, ropero.
-function suite(cuadroArchivo, alto, colorCama, colorAcento, anchoCama, banco) {
+function suite(colorCama, colorAcento, anchoCama, banco) {
   return [
     LUZ(0, 0),
     M('alfombra', 'Alfombra', -2, 2.5, (k, s) => alfombra(s, -8, -4.4, 0.8, 4.4, '#cdbfae')),
-    M('cuadro', 'Cuadro', -5.5, -2, (k, s) => pintura(k, pieza(s, -8.62, 0, '+x'), cuadroArchivo, 0, 5.9, 0, alto)),
     M('cama', 'Cama King', -5.5, 0.5, (k, s) => cama(k, pieza(s, -5.85, 0, '+x'), anchoCama, anchoCama, colorCama)),
     M('mesas_luz', 'Mesas de luz', -6.6, 5, (k, s) => {
       mesaLuz(k, pieza(s, -7.9, 3.6, '+x'), 0, 0);
@@ -1024,8 +1016,8 @@ function suite(cuadroArchivo, alto, colorCama, colorAcento, anchoCama, banco) {
     }),
   ];
 }
-const dormitorioPrincipal = suite('grande_jatte.jpg', 2.4, '#efe7da', '#8e6c4a', 5, true);
-const dormitorio1 = suite('cafe_noche.jpg', 2.6, '#3f5873', '#c9b8a0', 4.4, false);
+const dormitorioPrincipal = suite('#efe7da', '#8e6c4a', 5, true);
+const dormitorio1 = suite('#3f5873', '#c9b8a0', 4.4, false);
 
 // ---------- Piso 3 ----------
 
@@ -1108,7 +1100,6 @@ const karaoke = [
 const dormitorio2 = [
   LUZ(0, 0),
   M('alfombra', 'Alfombra', 3, 1.5, (k, s) => alfombra(s, -6.5, -4, 6.5, 2, '#c5d5d3')),
-  M('cuadro', 'Cuadro', 0, -4, (k, s) => pintura(k, pieza(s, 0, -6.68, '+z'), 'grande_jatte.jpg', 0, 5.3, 0, 2.2)),
   M('camas', 'Camas', -3.6, -4.2, (k, s) => {
     cama(k, pieza(s, -3.6, -4.35, '+z'), 2.6, 4.4, '#7a9e9f');
     cama(k, pieza(s, 3.6, -4.35, '+z'), 2.6, 4.4, '#7a9e9f');
@@ -1142,7 +1133,6 @@ const bar = [
     s.modelo('stoolBar', -2.8, 0, 3, 0, { tela: '#c62828' });
     s.modelo('stoolBar', 0.8, 0, 3, 0, { tela: '#c62828' });
   }),
-  M('cuadro', 'Cuadro', -6.4, -1, (k, s) => pintura(k, pieza(s, -8.62, 0, '+x'), 'cafe_noche.jpg', 0, 4.8, 0, 3)),
 ];
 
 const salaTrofeos = [

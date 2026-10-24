@@ -128,8 +128,10 @@ export function crearPersonaje(p, cabezaTex) {
   const xPierna = segun(0.5, 0.65) + 0.06 * musculo;
   const piernaI = pierna(-xPierna, grosorPierna);
   const piernaD = pierna(xPierna, grosorPierna);
-  const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, remera, matPiel, 0.8, grosorBrazo);
-  const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, remera, matPiel, 0.8, grosorBrazo);
+  // Mangas largas (mangasLargas: true): el brazo entero es del color de la remera.
+  const abajoBrazo = p.mangasLargas ? remera : matPiel;
+  const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, remera, abajoBrazo, 0.8, grosorBrazo);
+  const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, remera, abajoBrazo, 0.8, grosorBrazo);
   const bloque = (w, h, d, material, x, y, z) => {
     if (!Array.isArray(material)) return caja(w, h, d, material, x, y, z);
     const m = new THREE.Mesh(GEO_CAJA, material);
@@ -217,6 +219,16 @@ export function crearPersonaje(p, cabezaTex) {
     cuerpo.add(caja(0.7, 0.55, 0.04, p.cuello, 0, 1.72, fondoTorso / 2 + 0.01));
     cuerpo.add(caja(0.06, segun(1.6, 1.3), 0.03, '#c9ced3', 0.04, segun(0.9, 0.8), z));
   }
+  // Cuello alto subido hasta la pera (cuelloAlto: color), como un buzo de entrenamiento con
+  // el cierre hasta arriba: la cabeza queda "pegada" al cuerpo.
+  if (p.cuelloAlto) {
+    const yc = cabeza.position.y;
+    const c = p.cuelloAlto;
+    cuerpo.add(caja(1.42, 0.34, 0.12, c, 0, yc - 0.52, 0.66)); // adelante (tapa la pera)
+    cuerpo.add(caja(1.42, 0.5, 0.12, c, 0, yc - 0.45, -0.66)); // atrás
+    for (const lado of [-1, 1]) cuerpo.add(caja(0.12, 0.46, 1.42, c, lado * 0.66, yc - 0.47, 0));
+    cuerpo.add(caja(0.05, 0.3, 0.02, '#c9ced3', 0, yc - 0.53, 0.73)); // el cierre
+  }
   // Buzo con capucha (capucha: color): la capucha caída en la espalda y los cordones.
   if (p.capucha) {
     cuerpo.add(caja(1.5, 0.8, 0.5, p.capucha, 0, cabeza.position.y - 0.62, -fondoTorso / 2 - 0.12));
@@ -243,6 +255,7 @@ export function crearPersonaje(p, cabezaTex) {
     manoD: brazoD, // para colgarle el arma (la mano está en y = -1.9)
     apuntar: false, // con el arma en la mano: brazos al frente
     llevar: false, // llevando algo con las dos manos (un plato)
+    manosBolsillo: false, // caminando con las manos en los bolsillos (Dufre)
     brazosSentado: -1.2, // sentado: -1.2 llega al manubrio de la moto; menos, manos en la falda
     // velocidad: unidades/seg en el plano. enSuelo: para la pose de salto.
     // agachado: rodillas dobladas, cadera abajo, torso hacia adelante y brazos al frente.
@@ -284,6 +297,14 @@ export function crearPersonaje(p, cabezaTex) {
         // Llevando un plato: los dos brazos al frente, un poco cerrados hacia el plato.
         brazoI.rotation.set(-1.45, 0, 0.45);
         brazoD.rotation.set(-1.45, 0, -0.45);
+      }
+      if (modelo.manosBolsillo) {
+        // Manos en los bolsillos: brazos pegados al cuerpo, codos un poco para atrás y las
+        // manos metidas adelante a la altura de la cadera; caminando casi no se mueven.
+        brazoI.rotation.set(0.18 - a * 0.06, 0, 0.06);
+        brazoD.rotation.set(0.18 + a * 0.06, 0, -0.06);
+        brazoI.codo.rotation.x = -0.5;
+        brazoD.codo.rotation.x = -0.5;
       }
       if (modelo.apuntar) {
         brazoD.rotation.x = -1.5;

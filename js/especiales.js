@@ -12,7 +12,7 @@ export function slotCuadro(i) {
 }
 
 const FORMAS = [trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete];
-const FORMAS_PROPIAS = { lapiz, papa, stm, boxer };
+const FORMAS_PROPIAS = { lapiz, papa, stm, boxer, flauta };
 
 // Lápiz Staedtler azul, hexagonal, con punta de madera y mina negra, inclinado.
 function lapiz(k, p) {
@@ -33,6 +33,30 @@ function lapiz(k, p) {
   l.position.y = 1.6;
   l.rotation.z = -1.0;
   p.add(l);
+}
+
+// Flauta dulce del pelado (la del video): verde lima, con la boquilla, los agujeros y el
+// pie un poco más ancho, inclinada como cuando la levantó en la cancha.
+function flauta(k, p) {
+  const f = k.grupo();
+  const verde = '#d4ee4e';
+  const oscuro = '#a8c634';
+  f.add(k.cilindro(0.2, 0.17, 2.6, verde, 0, 0, 0, 14)); // cuerpo
+  f.add(k.cilindro(0.24, 0.2, 0.55, verde, 0, 1.55, 0, 14)); // cabeza
+  f.add(k.cilindro(0.15, 0.24, 0.35, oscuro, 0, 1.98, 0, 14)); // boquilla
+  f.add(k.cilindro(0.24, 0.17, 0.7, verde, 0, -1.65, 0, 14)); // pie
+  f.add(k.cilindro(0.245, 0.245, 0.06, oscuro, 0, 1.28, 0, 14));
+  f.add(k.cilindro(0.215, 0.215, 0.06, oscuro, 0, -1.3, 0, 14));
+  f.add(k.caja(0.16, 0.12, 0.06, '#26300c', 0, 1.62, 0.23)); // la ventanita
+  for (let n = 0; n < 7; n++) {
+    const h = k.cilindro(0.06, 0.06, 0.05, '#26300c', 0, 0.9 - n * 0.32, 0.19 - n * 0.003, 10);
+    h.rotation.x = Math.PI / 2;
+    f.add(h);
+  }
+  f.position.y = 2.3;
+  f.rotation.z = -0.5;
+  f.rotation.x = 0.2;
+  p.add(f);
 }
 
 // Papa podrida: la foto recortada en dos planos cruzados (se ve con volumen desde cualquier lado).
@@ -178,10 +202,11 @@ export function slotObra(i) {
 
 export function obra(k, g, i, datos) {
   const { piso, lado } = slotObra(i);
-  const p = k.pintura(datos.archivo, 3);
+  const p = datos.carpeta ? k.pintura(datos.archivo, 3.4, { carpeta: datos.carpeta, marco: '#1d1f22' }) : k.pintura(datos.archivo, 3);
   p.position.set(lado * 26, nivel(piso) + 4.6, PASILLO.z1 - GROSOR_INT / 2 - 0.08);
   p.rotation.y = Math.PI;
   g.add(p);
+  if (!datos.cartel) return; // los de la Vecibanda no llevan cartel
   const cartel = k.cartel(datos.nombre, 4, 0.45, '#ffffff', '#24282c');
   cartel.position.set(lado * 26, nivel(piso) + 2.3, PASILLO.z1 - GROSOR_INT / 2 - 0.02);
   cartel.rotation.y = Math.PI;
