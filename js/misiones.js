@@ -87,10 +87,10 @@ export class Misiones {
       } else {
         const c = this.estado.cusi;
         if (c === 'rescatado') { avance = 1; detalle = 'El Cusi está a salvo en la casa'; }
-        else if (c === 'perdido' || c === 'llevando') { avance = c === 'llevando' ? 0.75 : 0.4; detalle = c === 'llevando' ? 'Llevalo hasta la mansión' : 'Está en el bosque, al pie de la montaña del pelado'; }
+        else if (c === 'perdido' || c === 'llevando') { avance = c === 'llevando' ? 0.75 : 0.4; detalle = c === 'llevando' ? 'Llevalo hasta la mansión' : 'Todavía no lo encontraste... ¡buscalo!'; }
         else { avance = 0; detalle = 'Jugá con Juanma para empezarla'; }
       }
-      const bloqueada = !this.hecha(m.id) && progreso < (m.desde || 0);
+      const bloqueada = progreso < (m.desde || 0);
       return { ...m, hecha: this.hecha(m.id), bloqueada, avance, detalle, tuya: jugador.personaje?.id === m.personaje };
     });
   }
@@ -112,8 +112,14 @@ export class Misiones {
     this.cargando = false;
   }
 
+  // ¿Ya pasó el 50%? Antes de eso el Cusi no existe y su misión no se puede hacer.
+  get cusiDisponible() {
+    return this.tycoon.progreso >= MISIONES.find((m) => m.id === 'cusi').desde;
+  }
+
   // Dónde tiene que estar el Cusi ahora (o null si no se ve).
   lugarCusi(jugador) {
+    if (!this.cusiDisponible) return null;
     const c = this.estado.cusi;
     if (c === 'rescatado') return 'casa';
     if (c === 'perdido' && jugador.personaje?.id === 'juanma') return 'bosque';
@@ -153,7 +159,7 @@ export class Misiones {
   }
 
   hacer(jugador) {
-    if (!this.accion(jugador)) return;
+    if (!this.accion(jugador) || !this.cusiDisponible) return;
     this.estado.cusi = 'llevando';
     this.llevando = true;
     sfx.brillo();
@@ -172,7 +178,7 @@ export class Misiones {
 
   // ¿Ya se ve la sección de misiones?
   get abiertas() {
-    return this.tycoon.progreso >= MISIONES_DESDE || Object.keys(this.estado).length > 0;
+    return this.tycoon.progreso >= MISIONES_DESDE;
   }
 
   actualizar(dt, jugador, jugando) {
@@ -203,7 +209,7 @@ export class Misiones {
     // Bauti trabado: musculoso al 100%.
     if (jugando && !this.hecha('trabado') && id === 'bauti' && (jugador.personaje.musculo || 0) >= 1) this.completar('trabado', 'Bauti quedó trabado');
     // Al 50% con Juanma: el Cusi se pierde (diálogo).
-    if (jugando && !e.cusi && id === 'juanma' && this.tycoon.progreso >= 0.5 && this.alHablar && !this.hablando) {
+    if (jugando && !e.cusi && id === 'juanma' && this.cusiDisponible && this.alHablar && !this.hablando) {
       this.hablando = true;
       this.alHablar(DIALOGO_CUSI, () => {
         e.cusi = 'perdido';
@@ -226,7 +232,7 @@ export class Misiones {
     if (lugar === 'brazos') {
       jugador.modelo && (jugador.modelo.llevar = true);
       this.cusi.animar(dt, 0, true, false, true);
-      if (this.enCasa(jugador.pos)) {
+      if (this.enCasa(jugador.pos) && this.cusiDisponible) {
         this.llevando = false;
         if (jugador.modelo) jugador.modelo.llevar = false;
         this.completar('cusi', 'El Cusi volvió a casa');
