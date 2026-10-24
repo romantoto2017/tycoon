@@ -47,12 +47,21 @@ async function iniciar() {
 
   const escena = new THREE.Scene();
   const camara = new THREE.PerspectiveCamera(70, 1, 0.2, 900);
+  // El canvas ocupa toda la pantalla por CSS (no se le fija el tamaño en px: si no, en el celu,
+  // al entrar a pantalla completa o esconderse la barra del navegador, queda más chico hasta
+  // que llega el resize y asoma el fondo abajo). Acá solo se ajusta la resolución a lo que mide.
+  let anchoCanvas = 0;
+  let altoCanvas = 0;
   const ajustar = () => {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    camara.aspect = window.innerWidth / window.innerHeight;
+    anchoCanvas = canvas.clientWidth || window.innerWidth;
+    altoCanvas = canvas.clientHeight || window.innerHeight;
+    renderer.setSize(anchoCanvas, altoCanvas, false);
+    camara.aspect = anchoCanvas / altoCanvas;
     camara.updateProjectionMatrix();
   };
-  window.addEventListener('resize', ajustar);
+  for (const ev of ['resize', 'orientationchange', 'fullscreenchange']) window.addEventListener(ev, ajustar);
+  document.addEventListener('fullscreenchange', ajustar);
+  window.visualViewport?.addEventListener('resize', ajustar);
   ajustar();
 
   const mundo = crearMundo(escena);
@@ -558,6 +567,8 @@ async function iniciar() {
 
   const bucle = () => {
     requestAnimationFrame(bucle);
+    // Por si el aviso de cambio de tamaño tarda (pasa en el celu): se mira cada cuadro.
+    if (canvas.clientWidth !== anchoCanvas || canvas.clientHeight !== altoCanvas) ajustar();
     const real = reloj.getDelta();
     const dt = Math.min(real, 0.05);
 
