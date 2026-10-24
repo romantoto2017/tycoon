@@ -17,6 +17,7 @@ import { Ladron } from './ladron.js';
 import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico } from './gimnasio.js';
+import { Misiones } from './misiones.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM } from './constantes.js';
 import { crearAK } from './arma.js';
@@ -71,11 +72,13 @@ async function iniciar() {
   const tycoon = new Tycoon({ escena, colisiones, estado, ui: UI, guardar: guardarAhora });
   tycoon.reconstruir();
   tycoon.lote.absorber(mundo.estaticos);
+  colisiones.push(...mundo.choques);
   UI.prepararHUD();
   const ladron = new Ladron(escena, tycoon, UI);
   const mazza = new Mazza(escena, tycoon, UI);
   const resto = new Restaurante(escena, tycoon, UI);
   const gym = new Gimnasio(escena, UI);
+  const misiones = new Misiones(escena, tycoon, UI);
 
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
@@ -148,6 +151,10 @@ async function iniciar() {
   };
   // Un solo botón de acción (como los avisos de Roblox): manejar o dormir, con la E.
   const accion = () => {
+    if (misiones.accion(jugador)) {
+      misiones.hacer(jugador);
+      return;
+    }
     if (gym.accion(jugador)) {
       gym.hacer(jugador);
       return;
@@ -409,6 +416,29 @@ async function iniciar() {
     controles.activo = modo === 'juego';
   };
   $('btn-config').addEventListener('click', abrirConfig);
+  // ---------- Misiones ----------
+  const caras = {};
+  const caraDe = async (id) => {
+    if (!caras[id]) caras[id] = (await cargarCabeza(PERSONAJES.find((p) => p.id === id))).frente.toDataURL();
+    return caras[id];
+  };
+  const abrirMisiones = async () => {
+    if (modo !== 'juego' || UI.visible('misiones') || UI.visible('dialogo')) return;
+    if (gym.entrenando) gym.dejar(jugador);
+    controles.activo = false;
+    const lista = await Promise.all(misiones.lista(jugador).map(async (m) => ({ ...m, cara: await caraDe(m.personaje), nombre: PERSONAJES.find((p) => p.id === m.personaje).nombre })));
+    UI.puntoMisiones(false);
+    UI.abrirMisiones(lista, () => { controles.activo = modo === 'juego'; });
+  };
+  $('btn-misiones').addEventListener('click', abrirMisiones);
+  window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && controles.activo && modo === 'juego') abrirMisiones(); });
+  // Diálogo de historia con un personaje a la derecha (por ahora, el del Cusi con Juanma).
+  misiones.alHablar = async (lineas, alTerminar) => {
+    if (gym.entrenando) gym.dejar(jugador);
+    controles.activo = false;
+    const p = PERSONAJES.find((x) => x.id === 'juanma');
+    UI.dialogo({ nombre: p.nombre, cara: await caraDe('juanma'), remera: p.remera, lineas, alTerminar: () => { controles.activo = modo === 'juego'; UI.puntoMisiones(true); alTerminar(); } });
+  };
   $('btn-cerrar-config').addEventListener('click', cerrarConfig);
   $('btn-salir-menu').addEventListener('click', () => { volverAlJuego = false; ir('menu'); });
   $('btn-cambiar-personaje').addEventListener('click', () => { volverAlJuego = true; abrirSeleccion(); });
@@ -428,7 +458,7 @@ async function iniciar() {
     if (e.code !== 'Escape' || modo !== 'juego') return;
     if (UI.visible('config')) cerrarConfig();
     else if (gym.entrenando) gym.dejar(jugador);
-    else if (!UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto')) abrirConfig();
+    else if (!UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto') && !UI.visible('misiones') && !UI.visible('dialogo')) abrirConfig();
   });
 
   // Personaje de fondo mientras se ve el menú.
@@ -446,7 +476,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -550,7 +580,7 @@ async function iniciar() {
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
     }
-    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : ''));
+    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -567,6 +597,7 @@ async function iniciar() {
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     resto.actualizar(dt, jugador, modo === 'juego');
     gym.actualizar(dt, jugador, modo === 'juego');
+    misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
     actualizarArma(dt);
     brillos.actualizar(dt);
     // Adentro del gym se prenden las luces (sube de a poco al entrar, como un fundido).

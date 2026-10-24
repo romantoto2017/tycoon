@@ -209,3 +209,77 @@ export function cerrarPanelGym() {
   repApretado = false;
   mostrar('panel-gym', false);
 }
+
+// ---------- Misiones ----------
+// lista: [{ titulo, texto, detalle, avance, hecha, tuya, cara (dataURL), nombre }]
+export function abrirMisiones(lista, alCerrar) {
+  const ul = $('lista-misiones');
+  ul.innerHTML = '';
+  for (const m of lista) {
+    const li = document.createElement('li');
+    li.className = `mision${m.hecha ? ' hecha' : ''}`;
+    li.innerHTML = `
+      <div class="mision-cara"><img alt="" src="${m.cara || ''}"><span>${m.nombre}</span></div>
+      <div class="mision-info">
+        <h3>${m.titulo}</h3>
+        <p>${m.texto}</p>
+        <div class="mision-barra" role="progressbar" aria-valuenow="${Math.round(m.avance * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.round(m.avance * 100)}%"></i></div>
+        <small>${m.detalle}${!m.hecha && !m.tuya ? ` · Solo con ${m.nombre}` : ''}</small>
+      </div>
+      <div class="mision-check" aria-label="${m.hecha ? 'Cumplida' : 'Sin cumplir'}">${m.hecha ? '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</div>`;
+    ul.appendChild(li);
+  }
+  const cerrar = () => {
+    mostrar('misiones', false);
+    window.removeEventListener('keydown', teclas);
+    alCerrar();
+  };
+  const teclas = (e) => { if (e.code === 'Escape' || e.code === 'KeyM') { e.stopPropagation(); cerrar(); } };
+  $('btn-cerrar-misiones').onclick = cerrar;
+  $('misiones').onclick = (e) => { if (e.target.id === 'misiones') cerrar(); };
+  window.addEventListener('keydown', teclas);
+  mostrar('misiones', true);
+  $('btn-cerrar-misiones').focus();
+}
+export function puntoMisiones(v) { $('misiones-punto').classList.toggle('oculto', !v); }
+
+// ---------- Diálogo de historia ----------
+// Escribe cada línea de a poco; Continuar / E / Espacio / clic completa la línea o pasa a la
+// siguiente. Al terminar llama a alTerminar().
+export function dialogo({ nombre, cara, remera, lineas, alTerminar }) {
+  $('dialogo-nombre').textContent = nombre;
+  $('dialogo-cara').src = cara;
+  $('dialogo-cuerpo').style.background = remera;
+  const texto = $('dialogo-texto');
+  const boton = $('dialogo-seguir');
+  let i = 0;
+  let letras = 0;
+  let timer = null;
+  const escribir = () => {
+    const linea = lineas[i];
+    letras = 0;
+    boton.textContent = i === lineas.length - 1 ? 'Vamos ▸' : 'Continuar ▸';
+    clearInterval(timer);
+    timer = setInterval(() => {
+      letras++;
+      texto.textContent = linea.slice(0, letras);
+      if (letras >= linea.length) clearInterval(timer);
+    }, 24);
+  };
+  const seguir = () => {
+    if (letras < lineas[i].length) { clearInterval(timer); letras = lineas[i].length; texto.textContent = lineas[i]; return; }
+    i++;
+    if (i < lineas.length) { escribir(); return; }
+    clearInterval(timer);
+    window.removeEventListener('keydown', teclas, true);
+    mostrar('dialogo', false);
+    alTerminar();
+  };
+  const teclas = (e) => {
+    if (['KeyE', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) seguir(); }
+  };
+  $('dialogo').onclick = seguir;
+  window.addEventListener('keydown', teclas, true);
+  mostrar('dialogo', true);
+  escribir();
+}

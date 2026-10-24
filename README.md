@@ -76,6 +76,19 @@ Los pesos son realistas: cada ejercicio tiene el máximo que levanta una persona
 
 Solo Bauti cambia de cuerpo: cada repetición le suma puntos (`estado.bautiGym`); con unas 1000 repeticiones adelgaza (y camina más rápido) y, ya flaco, con unas 2400 más se pone musculoso. El progreso se ve en el panel y se guarda con la partida. Los números están en `BAUTI_GYM` de `js/gimnasio.js`.
 
+## Misiones
+
+Con el botón de la lista (al lado de la configuración, o la tecla M) se abre el panel de misiones: cada una es de un personaje, muestra su avance y se tilda cuando se cumple (`js/misiones.js`, guardadas en `estado.misiones`).
+
+- **Ponerse trabado (Bauti):** entrenar en el Power Camp hasta adelgazar y quedar musculoso del todo.
+- **Rescatar al Cusi (Juanma):** cuando la mansión llega al 50% jugando con Juanma, salta un diálogo (Juanma a la derecha y el texto abajo; se avanza con Continuar, E o Espacio): el Cusi se perdió en el bosque al pie de la montaña del pelado. Solo con Juanma aparece ahí (con cualquier otro no está). Al lado de él, "Agarrar al Cusi (E)": Juanma lo lleva en brazos y, al entrar a la mansión, se cumple la misión. Desde ahí el Cusi vive en el hall de planta baja y se lo ve con cualquier personaje. Si cambiás de personaje con el Cusi en brazos, vuelve al bosque. El Cusi es un nene chiquito y muy cabezón (cara de `assets/caras/cusi.jpeg`).
+
+## La montaña del pelado y la foto Vecibanda
+
+Atrás de la mansión, para el lado del garage, hay una montaña grande (con dos colinas más chicas al lado) y en la cima el pelado con la camiseta de La Dosis, recortado de `peladomontaña.jpeg` con `herramientas/pelado_montana.py` (rembg, acá en la compu, no se manda a ningún servicio). No le afecta la niebla, así se ve desde lejos. Al pie está el bosque del Cusi.
+
+La foto de la Vecibanda (`assets/cuadros/fotovecibanda.jpeg`) es un cuadro gigante que ocupa la pared de atrás de la cabina del DJ en el Salón de Fiestas (último mueble que se compra ahí).
+
 ## La Mazza
 
 Cada minuto de juego hay un 0,5% de chance de que caiga la Mazza (está enamorada de Juanma). Si estás jugando con Juanma te persigue por toda la mansión (escaleras incluidas) y le salen corazones al verte; si no, entra a preguntar por él. No se la puede echar: se va sola a los 5 minutos. Todo está en `js/mazza.js`.

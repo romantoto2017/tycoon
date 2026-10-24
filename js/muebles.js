@@ -1048,6 +1048,12 @@ const salonFiestas = [
   }),
   M('parlantes', 'Parlantes', -6.6, -4.6, (k, s) => [-5, 6].forEach((z) => s.modelo('speaker', -7.4, 0, z, Math.PI / 2, { alto: 4.8 }))),
   M('luces', 'Luces de colores', 3, -4, (k, s) => ['#ff1744', '#00e5ff', '#76ff03', '#ffea00'].forEach((c, i) => s.d(-6 + i * 4, 7.2, -6.6, -4.5 + i * 4, 7.6, -6.2, brillo(k, c)))),
+  // La foto icónica de la Vecibanda (frente al Palacio Legislativo): ocupa toda la pared de
+  // atrás del DJ, de arriba de la cabina hasta el techo. Sin cartel, como todos los cuadros.
+  M('foto', 'Cuadro gigante', -4.8, 4.6, (k, s) => {
+    const p = pieza(s, -8.62, 0, '+x');
+    p.plano(k.pintura('fotovecibanda.jpeg', 7.2, { carpeta: 'cuadros', marco: '#141414' }), 0, 5.85, 0);
+  }),
 ];
 
 const estudioMusica = [

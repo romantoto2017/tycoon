@@ -727,3 +727,94 @@ html, body {
   .pg-ayuda { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .pg-barra i, .pg-peso, .pg-rep { transition: none; } .pg-lucha { animation: none; } }
+
+/* ---------- Misiones ---------- */
+.btn-misiones {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(64px + env(safe-area-inset-left));
+  width: 44px; height: 44px; padding: 0;
+  display: grid; place-items: center;
+  color: #fff; background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 12px;
+  cursor: pointer; pointer-events: auto;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.btn-misiones:hover { filter: brightness(1.25); }
+.btn-misiones:active { transform: translateY(2px); }
+.btn-misiones:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
+.misiones-punto { position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; border-radius: 50%; background: #ffd23f; border: 2px solid #1b1d20; }
+.misiones-fondo { background: rgba(10, 20, 40, 0.6); }
+.panel-misiones {
+  width: min(560px, 100%);
+  background: #fff;
+  border: 5px solid var(--borde);
+  border-radius: 22px;
+  overflow: hidden;
+  color: #222;
+}
+.panel-misiones header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #2f8cff; color: #fff; }
+.panel-misiones h2 { margin: 0; font-size: 26px; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+.cerrar-x { width: 44px; height: 44px; border: none; border-radius: 12px; background: rgba(0, 0, 0, 0.2); color: #fff; font-size: 22px; font-weight: 800; cursor: pointer; }
+.cerrar-x:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.lista-misiones { list-style: none; margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.mision { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; border: 2px solid #e3e6ea; background: #f7f8fa; }
+.mision.hecha { border-color: #3ccf4e; background: #effbf1; }
+.mision-cara { flex: none; width: 64px; text-align: center; font-size: 12px; font-weight: 700; color: #555; }
+.mision-cara img { display: block; width: 64px; height: 64px; border-radius: 12px; border: 3px solid #1b1d20; object-fit: cover; background: #ccc; }
+.mision-info { flex: 1; min-width: 0; }
+.mision-info h3 { margin: 0 0 2px; font-size: 19px; }
+.mision-info p { margin: 0 0 6px; font-size: 14px; color: #444; line-height: 1.3; }
+.mision-info small { font-size: 13px; color: #666; }
+.mision-barra { height: 10px; border-radius: 5px; background: #dfe3e8; overflow: hidden; margin-bottom: 4px; }
+.mision-barra i { display: block; height: 100%; background: linear-gradient(90deg, #2f8cff, #3ccf4e); }
+.mision-check { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 3px solid #c9ced3; display: grid; place-items: center; color: #fff; }
+.mision.hecha .mision-check { background: #3ccf4e; border-color: #2ea83d; animation: tilde 0.35s ease-out; }
+@keyframes tilde { from { transform: scale(0.6); } to { transform: scale(1); } }
+@media (max-height: 500px) {
+  .panel-misiones header { padding: 6px 12px; }
+  .panel-misiones h2 { font-size: 20px; }
+  .lista-misiones { padding: 8px; gap: 6px; }
+  .mision { padding: 6px; }
+  .mision-cara, .mision-cara img { width: 48px; }
+  .mision-cara img { height: 48px; }
+}
+
+/* ---------- Diálogo de historia (personaje a la derecha, texto abajo) ---------- */
+.dialogo { position: fixed; inset: 0; z-index: 25; cursor: pointer; background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 55%); }
+.dialogo-personaje {
+  position: absolute; right: max(4%, 16px); bottom: 150px;
+  width: min(30vw, 260px); display: flex; flex-direction: column; align-items: center;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.45));
+  animation: entra-personaje 0.35s ease-out;
+}
+.dialogo-personaje img { width: 64%; aspect-ratio: 1; border: 5px solid #1b1d20; border-radius: 10px; display: block; position: relative; z-index: 1; }
+.dialogo-cuerpo { width: 100%; height: min(18vw, 150px); margin-top: -4px; border: 5px solid #1b1d20; border-radius: 14px 14px 0 0; }
+@keyframes entra-personaje { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dialogo-caja {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  min-height: 150px;
+  padding: 16px calc(24px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+  background: rgba(16, 18, 24, 0.94);
+  border-top: 4px solid #ffd23f;
+  color: #fff;
+}
+.dialogo-nombre {
+  position: absolute; top: -22px; right: max(4%, 16px);
+  margin: 0; padding: 4px 18px; border-radius: 12px;
+  background: #ffd23f; color: #1b1d20; font-size: 20px; font-weight: 800;
+}
+.dialogo-texto { margin: 6px 0 0; max-width: 1100px; font-size: 22px; line-height: 1.45; min-height: 64px; }
+.dialogo-seguir {
+  position: absolute; right: calc(20px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom));
+  min-height: 44px; padding: 0 18px; border: none; border-radius: 12px;
+  background: #ffd23f; color: #1b1d20; font-family: var(--fuente); font-size: 18px; font-weight: 800; cursor: pointer;
+  animation: titila 1s ease-in-out infinite alternate;
+}
+@keyframes titila { to { filter: brightness(1.2); transform: translateX(3px); } }
+@media (max-height: 500px) {
+  .dialogo-caja { min-height: 110px; padding-top: 12px; }
+  .dialogo-texto { font-size: 17px; min-height: 48px; }
+  .dialogo-personaje { bottom: 108px; width: min(24vw, 170px); }
+  .dialogo-nombre { font-size: 16px; top: -18px; }
+}
+@media (prefers-reduced-motion: reduce) { .dialogo-personaje, .dialogo-seguir, .mision.hecha .mision-check { animation: none; } }

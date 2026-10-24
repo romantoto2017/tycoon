@@ -63,5 +63,11 @@ export const GYM_ESTACIONES = {
   pecdec: { x: -463, z: 15.5 }, // torre contra la pared del fondo: el asiento mira a +z
   jalon: { x: -451, z: 15.5 }, // torre alta contra el fondo: se sienta mirando a la torre
 };
+// Montaña del pelado: colina grande atrás de la mansión (para el lado del garage), con el
+// pelado y la camiseta de La Dosis en la cima. r: radio de la base, alto: de la cima.
+export const MONTANA = { x: 175, z: -225, r: 125, alto: 92 };
+// Bosque al pie de la montaña, donde se pierde el Cusi (misión de Juanma).
+export const BOSQUE_CUSI = { x: 92, z: -122, r: 20 };
+export const CUSI_ESCONDIDO = { x: 97.5, z: -128.5 };
 // Hasta dónde se puede ir caminando o en auto (el restaurante y el gym quedan lejos).
 export const LIMITE_MAPA = 520;

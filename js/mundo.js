@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { caja, matTex, aleatorio } from './util.js';
-import { TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM } from './constantes.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU } from './constantes.js';
 import { crearCielo } from './cielo.js';
 
 // Largo del barrio (en x): llega del gym (-455) al restaurante (+160) con margen.
@@ -22,10 +23,12 @@ export function crearMundo(escena) {
   crearCalle(estaticos);
   crearCasasVecinas(estaticos);
   crearArboles(escena);
+  const montana = crearMontana(escena);
   const nubes = crearNubes(escena);
 
   return {
     estaticos,
+    choques: montana.choques, // para no meterse adentro de la montaña
     // t: segundos jugados (para la hora del día). farolas: cuánta luz de farolas hay (0 a 1).
     // centro: dónde está la cámara (el cielo la sigue).
     // interior: 0 a 1, adentro de un lugar con luces fuertes (ver cielo.js).
@@ -92,9 +95,22 @@ function crearArboles(escena) {
       if (z > CALLE_Z - 10 && z < CALLE_Z + 34) continue;                          // calle y casas
       if (x > R.x0 - 8 && x < PA.x + 14 && z > R.z0 - 8 && z < CALLE_Z) continue;    // restaurante y parrilla
       if (x > GYM.x0 - 8 && x < GYM.x1 + 8 && z > GYM.z0 - 8 && z < CALLE_Z) continue; // gym
+      if (Math.hypot(x - MO.x, z - MO.z) < MO.r + 6) continue;                      // montaña
       puntos.push([x, z, 0.8 + rnd() * 0.6]);
       n++;
     }
+  }
+  // Bosque tupido al pie de la montaña (ahí se esconde el Cusi): árboles grandes y juntos,
+  // dejando un huequito para él.
+  let enBosque = 0;
+  while (enBosque < 46) {
+    const a = rnd() * Math.PI * 2;
+    const r = Math.sqrt(rnd()) * BO.r;
+    const x = BO.x + Math.cos(a) * r;
+    const z = BO.z + Math.sin(a) * r;
+    if (Math.hypot(x - CU.x, z - CU.z) < 3.2) continue;
+    puntos.push([x, z, 1.05 + rnd() * 0.55]);
+    enBosque++;
   }
   const n = puntos.length;
   const troncos = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: '#7a5230' }), n);
@@ -156,4 +172,96 @@ function crearNubes(escena) {
   }
   actualizar(0);
   return { actualizar, material: mesh.material };
+}
+
+// Montaña del pelado: dos colinas verdes redondeadas (como las de la foto) con piedras grises
+// y, en la cima de la grande, el pelado con la camiseta de La Dosis (siempre de frente). No
+// les afecta la niebla, así se ven desde lejos.
+function crearMontana(escena) {
+  const rnd = aleatorio(23);
+  const g = new THREE.Group();
+  const colina = (cx, cz, R, H, semilla) => {
+    const anillos = 26;
+    const lados = 48;
+    // Grilla polar propia: anillos concéntricos con alturas suaves y un poco de ruido.
+    const pos = [];
+    const col = [];
+    const idx = [];
+    const verde = new THREE.Color('#a6e070');
+    const seco = new THREE.Color('#cfd486');
+    const roca = new THREE.Color('#b4b6b3');
+    const c = new THREE.Color();
+    const altura = (r, a) => {
+      const t = r / R;
+      const base = H * Math.pow(Math.max(0, 1 - t * t), 1.35);
+      const ruido = Math.sin(a * 3 + semilla) * 0.05 + Math.sin(a * 7 + semilla * 2) * 0.025 + Math.sin(t * 9 + a * 2) * 0.03;
+      return Math.max(0, base * (1 + ruido * (1 - t * 0.5)));
+    };
+    for (let i = 0; i <= anillos; i++) {
+      const r = (i / anillos) * R;
+      for (let j = 0; j < lados; j++) {
+        const a = (j / lados) * Math.PI * 2;
+        const y = altura(r, a);
+        pos.push(cx + Math.cos(a) * r, y, cz + Math.sin(a) * r);
+        const mezcla = rnd();
+        c.copy(verde).lerp(seco, 0.1 + 0.3 * (i / anillos) * mezcla);
+        if (rnd() < 0.08 + 0.12 * (1 - i / anillos)) c.lerp(roca, 0.7);
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (let i = 0; i < anillos; i++) {
+      for (let j = 0; j < lados; j++) {
+        const a = i * lados + j;
+        const b = i * lados + ((j + 1) % lados);
+        const a2 = a + lados;
+        const b2 = b + lados;
+        idx.push(a, a2, b, b, a2, b2);
+      }
+    }
+    const m = new THREE.BufferGeometry();
+    m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    m.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    m.setIndex(idx);
+    m.computeVertexNormals();
+    const malla = new THREE.Mesh(m, new THREE.MeshLambertMaterial({ vertexColors: true, fog: false, flatShading: true, emissive: '#1c2a12' }));
+    g.add(malla);
+    return altura;
+  };
+  const alturaGrande = colina(MO.x, MO.z, MO.r, MO.alto, 1.3);
+  colina(MO.x + 105, MO.z - 70, MO.r * 0.75, MO.alto * 0.62, 4.1);
+  colina(MO.x - 120, MO.z - 85, MO.r * 0.6, MO.alto * 0.45, 2.2);
+  // Piedras grises por las laderas (una sola malla).
+  const piedras = [];
+  for (let i = 0; i < 90; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = (0.15 + rnd() * 0.8) * MO.r;
+    const y = alturaGrande(r, a);
+    const p = new THREE.DodecahedronGeometry(1.2 + rnd() * 2.8, 0);
+    p.scale(1.2, 0.6 + rnd() * 0.4, 1);
+    p.rotateY(rnd() * 3);
+    p.translate(MO.x + Math.cos(a) * r, y + 0.4, MO.z + Math.sin(a) * r);
+    piedras.push(p);
+  }
+  const roca = new THREE.Mesh(mergeGeometries(piedras), new THREE.MeshLambertMaterial({ color: '#b9bbb8', fog: false, flatShading: true }));
+  g.add(roca);
+  // El pelado en la cima, bien grande para que se vea desde la mansión.
+  const tex = new THREE.TextureLoader().load('assets/especiales/pelado_cima.png');
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const pelado = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, fog: false, alphaTest: 0.4 }));
+  const alto = 44;
+  pelado.scale.set(alto * 519 / 843, alto, 1);
+  pelado.center.set(0.5, 0.02);
+  pelado.position.set(MO.x, alturaGrande(0, 0) - 0.5, MO.z);
+  g.add(pelado);
+  escena.add(g);
+  // Choques: una cruz de cajas que cubre casi toda la base (no se puede meter adentro).
+  const choques = [];
+  const caja = (x0, z0, x1, z1) => {
+    const b = new THREE.Box3(new THREE.Vector3(x0, 0, z0), new THREE.Vector3(x1, MO.alto, z1));
+    b.camara = false;
+    choques.push(b);
+  };
+  const r = MO.r * 0.8;
+  for (const [w, h] of [[r, r * 0.42], [r * 0.42, r], [r * 0.72, r * 0.72]]) caja(MO.x - w, MO.z - h, MO.x + w, MO.z + h);
+  return { choques };
 }
