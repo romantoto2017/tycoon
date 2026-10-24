@@ -39,7 +39,7 @@ export const MISIONES = [
 const DIALOGO_CUSI = [
   '¿Eh? ¿Y el Cusi? ¿Alguien vio al Cusi?',
   'Estaba acá hace un rato... ¡No lo encuentro por ningún lado de la casa!',
-  'Me parece que se fue para el bosque, el que está al pie de la montaña del pelado.',
+  'Se debe haber ido para algún lado de afuera... ¡y no tengo ni idea adónde!',
   'Es chiquito, se va a asustar solo. Tengo que ir a buscarlo y traerlo de vuelta a casa.',
 ];
 
