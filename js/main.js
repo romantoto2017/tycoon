@@ -423,7 +423,7 @@ async function iniciar() {
     return caras[id];
   };
   const abrirMisiones = async () => {
-    if (modo !== 'juego' || UI.visible('misiones') || UI.visible('dialogo')) return;
+    if (modo !== 'juego' || !misiones.abiertas || UI.visible('misiones') || UI.visible('dialogo')) return;
     if (gym.entrenando) gym.dejar(jugador);
     controles.activo = false;
     const lista = await Promise.all(misiones.lista(jugador).map(async (m) => ({ ...m, cara: await caraDe(m.personaje), nombre: PERSONAJES.find((p) => p.id === m.personaje).nombre })));

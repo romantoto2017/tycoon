@@ -78,7 +78,7 @@ Solo Bauti cambia de cuerpo: cada repetición le suma puntos (`estado.bautiGym`)
 
 ## Misiones
 
-Con el botón de la lista (al lado de la configuración, o la tecla M) se abre el panel de misiones: cada una es de un personaje, muestra su avance y se tilda cuando se cumple (`js/misiones.js`, guardadas en `estado.misiones`).
+La sección de misiones aparece cuando la mansión llega al 15% (`MISIONES_DESDE`); antes no está el botón. Con el botón de la lista (al lado de la configuración, o la tecla M) se abre el panel de misiones. Las que piden un progreso mayor (`desde`, como la del Cusi al 50%) se ven grises con un "?" de piedra, sin decir cuánto falta, hasta que se llega; ahí avisa "Nueva misión desbloqueada". En el panel cada una es de un personaje, muestra su avance y se tilda cuando se cumple (`js/misiones.js`, guardadas en `estado.misiones`).
 
 - **Ponerse trabado (Bauti):** entrenar en el Power Camp hasta adelgazar y quedar musculoso del todo.
 - **Rescatar al Cusi (Juanma):** cuando la mansión llega al 50% jugando con Juanma, salta un diálogo (Juanma a la derecha y el texto abajo; se avanza con Continuar, E o Espacio): el Cusi se perdió en el bosque al pie de la montaña del pelado. Solo con Juanma aparece ahí (con cualquier otro no está). Al lado de él, "Agarrar al Cusi (E)": Juanma lo lleva en brazos y, al entrar a la mansión, se cumple la misión. Desde ahí el Cusi vive en el hall de planta baja y se lo ve con cualquier personaje. Si cambiás de personaje con el Cusi en brazos, vuelve al bosque. El Cusi es un nene chiquito y muy cabezón (cara de `assets/caras/cusi.jpeg`).

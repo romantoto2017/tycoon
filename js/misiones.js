@@ -22,14 +22,17 @@ const ESCALA_CUSI = 0.58;
 const CABEZON = 1.95;
 const CASA_CUSI = { x: -4.5, z: -4, angulo: 0.4 }; // en el hall de planta baja, mirando a la puerta
 
+// La sección de misiones aparece cuando la mansión llega a este progreso. Una misión con
+// `desde` se ve gris (un "?" de piedra, sin decir cuánto falta) hasta llegar a ese progreso.
+export const MISIONES_DESDE = 0.15;
 export const MISIONES = [
   {
     id: 'trabado', personaje: 'bauti', titulo: 'Ponerse trabado',
     texto: 'Entrená en el Power Camp hasta adelgazar y quedar musculoso del todo.',
   },
   {
-    id: 'cusi', personaje: 'juanma', titulo: 'Rescatar al Cusi',
-    texto: 'Cuando la mansión llegue al 50%, el Cusi se pierde. Encontralo y llevalo a casa.',
+    id: 'cusi', personaje: 'juanma', titulo: 'Rescatar al Cusi', desde: 0.5,
+    texto: 'El Cusi se perdió. Encontralo y llevalo de vuelta a casa.',
   },
 ];
 
@@ -85,9 +88,10 @@ export class Misiones {
         const c = this.estado.cusi;
         if (c === 'rescatado') { avance = 1; detalle = 'El Cusi está a salvo en la casa'; }
         else if (c === 'perdido' || c === 'llevando') { avance = c === 'llevando' ? 0.75 : 0.4; detalle = c === 'llevando' ? 'Llevalo hasta la mansión' : 'Está en el bosque, al pie de la montaña del pelado'; }
-        else { avance = Math.min(0.99, progreso / 0.5) * 0.3; detalle = progreso < 0.5 ? `Se activa con la mansión al 50% (vas ${Math.floor(progreso * 100)}%)` : 'Jugá con Juanma para empezarla'; }
+        else { avance = 0; detalle = 'Jugá con Juanma para empezarla'; }
       }
-      return { ...m, hecha: this.hecha(m.id), avance, detalle, tuya: jugador.personaje?.id === m.personaje };
+      const bloqueada = !this.hecha(m.id) && progreso < (m.desde || 0);
+      return { ...m, hecha: this.hecha(m.id), bloqueada, avance, detalle, tuya: jugador.personaje?.id === m.personaje };
     });
   }
 
@@ -166,9 +170,35 @@ export class Misiones {
     return p.x > MANSION.x0 && p.x < MANSION.x1 && p.z > MANSION.z0 && p.z < MANSION.z1;
   }
 
+  // ¿Ya se ve la sección de misiones?
+  get abiertas() {
+    return this.tycoon.progreso >= MISIONES_DESDE || Object.keys(this.estado).length > 0;
+  }
+
   actualizar(dt, jugador, jugando) {
     if (!jugador.personaje) return;
     const e = this.estado;
+    // Al pasar el 15% aparece la sección; al pasar el % de una misión, se desbloquea.
+    const progreso = this.tycoon.progreso;
+    const abiertas = this.abiertas;
+    if (abiertas !== this.yaAbiertas) {
+      if (this.yaAbiertas === false && abiertas) {
+        sfx.brillo();
+        this.ui.toast('¡Desbloqueaste las misiones! Tocá el botón de la lista (o M)', 'plata');
+        this.ui.puntoMisiones?.(true);
+      }
+      this.yaAbiertas = abiertas;
+      this.ui.botonMisiones?.(abiertas);
+    }
+    for (const m of MISIONES) {
+      if (!m.desde) continue;
+      const libre = progreso >= m.desde;
+      if (this.libres?.[m.id] === false && libre && abiertas) {
+        this.ui.toast(`¡Nueva misión desbloqueada: ${m.titulo}!`, 'plata');
+        this.ui.puntoMisiones?.(true);
+      }
+      (this.libres ??= {})[m.id] = libre;
+    }
     const id = jugador.personaje.id;
     // Bauti trabado: musculoso al 100%.
     if (jugando && !this.hecha('trabado') && id === 'bauti' && (jugador.personaje.musculo || 0) >= 1) this.completar('trabado', 'Bauti quedó trabado');

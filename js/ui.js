@@ -217,6 +217,19 @@ export function abrirMisiones(lista, alCerrar) {
   ul.innerHTML = '';
   for (const m of lista) {
     const li = document.createElement('li');
+    if (m.bloqueada) {
+      // Bloqueada: gris, con el "?" de piedra y sin pistas.
+      li.className = 'mision bloqueada';
+      li.innerHTML = `
+      <div class="mision-piedra" aria-hidden="true"><span>?</span></div>
+      <div class="mision-info">
+        <h3>???</h3>
+        <p>Seguí construyendo la mansión para desbloquearla.</p>
+      </div>
+      <div class="mision-check" aria-label="Bloqueada"></div>`;
+      ul.appendChild(li);
+      continue;
+    }
     li.className = `mision${m.hecha ? ' hecha' : ''}`;
     li.innerHTML = `
       <div class="mision-cara"><img alt="" src="${m.cara || ''}"><span>${m.nombre}</span></div>
@@ -242,6 +255,7 @@ export function abrirMisiones(lista, alCerrar) {
   $('btn-cerrar-misiones').focus();
 }
 export function puntoMisiones(v) { $('misiones-punto').classList.toggle('oculto', !v); }
+export function botonMisiones(v) { $('btn-misiones').classList.toggle('oculto', !v); }
 
 // ---------- Diálogo de historia ----------
 // Escribe cada línea de a poco; Continuar / E / Espacio / clic completa la línea o pasa a la
