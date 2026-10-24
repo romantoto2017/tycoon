@@ -107,6 +107,7 @@ function dibujarCaraPlaceholder(g, s, p) {
 
 // Busca la foto: primero el archivo indicado en personajes.js, después id.jpg/.jpeg/.png.
 async function cargarFoto(p) {
+  if (p.sinFoto) return null; // gente inventada (la de la ciudad): cara dibujada
   const nombres = [p.foto, `${p.id}.jpg`, `${p.id}.jpeg`, `${p.id}.png`].filter(Boolean);
   for (const n of [...new Set(nombres)]) {
     const img = await cargarImagen(`assets/caras/${n}`);

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { caja, matTex, aleatorio } from './util.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU } from './constantes.js';
+import { LIMITE_MAPA, TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU } from './constantes.js';
 import { crearCielo } from './cielo.js';
 
 // Largo del barrio (en x): llega del gym (-455) al restaurante (+160) con margen.
@@ -12,8 +12,13 @@ export function crearMundo(escena) {
   const cielo = crearCielo(escena);
 
   // Pasto general (el baseplate del terreno es la primera compra). Llega hasta el gym.
-  const pasto = new THREE.Mesh(new THREE.PlaneGeometry(LARGO, 800), matTex('pastoLibre', '#79b957', 6));
+  // Pasto general: del barrio hasta pasando la Ciudad Vecibanda (la autopista va por arriba).
+  const ancho = LIMITE_MAPA.x1 - LIMITE_MAPA.x0 + 1000;
+  // Dividido en pedazos de 100: con dos triángulos gigantes la profundidad pierde precisión y
+  // el pasto tapa la autopista (que está apenas arriba).
+  const pasto = new THREE.Mesh(new THREE.PlaneGeometry(ancho, 2000, Math.ceil(ancho / 100), 20), matTex('pastoLibre', '#79b957', 6));
   pasto.rotation.x = -Math.PI / 2;
+  pasto.position.set((LIMITE_MAPA.x0 + LIMITE_MAPA.x1) / 2, 0, 0);
   escena.add(pasto);
 
   // Bloques quietos del barrio: main.js los pasa al lote para dibujarlos juntos.
@@ -34,7 +39,7 @@ export function crearMundo(escena) {
     // centro: dónde está la cámara (el cielo la sigue).
     // interior: 0 a 1, adentro de un lugar con luces fuertes (ver cielo.js).
     actualizar(dt, t = 0, farolas = false, centro = null, interior = 0) {
-      nubes.actualizar(dt);
+      nubes.actualizar(dt, centro ? centro.x : 0);
       cielo.actualizar(dt, t, farolas, nubes.material.color, centro, interior);
     },
   };
@@ -157,13 +162,15 @@ function crearNubes(escena) {
   escena.add(mesh);
   const o = new THREE.Object3D();
 
-  function actualizar(dt) {
+  // Las nubes dan la vuelta alrededor de la cámara (así también hay cielo con nubes en la ciudad).
+  function actualizar(dt, centroX = 0) {
     let k = 0;
     for (const n of nubes) {
       n.x += n.vel * dt;
       if (n.x > LARGO / 2) n.x = -LARGO / 2;
       for (const p of n.partes) {
-        o.position.set(n.x + p.dx, n.y + p.dy, n.z + p.dz);
+        const x = centroX + THREE.MathUtils.euclideanModulo(n.x - centroX + LARGO / 2, LARGO) - LARGO / 2;
+        o.position.set(x + p.dx, n.y + p.dy, n.z + p.dz);
         o.scale.set(p.w, p.h, p.d);
         o.updateMatrix();
         mesh.setMatrixAt(k++, o.matrix);

@@ -19,6 +19,7 @@ import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre } from './dufre.js';
+import { Ciudad } from './ciudad.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM } from './constantes.js';
 import { crearAK } from './arma.js';
@@ -91,6 +92,10 @@ async function iniciar() {
   const gym = new Gimnasio(escena, UI);
   const misiones = new Misiones(escena, tycoon, UI);
   const dufre = new Dufre(escena, UI);
+  const ciudad = new Ciudad(escena, UI);
+  // Choques de este cuadro: en la ciudad, solo los de alrededor (son muchos); si no, los de siempre.
+  let choquesActuales = colisiones;
+  let avisoAutopista = false;
 
   // ---------- Ajustes ----------
   const ajustes = cargarAjustes();
@@ -163,6 +168,10 @@ async function iniciar() {
   };
   // Un solo botón de acción (como los avisos de Roblox): manejar o dormir, con la E.
   const accion = () => {
+    if (!conduciendo && ciudad.accion(jugador)) {
+      ciudad.hacer(jugador);
+      return;
+    }
     if (misiones.accion(jugador)) {
       misiones.hacer(jugador);
       return;
@@ -265,7 +274,7 @@ async function iniciar() {
     raycaster.setFromCamera(ndc, camara);
     const rayo = raycaster.ray;
     let dist = 160;
-    for (const b of colisiones) {
+    for (const b of choquesActuales) {
       if (b.containsPoint(rayo.origin)) continue;
       if (rayo.intersectBox(b, tmpPunto)) dist = Math.min(dist, tmpPunto.distanceTo(rayo.origin));
     }
@@ -488,7 +497,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ciudad };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -501,7 +510,7 @@ async function iniciar() {
   const distanciaLibre = (origen, dir, maxDist) => {
     rayo.set(origen, dir);
     let d = maxDist;
-    for (const b of colisiones) {
+    for (const b of choquesActuales) {
       if (b.camara === false || b.containsPoint(origen)) continue;
       if (rayo.intersectBox(b, punto)) {
         const dist = punto.distanceTo(origen);
@@ -564,7 +573,7 @@ async function iniciar() {
   const centroGym = new THREE.Vector3((GYM.x0 + GYM.x1) / 2, 0, (GYM.z0 + GYM.z1) / 2);
   const cerca = (c, r) => THREE.MathUtils.clamp((r + 40 - Math.hypot(jugador.pos.x - c.x, jugador.pos.z - c.z)) / 40, 0, 1);
   let luzGym = 0;
-  const luzBarrio = () => Math.max(tycoon.restoAbierto ? cerca(centroResto, 55) : 0, cerca(centroGym, 60));
+  const luzBarrio = () => Math.max(tycoon.restoAbierto ? cerca(centroResto, 55) : 0, cerca(centroGym, 60), ciudad.adentro(jugador.pos) ? 1 : 0);
 
   // ---------- Bucle ----------
   const reloj = new THREE.Clock();
@@ -577,9 +586,17 @@ async function iniciar() {
     const real = reloj.getDelta();
     const dt = Math.min(real, 0.05);
 
+    choquesActuales = ciudad.choquesCerca(jugador.pos, tycoon.auto?.caja) || colisiones;
     if (conduciendo) {
       tycoon.auto.terreno = mundo.altura;
-      tycoon.auto.actualizar(dt, controles.ejes(ejes), colisiones);
+      // En la autopista el auto va mucho más rápido (la ciudad queda a 20 km).
+      const enAutopista = ciudad.enAutopista(tycoon.auto.pos);
+      tycoon.auto.velMax = enAutopista ? 150 : 0;
+      if (enAutopista && !avisoAutopista) {
+        avisoAutopista = true;
+        UI.toast('¡Autopista! Acá el auto vuela: a fondo hasta la Ciudad Vecibanda', 'info');
+      }
+      tycoon.auto.actualizar(dt, controles.ejes(ejes), choquesActuales);
       jugador.pos.copy(tycoon.auto.pos);
     } else if (gym.entrenando) {
       // Entrenando en el gym: moverse lo saca de la máquina; saltar (o el botón) hace la repetición.
@@ -595,9 +612,9 @@ async function iniciar() {
       controles.direccion(dir);
       jugador.autoSalto = controles.esTactil;
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
-      if (jugador.actualizar(dt, dir, controles.saltar, colisiones, tycoon.agua)) sfx.salto();
+      if (jugador.actualizar(dt, dir, controles.saltar, choquesActuales, tycoon.agua)) sfx.salto();
     }
-    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : ''));
+    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -616,6 +633,7 @@ async function iniciar() {
     gym.actualizar(dt, jugador, modo === 'juego');
     misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
     dufre.actualizar(dt, jugador, modo === 'juego');
+    ciudad.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     brillos.actualizar(dt);
     // Adentro del gym se prenden las luces (sube de a poco al entrar, como un fundido).

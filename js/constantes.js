@@ -69,5 +69,11 @@ export const MONTANA = { x: 175, z: -225, r: 125, alto: 92 };
 // Bosque al pie de la montaña, donde se pierde el Cusi (misión de Juanma).
 export const BOSQUE_CUSI = { x: 92, z: -122, r: 20 };
 export const CUSI_ESCONDIDO = { x: 94.5, z: -124.5 };
-// Hasta dónde se puede ir caminando o en auto (el restaurante y el gym quedan lejos).
-export const LIMITE_MAPA = 520;
+// Ciudad Vecibanda: a unos 20 km para el lado del gym, al final de la autopista (que sigue la
+// misma calle de la mansión). Centro de la ciudad en el mundo; la avenida principal es la
+// autopista que entra por el este.
+export const CIUDAD = { x: -20000, z: CALLE_Z };
+// La autopista va desde donde termina la calle del barrio hasta la entrada de la ciudad.
+export const AUTOPISTA = { x0: CIUDAD.x + 340, x1: -640, z: CALLE_Z, medioAncho: 12 };
+// Hasta dónde se puede ir caminando o en auto: el barrio, la autopista y la ciudad.
+export const LIMITE_MAPA = { x0: CIUDAD.x - 480, x1: 520, z0: -520, z1: 520 };

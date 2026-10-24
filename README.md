@@ -118,3 +118,14 @@ El progreso se guarda solo en el navegador (localStorage). "Reiniciar partida" e
 - **La moneda** tiene la cara del Negro Bebé: `assets/moneda.png`, hecha con `herramientas/moneda.py` desde `assets/especiales/moneda.jpeg`.
 - **Pasillos:** de las pinturas famosas solo quedó la Gioconda, con la cara de Bauti (bautizoom) puesta acá con OpenCV (`herramientas/gioconda_bauti.py`, sin servicios de IA externos) y su cartel de siempre. En los otros lugares van Masacre, Toto lindo, Veneca y el video de la flauta del pelado, sin cartel. Las pinturas famosas de las habitaciones y del restaurante se sacaron.
 - **Flauta del Pelado:** objeto Vecibanda nuevo (flauta dulce verde lima en su pedestal).
+
+## Ciudad Vecibanda y la autopista
+
+Siguiendo la calle de la mansión para el lado del gym arranca la **autopista** (dos carriles por mano, barandas, faroles, árboles y carteles verdes con los km). Son unos 19 km hasta la **Ciudad Vecibanda**: en auto, sobre la autopista, va mucho más rápido (hasta 150 en vez de 34) y se llega en unos 2 minutos; caminando son más de 20. Al salir de la autopista el auto frena solo a la velocidad normal.
+
+La ciudad (`js/ciudad.js`) está armada como una de verdad: una cuadrícula de 8 x 8 manzanas con dos avenidas anchas que se cruzan en el medio (una es la continuación de la autopista), rascacielos de vidrio en el centro, alrededor edificios de 3 a 7 pisos con negocios y toldos sobre la vereda (farmacia, pizzería, kiosco, café, panadería...), y en las afueras casas con jardín y techo de dos aguas. Hay plaza con fuente y la moneda gigante, el Banco Vecibanda (escalinata, columnas y frontón), el Hotel VB, el Super Vecibanda con estacionamiento, una estación de servicio, un parque con juegos, semáforos, sendas peatonales, faroles que se prenden de noche, autos estacionados y gente caminando por las veredas (no hacen nada).
+
+- **Cancha de fútbol:** la pelota se patea caminando contra ella; gol en los arcos.
+- **Cancha de básquet:** al lado de la pelota aparece "Tirar al aro (E)". Sale en parábola al aro más cerca; de cerca entra casi siempre y de lejos se erra más (los de afuera de la línea de 3 valen 3).
+
+Para la Chromebook: cada manzana es una sola malla por material (lo que no se ve no se dibuja), los choques de la ciudad están en una grilla (solo se miran los de alrededor) y la ciudad se arma recién cuando vas para ese lado, de a una manzana por cuadro, así no se traba.

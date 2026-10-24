@@ -117,8 +117,8 @@ export class Jugador {
 
   moverHorizontal(dt, colisiones) {
     const p = this.pos;
-    p.x = THREE.MathUtils.clamp(p.x + this.vel.x * dt, -LIMITE_MAPA, LIMITE_MAPA);
-    p.z = THREE.MathUtils.clamp(p.z + this.vel.z * dt, -LIMITE_MAPA, LIMITE_MAPA);
+    p.x = THREE.MathUtils.clamp(p.x + this.vel.x * dt, LIMITE_MAPA.x0, LIMITE_MAPA.x1);
+    p.z = THREE.MathUtils.clamp(p.z + this.vel.z * dt, LIMITE_MAPA.z0, LIMITE_MAPA.z1);
     this.trabado = 0;
     for (const b of colisiones) {
       if (b.max.y <= p.y + PASO || b.min.y >= p.y + this.alto) continue;

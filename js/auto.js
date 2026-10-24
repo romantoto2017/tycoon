@@ -400,22 +400,27 @@ export class Auto {
   // ejes: { x: doblar (+ derecha), y: acelerar (+ adelante) }.
   actualizar(dt, ejes, colisiones) {
     const acel = ejes.y;
+    // En la autopista (velMax alto, lo pone main.js) acelera más y llega mucho más rápido.
+    const velMax = this.velMax || VEL_MAX;
+    const empuje = velMax > VEL_MAX ? 32 : 22;
     if (acel) {
       const frenando = acel * this.vel < 0;
-      this.vel += acel * (frenando ? 45 : 22) * dt;
+      this.vel += acel * (frenando ? 45 : empuje) * dt;
     } else {
       this.vel *= Math.max(0, 1 - 1.6 * dt);
       if (Math.abs(this.vel) < 0.2) this.vel = 0;
     }
-    this.vel = THREE.MathUtils.clamp(this.vel, VEL_ATRAS, VEL_MAX);
+    // Al salir de la autopista frena de a poco hasta la velocidad normal.
+    if (this.vel > velMax) this.vel = Math.max(velMax, this.vel - 70 * dt);
+    this.vel = Math.max(this.vel, VEL_ATRAS);
     this.direccion += (ejes.x * 0.45 - this.direccion) * Math.min(1, dt * 8);
     this.angulo -= this.direccion * 3.6 * THREE.MathUtils.clamp(this.vel / 10, -1, 1) * dt;
 
     const p = this.pos;
     const antesX = p.x;
     const antesZ = p.z;
-    p.x = THREE.MathUtils.clamp(p.x + Math.sin(this.angulo) * this.vel * dt, -LIMITE_MAPA, LIMITE_MAPA);
-    p.z = THREE.MathUtils.clamp(p.z + Math.cos(this.angulo) * this.vel * dt, -LIMITE_MAPA, LIMITE_MAPA);
+    p.x = THREE.MathUtils.clamp(p.x + Math.sin(this.angulo) * this.vel * dt, LIMITE_MAPA.x0, LIMITE_MAPA.x1);
+    p.z = THREE.MathUtils.clamp(p.z + Math.cos(this.angulo) * this.vel * dt, LIMITE_MAPA.z0, LIMITE_MAPA.z1);
     let choque = false;
     for (const b of colisiones) {
       if (b === this.caja || b.max.y < 0.35 || b.min.y > 2.5) continue;
