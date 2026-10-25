@@ -34,7 +34,10 @@ export const MISIONES = [
     id: 'cusi', personaje: 'juanma', titulo: 'Rescatar al Cusi', desde: 0.5,
     texto: 'El Cusi se perdió. Encontralo y llevalo de vuelta a casa.',
   },
+  // De cualquier personaje (personaje: null). Sin pistas: solo el texto.
+  { id: 'empilchado', personaje: null, titulo: 'Empilchado', texto: 'Comprate 5 pilchas ricas' },
 ];
+export const PILCHAS = 5;
 
 const DIALOGO_CUSI = [
   '¿Eh? ¿Y el Cusi? ¿Alguien vio al Cusi?',
@@ -81,7 +84,10 @@ export class Misiones {
     return MISIONES.map((m) => {
       let avance = 0;
       let detalle = '';
-      if (m.id === 'trabado') {
+      if (m.id === 'empilchado') {
+        avance = Math.min(1, (e.ropa?.length || 0) / PILCHAS);
+        detalle = '';
+      } else if (m.id === 'trabado') {
         avance = Math.min(1, (e.bautiGym || 0) / (BAUTI_GYM.adelgazar + BAUTI_GYM.musculo));
         detalle = this.hecha('trabado') ? '¡Bauti quedó trabado!' : `Entrenamiento: ${Math.floor(avance * 100)}%`;
       } else {
@@ -91,8 +97,13 @@ export class Misiones {
         else { avance = 0; detalle = 'Jugá con Juanma para empezarla'; }
       }
       const bloqueada = progreso < (m.desde || 0);
-      return { ...m, hecha: this.hecha(m.id), bloqueada, avance, detalle, tuya: jugador.personaje?.id === m.personaje };
+      return { ...m, hecha: this.hecha(m.id), bloqueada, avance, detalle, tuya: !m.personaje || jugador.personaje?.id === m.personaje };
     });
+  }
+
+  // Después de cada compra de ropa (main.js).
+  revisarRopa() {
+    if (!this.hecha('empilchado') && (this.tycoon.estado.ropa?.length || 0) >= PILCHAS) this.completar('empilchado', 'Empilchado');
   }
 
   // ---------- El Cusi ----------

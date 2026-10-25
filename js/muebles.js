@@ -88,6 +88,7 @@ function sala(k, g, lugar, piso, nativo) {
     modelo(nombre, x, y0, z, rotY = 0, opts = {}) {
       const m = s.plano(k.modelo(nombre, opts), x, y0, z, rotY);
       if (opts.cama) k.alCama?.(m.position.clone()); // para poder dormir (main.js)
+      if (opts.ropero) k.alRopero?.(m.position.clone()); // para cambiarse la ropa (main.js)
       return m;
     },
     medida: (nombre, opts) => k.medida(nombre, opts),
@@ -268,7 +269,7 @@ function espejo(k, p) {
 }
 
 function placard(k, p, ancho) {
-  p.modelo('bookcaseClosedWide', 0, 0, { ancho, alto: 7, fondo: 1.3, atras: -0.65 });
+  p.modelo('bookcaseClosedWide', 0, 0, { ancho, alto: 7, fondo: 1.3, atras: -0.65, ropero: true });
 }
 
 // Alfombra: color = modelo de alfombra con borde; textura = piso (baños).

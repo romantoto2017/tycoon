@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { CIUDAD as C, AUTOPISTA as AU } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
-import { cargarCabeza } from './texturas.js';
+import { cargarCabeza, cargarImagen, crearEtiqueta } from './texturas.js';
+import { TIENDAS } from '../data/ropa.js';
+import { vestido, cabezaManiqui, MANIQUI } from './vestir.js';
+import { crearZapatilla } from './zapatillas.js';
 import { aleatorio } from './util.js';
 import { sfx } from './sfx.js';
 
@@ -277,10 +280,12 @@ export class Ciudad {
       vidrio: new THREE.MeshLambertMaterial({ vertexColors: true, map: texVidrio() }),
       luz: new THREE.MeshBasicMaterial({ vertexColors: true }),
       carteles: new THREE.MeshBasicMaterial({ map: texCarteles(), side: THREE.DoubleSide }),
+      cristal: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.28, depthWrite: false }),
     };
     this.pendientes = null; // manzanas que faltan armar
     this.lista = false;
     this.peatones = [];
+    this.figuras = []; // maniquíes y vendedores (quietos)
     this.estuvo = false;
     this.crearAutopista();
   }
@@ -484,7 +489,7 @@ export class Ciudad {
     const anillo = Math.max(Math.abs(i - 3.5), Math.abs(j - 3.5));
     const clave = `${i},${j}`;
     const especial = {
-      '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel', '5,3': 'verdu',
+      '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel', '5,3': 'verdu', '3,4': 'kicks', '4,4': 'drip', '2,4': 'futbolera',
     }[clave];
     if (especial === 'plaza') this.plaza(c, lote, rnd);
     else if (especial === 'banco') this.banco(c, lote, rnd);
@@ -494,6 +499,7 @@ export class Ciudad {
     else if (especial === 'parque') this.parque(c, lote, rnd);
     else if (especial === 'super') this.super(c, lote, rnd);
     else if (especial === 'verdu') this.verduleria(c, lote, rnd);
+    else if (TIENDAS.some((t) => t.id === especial)) this.tienda(c, lote, rnd, TIENDAS.find((t) => t.id === especial));
     else if (especial === 'hotel') this.torre(c, lote.x0 + 6, lote.z0 + 6, lote.x1 - 6, lote.z1 - 6, 76, rnd, { cartel: 11 });
     else if (anillo < 1) this.centro(c, lote, rnd);
     else if (anillo < 2) this.comercial(c, lote, rnd, 3, 7);
@@ -987,6 +993,153 @@ export class Ciudad {
     this.verdu = { x: xm, z: z1 - 2.2, xVerdulero: xm, zVerdulero: z1 - 6.5 };
   }
 
+  // Tienda de ropa sobre la avenida (el frente mira a -z): vidriera con maniquíes vestidos con
+  // la ropa de la tienda, percheros, mostrador al fondo con el que atiende y el cartel arriba.
+  // Atrás, un edificio. Las personas (maniquíes y vendedor) se ponen en crearPeatones().
+  tienda(c, lote, rnd, T) {
+    c.piso(lote.x0, lote.z0, lote.x1, lote.z1, PISO + 0.02, '#b9b4aa');
+    this.edificio(c, lote.x0, lote.z0 + 30, lote.x1, lote.z1, 4 + Math.floor(rnd() * 3), rnd, { eje: 'z', lado: 1 }, true);
+    const xm = Math.round((lote.x0 + lote.x1) / 2);
+    const x0 = xm - 16;
+    const x1 = xm + 16;
+    const zf = lote.z0 + 2; // vidriera
+    const zb = lote.z0 + 26; // pared del fondo
+    const alto = PISO + 9;
+    const pared = T.pared;
+    c.piso(x0, zf, x1, zb, PISO + 0.05, T.id === 'drip' ? '#3a3a40' : '#ecebe7');
+    c.caja(x0, PISO, zb - 0.6, x1, alto, zb, pared);
+    c.caja(x0, PISO, zf, x0 + 0.6, alto, zb, pared);
+    c.caja(x1 - 0.6, PISO, zf, x1, alto, zb, pared);
+    c.caja(x0 - 0.3, alto, zf - 0.3, x1 + 0.3, alto + 0.6, zb + 0.3, '#2b2b2b');
+    c.caja(x0 + 0.6, alto - 0.05, zf + 0.2, x1 - 0.6, alto, zb - 0.6, T.id === 'drip' ? '#1c1c20' : '#fafafa', { abajo: true }); // cielorraso
+    // Luces del techo (paneles).
+    for (let x = x0 + 5; x < x1 - 3; x += 7) for (let z = zf + 5; z < zb - 3; z += 7) c.caja(x - 1.2, alto - 0.12, z - 0.4, x + 1.2, alto - 0.05, z + 0.4, '#fffbe8', { lados: 'luz', abajo: true });
+    this.solido(x0, 0, zb - 0.6, x1, alto, zb);
+    this.solido(x0, 0, zf, x0 + 0.6, alto, zb);
+    this.solido(x1 - 0.6, 0, zf, x1, alto, zb);
+    this.solido(x0 - 0.3, alto, zf - 0.3, x1 + 0.3, alto + 0.6, zb + 0.3);
+    // Vidriera con la puerta en el medio, y el frente de arriba (donde va el cartel).
+    const puerta = 3;
+    for (const [a, b] of [[x0 + 0.6, xm - puerta], [xm + puerta, x1 - 0.6]]) {
+      c.caja(a, PISO, zf, b, PISO + 6, zf + 0.12, '#cfe6f5', { lados: 'cristal' });
+      this.solido(a, 0, zf, b, PISO + 6, zf + 0.12);
+      for (let x = a; x <= b; x += (b - a) / 3) c.caja(x - 0.08, PISO, zf - 0.04, x + 0.08, PISO + 6, zf + 0.16, '#222222');
+    }
+    c.caja(x0, PISO + 6, zf - 0.1, x1, alto, zf + 0.3, T.fondo);
+    this.solido(x0, PISO + 6, zf - 0.1, x1, alto, zf + 0.3);
+    // Pedestales de los maniquíes (adentro, contra la vidriera).
+    const maniquies = [xm - 11, xm - 6.5, xm + 6.5, xm + 11];
+    for (const x of maniquies.slice(0, 3)) {
+      c.caja(x - 1.4, PISO, zf + 2.2, x + 1.4, PISO + 0.6, zf + 4.8, '#f2f2f2', { arriba: '#d9d9de' });
+      this.solido(x - 1.4, 0, zf + 2.2, x + 1.4, PISO + 0.6, zf + 4.8);
+    }
+    // Percheros a los costados con prendas colgadas de los colores de la tienda.
+    const colores = this.coloresTienda(T.id);
+    for (const lado of [-1, 1]) {
+      const x = lado < 0 ? x0 + 2.2 : x1 - 2.2;
+      c.caja(x - 0.08, PISO, zf + 8, x + 0.08, PISO + 5, zf + 8.16, '#9e9e9e');
+      c.caja(x - 0.08, PISO, zf + 18, x + 0.08, PISO + 5, zf + 18.16, '#9e9e9e');
+      c.caja(x - 0.06, PISO + 4.9, zf + 8, x + 0.06, PISO + 5.02, zf + 18.16, '#bdbdbd');
+      for (let k = 0; k < 14; k++) {
+        const z = zf + 8.6 + k * 0.68;
+        c.caja(x - 0.9, PISO + 2.2, z, x + 0.9, PISO + 4.8, z + 0.18, colores[k % colores.length]);
+      }
+      this.solido(x - 1, 0, zf + 8, x + 1, PISO + 5, zf + 18.2);
+    }
+    // Mostrador al fondo.
+    c.caja(xm - 5, PISO, zb - 6.5, xm + 5, PISO + 2.2, zb - 5.3, '#ffffff', { arriba: '#2b2b2b' });
+    this.solido(xm - 5, 0, zb - 6.5, xm + 5, PISO + 2.2, zb - 5.3);
+    // Estantes en la pared del fondo (en Kicks, con zapatillas de verdad arriba).
+    for (const y of [PISO + 2.5, PISO + 4.3, PISO + 6.1]) {
+      c.caja(x0 + 2, y - 0.1, zb - 1.3, xm - 6, y, zb - 0.6, '#e0e0e0');
+      c.caja(xm + 6, y - 0.1, zb - 1.3, x1 - 2, y, zb - 0.6, '#e0e0e0');
+    }
+    this.tiendas ??= {};
+    this.tiendas[T.id] = { T, xm, zf, zb, maniquies, estantes: [[x0 + 2, xm - 6], [xm + 6, x1 - 2]] };
+  }
+
+  coloresTienda(id) {
+    return { kicks: ['#1b1b1b', '#e8e8e8', '#c62828', '#9e9e9e'], drip: ['#111111', '#8eb4f1', '#f2f2f2', '#54472b', '#2a2a2a'], futbolera: ['#0d47a1', '#f2f2f4', '#111111', '#f6c90e', '#202e5a'] }[id];
+  }
+
+  // Cartel con el nombre (o el logo) y lo que va adentro de la tienda: maniquíes, vendedor y,
+  // en Kicks, zapatillas en los estantes.
+  async armarTienda(t) {
+    const { T, xm, zf, zb, maniquies, estantes } = t;
+    const c = document.createElement('canvas');
+    c.width = 1024;
+    c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = T.fondo;
+    g.fillRect(0, 0, 1024, 256);
+    const logo = T.logo ? await cargarImagen(T.logo) : null;
+    if (logo) {
+      // El logo es negro sobre blanco: se recorta al centro.
+      g.drawImage(logo, logo.width * 0.12, logo.height * 0.3, logo.width * 0.76, logo.height * 0.4, 262, 28, 500, 200);
+    } else {
+      g.fillStyle = T.letras;
+      g.font = '900 150px Arial, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(T.nombre, 512, 136, 960);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const cartel = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: tex }));
+    cartel.position.set(xm, PISO + 7.5, zf - 0.12);
+    cartel.rotation.y = Math.PI;
+    this.grupo.add(cartel);
+    // Maniquíes con la ropa de la tienda.
+    for (let i = 0; i < T.maniquies.length; i++) {
+      const m = crearPersonaje(MANIQUI, cabezaManiqui(), await vestido(T.maniquies[i]));
+      m.grupo.position.set(maniquies[i], PISO + 0.6, zf + 3.5);
+      m.grupo.rotation.y = Math.PI;
+      m.animar(0.016, 0, true);
+      this.grupo.add(m.grupo);
+      this.figuras.push(m);
+    }
+    // El que atiende, vestido con ropa de la tienda.
+    const v = T.vendedor;
+    const p = { id: `vendedor_${T.id}`, nombre: ' ', sinFoto: true, piel: v.piel, pelo: v.pelo, peinado: v.peinado, remera: v.remera, pantalon: v.pantalon };
+    const cab = await cargarCabeza(p);
+    if (!cab.dibujada) {
+      dibujarCara(cab.frente, p.piel, p.pelo);
+      cab.dibujada = true;
+    }
+    const mod = crearPersonaje(p, cab, await vestido(v.ropa));
+    mod.grupo.position.set(xm, PISO, zb - 3.4);
+    mod.grupo.rotation.y = Math.PI;
+    this.grupo.add(mod.grupo);
+    t.vendedor = mod;
+    t.cara = cab.frente;
+    t.etiqueta = crearEtiqueta([{ texto: v.nombre, tam: 60, color: '#ffffff' }], 6);
+    t.etiqueta.sprite.position.y = 7;
+    mod.grupo.add(t.etiqueta.sprite);
+    t.globo = 0;
+    this.figuras.push(mod);
+    if (T.id === 'kicks') {
+      const ids = ['jordan1', 'jordanbalvin', 'nikeshox', 'nikeshoxr4', 'niketn', 'jordan1'];
+      let k = 0;
+      for (const [a, b] of estantes) {
+        for (const y of [PISO + 2.5, PISO + 4.3]) {
+          for (let n = 0; n < 2; n++) {
+            const z = crearZapatilla(ids[k++ % ids.length]);
+            z.scale.setScalar(0.75);
+            z.rotation.y = Math.PI / 2 * (n ? 1 : -1);
+            z.position.set(a + (b - a) * (0.3 + n * 0.4), y, zb - 0.95);
+            this.grupo.add(z);
+          }
+        }
+      }
+    }
+  }
+
+  // El que atiende dice algo (arriba de la cabeza, unos segundos).
+  decir(t, texto) {
+    t.etiqueta.actualizar([{ texto: t.T.vendedor.nombre, tam: 60, color: '#ffffff' }, { texto, tam: 40 }]);
+    t.globo = 5;
+  }
+
   // ---------- Canchas jugables ----------
   crearJuegos() {
     const pelota = (r, color, x, z, raya) => {
@@ -1126,9 +1279,19 @@ export class Ciudad {
     return v && jugador.pos.y < 3 && Math.hypot(jugador.pos.x - (C.x + v.x), jugador.pos.z - (C.z + v.z)) < 4.5;
   }
 
+  // La tienda en cuyo mostrador estás (o null).
+  tiendaCerca(jugador) {
+    if (!this.tiendas || jugador.pos.y > 3) return null;
+    for (const t of Object.values(this.tiendas)) {
+      if (t.vendedor && Math.hypot(jugador.pos.x - (C.x + t.xm), jugador.pos.z - (C.z + t.zb - 8)) < 4.5) return t;
+    }
+    return null;
+  }
+
   accion(jugador) {
     if (!this.lista || !this.adentro(jugador.pos)) return '';
     if (this.cercaVerdu(jugador)) return `Comprar lechuga $${this.precioLechuga} (E)`;
+    if (this.tiendaCerca(jugador)) return 'Ver la ropa (E)';
     const p = this.pelotaBasquet;
     if (p.tiro) return '';
     const d = p.m.position.distanceTo(jugador.pos.clone().setY(p.m.position.y));
@@ -1136,7 +1299,9 @@ export class Ciudad {
   }
 
   hacer(jugador) {
-    if (this.cercaVerdu(jugador)) this.alComprarLechuga?.();
+    const t = this.tiendaCerca(jugador);
+    if (t) this.alTienda?.(t);
+    else if (this.cercaVerdu(jugador)) this.alComprarLechuga?.();
     else if (this.accion(jugador)) this.tirar(jugador);
   }
 
@@ -1172,6 +1337,7 @@ export class Ciudad {
       this.peatones.push(peaton);
       this.moverPeaton(peaton, 0);
     }
+    for (const t of Object.values(this.tiendas || {})) await this.armarTienda(t);
     // El verdulero, parado atrás del mostrador.
     const v = this.verdu;
     if (v) {
@@ -1231,6 +1397,10 @@ export class Ciudad {
       if (ver) this.moverPeaton(p, dt);
     }
     this.verdulero?.animar(dt, 0, true);
+    for (const t of Object.values(this.tiendas || {})) {
+      t.vendedor?.animar(dt, 0, true);
+      if (t.globo > 0 && (t.globo -= dt) <= 0) t.etiqueta.actualizar([{ texto: t.T.vendedor.nombre, tam: 60, color: '#ffffff' }]);
+    }
     this.futbolActualizar(dt, jugador);
     this.basquetActualizar(dt, jugador);
   }

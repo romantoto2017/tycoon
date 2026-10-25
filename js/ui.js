@@ -237,7 +237,7 @@ export function abrirMisiones(lista, alCerrar) {
         <h3>${m.titulo}</h3>
         <p>${m.texto}</p>
         <div class="mision-barra" role="progressbar" aria-valuenow="${Math.round(m.avance * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.round(m.avance * 100)}%"></i></div>
-        <small>${m.detalle}${!m.hecha && !m.tuya ? ` · Solo con ${m.nombre}` : ''}</small>
+        ${m.detalle || (!m.hecha && !m.tuya) ? `<small>${m.detalle}${!m.hecha && !m.tuya ? `${m.detalle ? ' · ' : ''}Solo con ${m.nombre}` : ''}</small>` : ''}
       </div>
       <div class="mision-check" aria-label="${m.hecha ? 'Cumplida' : 'Sin cumplir'}">${m.hecha ? '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</div>`;
     ul.appendChild(li);
@@ -296,4 +296,96 @@ export function dialogo({ nombre, cara, remera, lineas, alTerminar }) {
   window.addEventListener('keydown', teclas, true);
   mostrar('dialogo', true);
   escribir();
+}
+
+// ---------- Tienda de ropa: catálogo ----------
+// prendas: [{ id, nombre, foto, precio, tuya }]. alComprar(id) devuelve true si se compró.
+export function abrirCatalogo({ titulo, sub, prendas, plata, alComprar, alCerrar }) {
+  $('catalogo-titulo').textContent = titulo;
+  $('catalogo-sub').textContent = sub;
+  const lista = $('catalogo-lista');
+  const dibujar = () => {
+    lista.innerHTML = '';
+    for (const p of prendas) {
+      const b = document.createElement('button');
+      b.className = 'prenda';
+      const caro = !p.tuya && plata() < p.precio;
+      b.innerHTML = `<span class="foto"><img alt="" src="${p.foto}"></span><b>${p.nombre}</b>${p.tuya ? '<span class="estado">Ya la tenés</span>' : `<span class="precio${caro ? ' caro' : ''}">$${formato(p.precio)}</span>`}`;
+      b.setAttribute('aria-label', p.tuya ? `${p.nombre}: ya la tenés` : `Comprar ${p.nombre} por $${formato(p.precio)}`);
+      b.addEventListener('click', () => {
+        if (p.tuya) return;
+        if (alComprar(p.id)) { p.tuya = true; dibujar(); }
+      });
+      lista.appendChild(b);
+    }
+  };
+  const cerrar = () => {
+    mostrar('catalogo', false);
+    window.removeEventListener('keydown', teclas);
+    alCerrar();
+  };
+  const teclas = (e) => { if (e.code === 'Escape') cerrar(); };
+  $('btn-cerrar-catalogo').onclick = cerrar;
+  $('catalogo').onclick = (e) => { if (e.target.id === 'catalogo') cerrar(); };
+  window.addEventListener('keydown', teclas);
+  dibujar();
+  mostrar('catalogo', true);
+  return { cerrar, dibujar };
+}
+
+// ---------- Ropero ----------
+// slots: [{ id, nombre }]; tuyas: prendas compradas; puesto: { slot: id }. Tocar una prenda
+// se la prueba (alProbar con la ropa nueva); "Ponérmelo" guarda (alListo) y "Cancelar" no.
+export function abrirRopero({ titulo, slots, tuyas, puesto, aviso, alProbar, alListo, alCerrar }) {
+  $('ropero-titulo').textContent = titulo;
+  const ropa = { ...puesto };
+  const lista = $('ropero-lista');
+  const dibujar = () => {
+    lista.innerHTML = '';
+    if (aviso) {
+      lista.innerHTML = `<p class="ropero-vacio">${aviso}</p>`;
+      return;
+    }
+    if (!tuyas.length) {
+      lista.innerHTML = '<p class="ropero-vacio">Todavía no tenés ropa.</p>';
+      return;
+    }
+    for (const s of slots) {
+      const deSlot = tuyas.filter((p) => p.slot === s.id);
+      if (!deSlot.length) continue;
+      const h = document.createElement('h3');
+      h.textContent = s.nombre;
+      lista.appendChild(h);
+      const grilla = document.createElement('div');
+      grilla.className = 'ropero-grilla';
+      const opcion = (p) => {
+        const b = document.createElement('button');
+        b.className = `prenda${p ? '' : ' nada'}`;
+        b.setAttribute('aria-pressed', String((ropa[s.id] || null) === (p ? p.id : null)));
+        b.innerHTML = p ? `<span class="foto"><img alt="" src="${p.foto}"></span><b>${p.nombre}</b>` : '<span class="foto">Lo de siempre</span><b>Sin nada de acá</b>';
+        b.addEventListener('click', () => {
+          if (p) ropa[s.id] = p.id;
+          else delete ropa[s.id];
+          dibujar();
+          alProbar({ ...ropa });
+        });
+        grilla.appendChild(b);
+      };
+      opcion(null);
+      deSlot.forEach(opcion);
+      lista.appendChild(grilla);
+    }
+  };
+  const cerrar = () => {
+    mostrar('ropero', false);
+    window.removeEventListener('keydown', teclas);
+    alCerrar();
+  };
+  const teclas = (e) => { if (e.code === 'Escape') cerrar(); };
+  $('btn-ropero-cancelar').onclick = cerrar;
+  $('btn-ropero-listo').onclick = () => { alListo({ ...ropa }); cerrar(); };
+  $('btn-ropero-listo').disabled = !!aviso;
+  window.addEventListener('keydown', teclas);
+  dibujar();
+  mostrar('ropero', true);
 }

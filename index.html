@@ -109,6 +109,33 @@
     </div>
   </div>
 
+  <!-- Tienda de ropa: catálogo del que atiende -->
+  <div id="catalogo" class="pantalla catalogo oculto" role="dialog" aria-modal="true" aria-labelledby="catalogo-titulo">
+    <div class="catalogo-caja">
+      <header>
+        <h2 id="catalogo-titulo">KICKS</h2>
+        <p id="catalogo-sub">Catálogo</p>
+        <button id="btn-cerrar-catalogo" class="cat-cerrar" aria-label="Cerrar">✕</button>
+      </header>
+      <div id="catalogo-lista" class="catalogo-lista"></div>
+    </div>
+  </div>
+
+  <!-- Ropero de la mansión: probarse y ponerse la ropa comprada -->
+  <div id="ropero" class="pantalla ropero oculto" role="dialog" aria-modal="true" aria-labelledby="ropero-titulo">
+    <div class="ropero-caja">
+      <div class="ropero-izq">
+        <h2 id="ropero-titulo">Ropero</h2>
+        <canvas id="ropero-vista" class="ropero-vista" aria-label="Cómo te queda"></canvas>
+        <div class="ropero-botones">
+          <button id="btn-ropero-listo" class="btn verde">Ponérmelo</button>
+          <button id="btn-ropero-cancelar" class="btn gris">Cancelar</button>
+        </div>
+      </div>
+      <div id="ropero-lista" class="ropero-lista"></div>
+    </div>
+  </div>
+
   <!-- Gym Power Camp: panel mientras entrenás (no tapa el juego: va abajo) -->
   <section id="panel-gym" class="panel-gym oculto" aria-label="Entrenando">
     <header class="pg-cabeza">

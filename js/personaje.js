@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { caja, GEO_CAJA } from './util.js';
 import { texturaDeCanvas, recorteCanvas } from './texturas.js';
+import { crearZapatilla, LARGO as LARGO_ZAPA } from './zapatillas.js';
 
 const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
 
@@ -57,7 +58,9 @@ function canvasKipa() {
 
 // Muñeco de bloques. Mira hacia +Z. Los pies están en y = 0 (alto total ~5.4).
 // cabeza: lo que devuelve cargarCabeza() (las 6 texturas y el color de piel de la foto).
-export function crearPersonaje(p, cabezaTex) {
+// vestido: (opcional) la ropa de las tiendas puesta, como la arma vestir.js:
+// { torso, piernas, pies, cabeza } con los canvas de cada prenda.
+export function crearPersonaje(p, cabezaTex, vestido = null) {
   const grupo = new THREE.Group();
   // Manos sin iluminación, igual que la cabeza, para que el tono de piel coincida.
   const matPiel = new THREE.MeshBasicMaterial({ color: cabezaTex.piel || p.piel || '#f1c27d' });
@@ -74,13 +77,55 @@ export function crearPersonaje(p, cabezaTex) {
   const anchoPanza = segun(1.5, 2.2);
   const extras = []; // texturas y materiales propios, para liberar al cambiar de personaje
 
+  const tex = (c) => { const t = texturaDeCanvas(c); extras.push(t); return t; };
+  const lambert = (t) => { const m = new THREE.MeshLambertMaterial(t.isTexture ? { map: t } : { color: t }); extras.push(m); return m; };
   // Remera con foto: frente con el diseño y el resto (espalda, costados, mangas) con la tela.
   let remera = p.remera;
   let torso;
   let panzaFrente = null;
-  if (cabezaTex.ropa) {
-    const tex = (c) => { const t = texturaDeCanvas(c); extras.push(t); return t; };
-    const lambert = (t) => { const m = new THREE.MeshLambertMaterial({ map: t }); extras.push(m); return m; };
+  let mangaArriba = null;
+  let mangaAbajo = null;
+  let mangasLargas = p.mangasLargas;
+  let mangaLarga = null; // { arriba, medio, abajo }: manga larga con foto (y la mano asoma)
+  let capucha = p.capucha;
+  let cuelloAlto = p.cuelloAlto;
+  let cuello = p.cuello;
+  const vt = vestido?.torso;
+  if (vt) {
+    // Prenda de la tienda: el frente se arma a la medida del torso (con la tela a los costados,
+    // así el estampado no se deforma de más), la tela atrás y en los costados, y las mangas.
+    const pr = vt.prenda;
+    const tela = lambert(tex(vt.tela));
+    const alto = 512;
+    const ancho = Math.round((alto * anchoTorso) / 2);
+    const c = document.createElement('canvas');
+    c.width = ancho;
+    c.height = alto;
+    const g = c.getContext('2d');
+    g.fillStyle = g.createPattern(vt.tela, 'repeat');
+    g.fillRect(0, 0, ancho, alto);
+    const w = Math.min(ancho, alto * (pr.aspecto || 0.7) * 1.45);
+    g.drawImage(vt.frente, (ancho - w) / 2, 0, w, alto);
+    const u0 = (anchoTorso / 2 - anchoPanza / 2) / anchoTorso;
+    torso = [tela, tela, tela, tela, lambert(tex(c)), tela];
+    panzaFrente = [tela, tela, tela, tela, lambert(tex(recorteCanvas(c, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2))), tela];
+    remera = tela;
+    mangasLargas = !!pr.largas;
+    if (vt.manga && mangasLargas) {
+      // Manga larga sacada de la foto, del hombro al puño: cada pedazo del brazo lleva su parte
+      // (así el dibujo sigue continuo) y abajo asoma la mano. Con rayas (rayas: true), solo
+      // del lado de afuera del brazo.
+      const corte = (v0, v1) => lambert(tex(recorteCanvas(vt.manga, 0, v0, 1, v1)));
+      const cara = (m) => (lado) => (pr.rayas
+        ? (lado < 0 ? [tela, m, tela, tela, tela, tela] : [m, tela, tela, tela, tela, tela])
+        : [m, m, tela, tela, m, m]);
+      const L = 1.8;
+      mangaLarga = { arriba: cara(corte(0, 0.8 / L)), medio: cara(corte(0.8 / L, 1 / L)), abajo: cara(corte(1 / L, 1)) };
+    } else if (pr.mangas) { mangaArriba = lambert(pr.mangas[0]); mangaAbajo = lambert(pr.mangas[1]); }
+    capucha = pr.capucha ? (typeof pr.capucha === 'string' ? pr.capucha : pr.tela) : null;
+    cuelloAlto = pr.cuello ? pr.tela : null;
+    cuello = null;
+  } else if (cabezaTex.ropa) {
     const tela = lambert(tex(cabezaTex.ropa.tela));
     torso = [tela, tela, tela, tela, lambert(tex(cabezaTex.ropa.frente)), tela];
     // La panza muestra la parte del frente que tapa, así el diseño sigue continuo.
@@ -96,27 +141,62 @@ export function crearPersonaje(p, cabezaTex) {
   const CADERA = 2;
   // Brazo con codo a la mitad (y = -1): manga arriba y piel abajo. pivote.codo dobla el
   // antebrazo (los ejercicios del gym lo usan; caminando queda derecho).
-  const extremidad = (padre, x, y, colorArriba, colorAbajo, largoArriba, grosor = 0.95) => {
+  // colorArriba / colorAbajo: color, material o una función (lado) => materiales por cara.
+  const extremidad = (padre, x, y, colorArriba, colorAbajo, largoArriba, grosor = 0.95, manga = null) => {
     const pivote = new THREE.Group();
     pivote.position.set(x, y, 0);
-    pivote.add(caja(grosor, largoArriba, grosor, colorArriba, 0, -largoArriba / 2, 0));
-    pivote.add(caja(grosor, 1 - largoArriba, grosor, colorAbajo, 0, -largoArriba - (1 - largoArriba) / 2, 0));
+    const deLado = (c) => (typeof c === 'function' ? c(x) : c);
+    pivote.add(bloque(grosor, largoArriba, grosor, deLado(manga ? manga.arriba : colorArriba), 0, -largoArriba / 2, 0));
+    pivote.add(bloque(grosor, 1 - largoArriba, grosor, deLado(manga ? manga.medio : colorAbajo), 0, -largoArriba - (1 - largoArriba) / 2, 0));
     const codo = new THREE.Group();
     codo.position.y = -1;
-    codo.add(caja(grosor * 0.97, 1, grosor * 0.97, colorAbajo, 0, -0.5, 0));
+    if (manga) {
+      // Antebrazo con la manga hasta el puño y la mano abajo.
+      codo.add(bloque(grosor * 0.97, 0.8, grosor * 0.97, deLado(manga.abajo), 0, -0.4, 0));
+      codo.add(bloque(grosor * 0.9, 0.2, grosor * 0.9, matPiel, 0, -0.9, 0));
+    } else {
+      codo.add(bloque(grosor * 0.97, 1, grosor * 0.97, deLado(colorAbajo), 0, -0.5, 0));
+    }
     pivote.add(codo);
     pivote.codo = codo;
     padre.add(pivote);
     return pivote;
   };
+  const bloque = (w, h, d, material, x, y, z) => {
+    if (!Array.isArray(material)) return caja(w, h, d, material, x, y, z);
+    const m = new THREE.Mesh(GEO_CAJA, material);
+    m.scale.set(w, h, d);
+    m.position.set(x, y, z);
+    return m;
+  };
+  // Pantalón de la tienda: cada pierna lleva adelante su mitad de la foto (el muslo la parte
+  // de arriba y abajo de la rodilla el resto) y la tela en los costados y atrás.
+  const vp = vestido?.piernas;
+  const telaPantalon = vp ? lambert(tex(vp.tela)) : null;
+  const frentePierna = (x, arriba) => {
+    if (!vp) return p.pantalon;
+    const u0 = x < 0 ? 0 : 0.5;
+    const f = lambert(tex(recorteCanvas(vp.piernas, u0, arriba ? 0 : 0.5, u0 + 0.5, arriba ? 0.5 : 1)));
+    return [telaPantalon, telaPantalon, telaPantalon, telaPantalon, f, telaPantalon];
+  };
+  // Zapatillas de la tienda: modelos 3D (zapatillas.js) a la medida del pie.
+  const vz = vestido?.pies;
+  const zapatilla = (rodilla, grosor) => {
+    const z = crearZapatilla(vz.prenda.id);
+    if (!z) return;
+    z.scale.set(grosor * 1.02, 1, (grosor + 0.75) / LARGO_ZAPA);
+    z.position.set(0, -1, 0.2);
+    rodilla.add(z);
+  };
   // Pierna con rodilla: muslo desde la cadera y la parte de abajo desde la rodilla.
   const pierna = (x, grosor) => {
     const muslo = new THREE.Group();
     muslo.position.set(x, CADERA, 0);
-    muslo.add(caja(grosor, 1, grosor, p.pantalon, 0, -0.5, 0));
+    muslo.add(bloque(grosor, 1, grosor, frentePierna(x, true), 0, -0.5, 0));
     const rodilla = new THREE.Group();
     rodilla.position.y = -1;
-    rodilla.add(caja(grosor * 0.98, 1, grosor * 0.98, p.pantalon, 0, -0.5, 0));
+    rodilla.add(bloque(grosor * 0.98, 1, grosor * 0.98, frentePierna(x, false), 0, -0.5, 0));
+    if (vz) zapatilla(rodilla, grosor);
     muslo.add(rodilla);
     grupo.add(muslo);
     return { muslo, rodilla };
@@ -129,16 +209,10 @@ export function crearPersonaje(p, cabezaTex) {
   const piernaI = pierna(-xPierna, grosorPierna);
   const piernaD = pierna(xPierna, grosorPierna);
   // Mangas largas (mangasLargas: true): el brazo entero es del color de la remera.
-  const abajoBrazo = p.mangasLargas ? remera : matPiel;
-  const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, remera, abajoBrazo, 0.8, grosorBrazo);
-  const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, remera, abajoBrazo, 0.8, grosorBrazo);
-  const bloque = (w, h, d, material, x, y, z) => {
-    if (!Array.isArray(material)) return caja(w, h, d, material, x, y, z);
-    const m = new THREE.Mesh(GEO_CAJA, material);
-    m.scale.set(w, h, d);
-    m.position.set(x, y, z);
-    return m;
-  };
+  const arribaBrazo = mangaArriba || remera;
+  const abajoBrazo = mangasLargas ? (mangaAbajo || remera) : matPiel;
+  const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, arribaBrazo, abajoBrazo, 0.8, grosorBrazo, mangaLarga);
+  const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, arribaBrazo, abajoBrazo, 0.8, grosorBrazo, mangaLarga);
   cuerpo.add(bloque(anchoTorso, 2, fondoTorso, torso || p.remera, 0, 3 - CADERA, 0));
   if (gordura > 0.05) {
     const fondoPanza = 0.45 * gordura;
@@ -147,7 +221,7 @@ export function crearPersonaje(p, cabezaTex) {
   if (musculo > 0.05) {
     // Hombros (van con el brazo) y pectorales marcados.
     for (const brazo of [brazoI, brazoD]) {
-      brazo.add(bloque(grosorBrazo + 0.3 * musculo, 0.8, grosorBrazo + 0.3 * musculo, remera, 0, -0.3, 0));
+      brazo.add(bloque(grosorBrazo + 0.3 * musculo, 0.8, grosorBrazo + 0.3 * musculo, (mangaLarga ? mangaLarga.arriba(brazo.position.x) : arribaBrazo), 0, -0.3, 0));
       // Bíceps: bulto adelante del brazo, en la parte de piel.
       brazo.add(bloque(grosorBrazo * 0.7, 0.5, 0.25 * musculo, matPiel, 0, -0.9, grosorBrazo / 2 + 0.1 * musculo));
     }
@@ -172,7 +246,8 @@ export function crearPersonaje(p, cabezaTex) {
   // Kipá (data/personajes.js: kipa): casquete de tela con forma de cúpula, tamaño real (unos
   // 14 cm sobre una cabeza de 18), en la coronilla y un poco hacia atrás: de costado se ve
   // paradita. Satén azul oscuro con la estrella bordada y el borde en zigzag plateado.
-  if (p.kipa) {
+  const vg = vestido?.cabeza;
+  if (p.kipa && !vg) {
     const r = 0.44;
     const geo = new THREE.SphereGeometry(r, 28, 8, 0, Math.PI * 2, 0, 1.15);
     geo.scale(1, 0.8, 1);
@@ -214,25 +289,32 @@ export function crearPersonaje(p, cabezaTex) {
     cuerpo.add(cola);
   }
   // Remera de otro color abajo de una campera abierta (cuello: color).
-  if (p.cuello) {
+  if (cuello) {
     const z = fondoTorso / 2 + 0.01 + 0.42 * gordura;
-    cuerpo.add(caja(0.7, 0.55, 0.04, p.cuello, 0, 1.72, fondoTorso / 2 + 0.01));
+    cuerpo.add(caja(0.7, 0.55, 0.04, cuello, 0, 1.72, fondoTorso / 2 + 0.01));
     cuerpo.add(caja(0.06, segun(1.6, 1.3), 0.03, '#c9ced3', 0.04, segun(0.9, 0.8), z));
   }
   // Cuello alto subido hasta la pera (cuelloAlto: color), como un buzo de entrenamiento con
   // el cierre hasta arriba: la cabeza queda "pegada" al cuerpo.
-  if (p.cuelloAlto) {
+  if (cuelloAlto) {
     const yc = cabeza.position.y;
-    const c = p.cuelloAlto;
+    const c = cuelloAlto;
     cuerpo.add(caja(1.42, 0.34, 0.12, c, 0, yc - 0.52, 0.66)); // adelante (tapa la pera)
     cuerpo.add(caja(1.42, 0.5, 0.12, c, 0, yc - 0.45, -0.66)); // atrás
     for (const lado of [-1, 1]) cuerpo.add(caja(0.12, 0.46, 1.42, c, lado * 0.66, yc - 0.47, 0));
     cuerpo.add(caja(0.05, 0.3, 0.02, '#c9ced3', 0, yc - 0.53, 0.73)); // el cierre
   }
   // Buzo con capucha (capucha: color): la capucha caída en la espalda y los cordones.
-  if (p.capucha) {
-    cuerpo.add(caja(1.5, 0.8, 0.5, p.capucha, 0, cabeza.position.y - 0.62, -fondoTorso / 2 - 0.12));
+  if (capucha) {
+    cuerpo.add(caja(1.5, 0.8, 0.5, capucha, 0, cabeza.position.y - 0.62, -fondoTorso / 2 - 0.12));
     for (const lado of [-1, 1]) cuerpo.add(caja(0.06, 0.65, 0.04, '#e6e6e6', lado * 0.24, 1.62, fondoTorso / 2 + 0.03));
+  }
+  // Gorra de la tienda: copa con el logo adelante y visera.
+  if (vg) {
+    const yc = cabeza.position.y;
+    const tela = lambert(tex(vg.tela));
+    cuerpo.add(bloque(1.4, 0.46, 1.4, [tela, tela, tela, tela, lambert(tex(vg.frente)), tela], 0, yc + 0.65 + 0.06, -0.01));
+    cuerpo.add(bloque(1.36, 0.07, 0.68, tela, 0, yc + 0.47, 0.65 + 0.3));
   }
   // Aritos plateados.
   if (p.aros) for (const lado of [-1, 1]) cuerpo.add(caja(0.08, 0.14, 0.08, '#d9dde2', lado * 0.69, cabeza.position.y - 0.2, 0.05));

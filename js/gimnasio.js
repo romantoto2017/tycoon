@@ -22,6 +22,8 @@ export const KELVIN = {
 // Puntos por repetición: 1 + 2 x (qué tan pesado es para él). Unas 1100 reps buenas para
 // quedar flaco y unas 2700 más para el músculo entero: le tiene que costar.
 export const BAUTI_GYM = { adelgazar: 2400, musculo: 6000 };
+// Bauti todavía gordo: no hay ropa de su talle (las tiendas no le venden y el ropero no le sirve).
+export const bautiGordo = (estado) => (estado.bautiGym || 0) < BAUTI_GYM.adelgazar;
 const ESCALONES = 6; // el cuerpo cambia de a sextos (así no se rearma el muñeco a cada rato)
 export function fisico(p, estado) {
   if (p.id !== 'bauti') return p;

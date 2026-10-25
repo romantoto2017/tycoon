@@ -16,14 +16,17 @@ import { momento, hastaLaManana } from './cielo.js';
 import { Ladron } from './ladron.js';
 import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
-import { Gimnasio, fisico } from './gimnasio.js';
+import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre } from './dufre.js';
 import { Ciudad } from './ciudad.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA, GYM } from './constantes.js';
+import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
 import { crearAK } from './arma.js';
 import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
+import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
+import { vestido } from './vestir.js';
+import { Probador } from './probador.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -78,6 +81,9 @@ async function iniciar() {
   if (vistaCompleta) estado.compras = ITEMS.map((i) => i.id);
   // Partidas guardadas antes de que el terreno fuera una compra.
   if (estado.compras.length && !estado.compras.includes('terreno')) estado.compras.unshift('terreno');
+  estado.ropa ??= [];
+  estado.vestuario ??= {};
+  const puedeVestirse = (id) => !(id === 'bauti' && bautiGordo(estado));
   let reiniciando = false;
   const guardarAhora = () => { if (!reiniciando && !vistaCompleta) guardar(estado); };
 
@@ -189,7 +195,8 @@ async function iniciar() {
       }
       return;
     }
-    if (camaCerca()) dormir();
+    if (roperoCerca()) abrirRopero();
+    else if (camaCerca()) dormir();
     else subirOBajar();
   };
   btnManejar.addEventListener('click', accion);
@@ -432,9 +439,10 @@ async function iniciar() {
     const conLechuga = lechugas.enMano;
     if (enMano) sacarArma(false);
     if (conLechuga) sacarLechuga(false);
-    // Bauti cambia de cuerpo entrenando en el gym (gimnasio.js: fisico).
+    // Bauti cambia de cuerpo entrenando en el gym (gimnasio.js: fisico). La ropa de las
+    // tiendas que tenga puesta este personaje (Bauti gordo no: no hay de su talle).
     const pf = fisico(p, estado);
-    jugador.setModelo(crearPersonaje(pf, await cargarCabeza(p)));
+    jugador.setModelo(crearPersonaje(pf, await cargarCabeza(p), await vestido(puedeVestirse(p.id) ? estado.vestuario[p.id] : null)));
     jugador.personaje = pf;
     jugador.estado = estado;
     if (enMano) sacarArma(true);
@@ -447,6 +455,96 @@ async function iniciar() {
     guardarAhora();
   };
   const personajeGuardado = () => PERSONAJES.find((p) => p.id === estado.personaje);
+
+  // ---------- Ropa: tiendas de la ciudad y roperos de la mansión ----------
+  // estado.ropa: las prendas compradas; estado.vestuario[personaje]: lo que tiene puesto cada uno.
+  const TALLE = 'Disculpá bro, no nos queda talle XXXXL';
+  const tuyas = () => PRENDAS.filter((p) => estado.ropa.includes(p.id));
+  let explicarRopero = false;
+  ciudad.alTienda = (t) => {
+    const v = t.T.vendedor;
+    if (!puedeVestirse(estado.personaje)) {
+      ciudad.decir(t, TALLE);
+      UI.toast(`${v.nombre}: "${TALLE}"`, 'info');
+      return;
+    }
+    controles.activo = false;
+    UI.abrirCatalogo({
+      titulo: t.T.nombre,
+      sub: `${v.nombre} te muestra lo que hay`,
+      plata: () => estado.plata,
+      prendas: PRENDAS.filter((p) => p.tienda === t.T.id).map((p) => ({ ...p, tuya: estado.ropa.includes(p.id) })),
+      alComprar: (id) => {
+        const p = PRENDA[id];
+        if (estado.plata < p.precio) {
+          UI.toast(`Te faltan ${formato(p.precio - estado.plata)}`, 'error');
+          sfx.error();
+          return false;
+        }
+        estado.plata -= p.precio;
+        estado.ropa.push(id);
+        guardarAhora();
+        sfx.comprar();
+        UI.toast(`¡Compraste ${p.nombre}!`, 'plata');
+        ciudad.decir(t, 'Ponétela en un ropero de la casa');
+        if (estado.ropa.length === 1) explicarRopero = true;
+        misiones.revisarRopa();
+        return true;
+      },
+      alCerrar: () => {
+        if (!explicarRopero) { controles.activo = modo === 'juego'; return; }
+        // La primera compra: el que atiende explica (cortito) dónde se la pone.
+        explicarRopero = false;
+        UI.dialogo({
+          nombre: v.nombre, cara: t.cara.toDataURL(), remera: v.remera,
+          lineas: ['¡Buena compra, bro!', 'Para ponértela andá a cualquier ropero de la mansión: ahí te la probás y elegís qué te ponés.'],
+          alTerminar: () => { controles.activo = modo === 'juego'; },
+        });
+      },
+    });
+  };
+
+  // Ropero: a la izquierda tu personaje (en 3D, girando) y a la derecha tus prendas.
+  const probador = new Probador(document.getElementById('ropero-vista'));
+  const roperoCerca = () => {
+    if (conduciendo) return null;
+    return tycoon.roperos.find((r) => Math.hypot(r.x - jugador.pos.x, r.z - jugador.pos.z) < 4.5 && Math.abs(r.y - jugador.pos.y) < 2.5) || null;
+  };
+  const abrirRopero = async () => {
+    const p = personajeGuardado();
+    if (!p) return;
+    controles.activo = false;
+    const pf = fisico(p, estado);
+    const cab = await cargarCabeza(p);
+    const probar = async (ropa) => probador.mostrar(crearPersonaje(pf, cab, await vestido(ropa)));
+    const puedo = puedeVestirse(p.id);
+    probador.abrir();
+    UI.abrirRopero({
+      titulo: `Ropero de ${p.nombre}`,
+      slots: SLOTS,
+      tuyas: tuyas(),
+      puesto: (puedo && estado.vestuario[p.id]) || {},
+      aviso: puedo ? '' : 'Todavía no te entra nada de esto. Primero tenés que adelgazar.',
+      alProbar: probar,
+      alListo: async (ropa) => {
+        estado.vestuario[p.id] = ropa;
+        guardarAhora();
+        await ponerPersonaje(p);
+        UI.toast('¡Listo, quedaste facha!', 'plata');
+      },
+      alCerrar: () => { probador.cerrar(); controles.activo = modo === 'juego'; },
+    });
+    await probar(puedo ? estado.vestuario[p.id] : null);
+  };
+
+  // Solo se cambia de personaje adentro de la mansión (cualquier piso).
+  const enLaMansion = () => jugador.pos.x > MANSION.x0 && jugador.pos.x < MANSION.x1 && jugador.pos.z > MANSION.z0 && jugador.pos.z < MANSION.z1;
+  const puedeCambiar = () => {
+    if (!estado.personaje || enLaMansion()) return true;
+    UI.toast('Para cambiar de personaje tenés que estar adentro de la mansión', 'error');
+    sfx.error();
+    return false;
+  };
   gym.alEntrar = () => {
     if (armaEnMano) sacarArma(false);
     if (lechugas.enMano) sacarLechuga(false);
@@ -483,7 +581,7 @@ async function iniciar() {
     if (personajeGuardado()) ir('juego');
     else abrirSeleccion();
   });
-  $('btn-menu-personaje').addEventListener('click', () => { iniciarAudio(); abrirSeleccion(); });
+  $('btn-menu-personaje').addEventListener('click', () => { iniciarAudio(); if (puedeCambiar()) abrirSeleccion(); });
   $('btn-volver-seleccion').addEventListener('click', () => ir(personajeGuardado() && modo === 'seleccion' && volverAlJuego ? 'juego' : 'menu'));
 
   let volverAlJuego = false;
@@ -506,7 +604,11 @@ async function iniciar() {
     if (modo !== 'juego' || !misiones.abiertas || UI.visible('misiones') || UI.visible('dialogo')) return;
     if (gym.entrenando) gym.dejar(jugador);
     controles.activo = false;
-    const lista = await Promise.all(misiones.lista(jugador).map(async (m) => ({ ...m, cara: await caraDe(m.personaje), nombre: PERSONAJES.find((p) => p.id === m.personaje).nombre })));
+    // Las misiones de cualquiera (personaje: null) muestran al que estás usando.
+    const lista = await Promise.all(misiones.lista(jugador).map(async (m) => {
+      const id = m.personaje || estado.personaje || PERSONAJES[0].id;
+      return { ...m, cara: await caraDe(id), nombre: PERSONAJES.find((p) => p.id === id).nombre };
+    }));
     UI.puntoMisiones(false);
     UI.abrirMisiones(lista, () => { controles.activo = modo === 'juego'; });
   };
@@ -521,7 +623,11 @@ async function iniciar() {
   };
   $('btn-cerrar-config').addEventListener('click', cerrarConfig);
   $('btn-salir-menu').addEventListener('click', () => { volverAlJuego = false; ir('menu'); });
-  $('btn-cambiar-personaje').addEventListener('click', () => { volverAlJuego = true; abrirSeleccion(); });
+  $('btn-cambiar-personaje').addEventListener('click', () => {
+    if (!puedeCambiar()) return;
+    volverAlJuego = true;
+    abrirSeleccion();
+  });
   $('btn-reiniciar').addEventListener('click', async () => {
     if (await UI.pedirConfirmacion()) {
       reiniciando = true;
@@ -538,7 +644,7 @@ async function iniciar() {
     if (e.code !== 'Escape' || modo !== 'juego') return;
     if (UI.visible('config')) cerrarConfig();
     else if (gym.entrenando) gym.dejar(jugador);
-    else if (!UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto') && !UI.visible('misiones') && !UI.visible('dialogo')) abrirConfig();
+    else if (!UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto') && !UI.visible('misiones') && !UI.visible('dialogo') && !UI.visible('catalogo') && !UI.visible('ropero')) abrirConfig();
   });
 
   // Personaje de fondo mientras se ve el menú.
@@ -673,7 +779,7 @@ async function iniciar() {
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, choquesActuales, tycoon.agua)) sfx.salto();
     }
-    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (camaCerca() ? 'Dormir (E)' : ''));
+    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
