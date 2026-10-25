@@ -54,7 +54,7 @@ export const COLORES_ROPA = {
   },
   "camperamilan": {
     "tela": "#111312",
-    "aspecto": 0.571,
+    "aspecto": 0.429,
     "manga": true
   },
   "camperapenarol": {

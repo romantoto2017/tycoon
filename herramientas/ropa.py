@@ -46,13 +46,13 @@ PRENDAS = [
     dict(id='buzocorteiz', foto='corteiztracksuit.jpeg', slot='torso', torso=(0.2, 0.17, 0.52, 0.63), tela=(0.22, 0.45, 0.3, 0.6), recorte=(0.12, 0.05, 0.6, 0.66), manga='lisa'),
     dict(id='buzocorteizceleste', foto='corteiztracksuit2.jpeg', slot='torso', torso=(0.17, 0.24, 0.49, 0.76), tela=(0.2, 0.58, 0.28, 0.7), recorte=(0.08, 0.06, 0.53, 0.8), manga='lisa'),
     dict(id='camperacerro', foto='camperacerro.jpeg', slot='torso', torso=(0.14, 0.05, 0.86, 0.95), tela=(0.35, 0.55, 0.45, 0.7), recorte=(0.0, 0.0, 1.0, 1.0), manga=((0.37, 0.38), (0.37, 0.95), 0.1)),
-    dict(id='camperamilan', foto='camperamilan.jpeg', slot='torso', torso=(0.25, 0.18, 0.77, 0.98), tela=(0.32, 0.6, 0.45, 0.8), manga=((0.24, 0.18), (0.17, 0.93), 0.1)),
+    dict(id='camperamilan', foto='camperamilan.jpeg', slot='torso', torso=(0.31, 0.2, 0.69, 0.97), tela=(0.4, 0.6, 0.48, 0.8), manga=((0.24, 0.18), (0.17, 0.93), 0.1)),
     dict(id='camperapenarol', foto='camperapeñarol.jpeg', slot='torso', torso=(0.32, 0.13, 0.71, 0.83), tela=(0.33, 0.55, 0.45, 0.75), manga='lisa'),
     dict(id='rompevientosnacional', foto='rompevientosnacional.webp', slot='torso', torso=(0.25, 0.17, 0.76, 0.88), tela=(0.4, 0.6, 0.48, 0.8), recorte=(0.0, 0.1, 1.0, 1.0), manga=((0.105, 0.2), (0.105, 0.93), 0.07)),
     # ---- pantalones: una caja por pierna (izquierda y derecha de la foto) ----
     dict(id='jeanscammo', foto='jeanscammo.jpeg', slot='piernas', piernas=[(0.2, 0.08, 0.5, 0.97), (0.5, 0.08, 0.8, 0.97)], tela=(0.3, 0.4, 0.45, 0.7), estampado=True),
     dict(id='joggingjordan', foto='joggingjordan.webp', slot='piernas', piernas=[(0.24, 0.07, 0.5, 0.86), (0.5, 0.07, 0.78, 0.86)], tela=(0.3, 0.4, 0.42, 0.6), recorte=(0.15, 0.06, 0.85, 0.86)),
-    dict(id='pantcorteiz', foto='corteiztracksuit.jpeg', slot='piernas', piernas=[(0.54, 0.34, 0.7, 0.93), (0.7, 0.34, 0.87, 0.93)], tela=(0.58, 0.6, 0.66, 0.8), recorte=(0.52, 0.32, 0.9, 0.95)),
+    dict(id='pantcorteiz', foto='corteiztracksuit.jpeg', slot='piernas', arreglo='sacar_manga_buzo', piernas=[(0.54, 0.34, 0.7, 0.93), (0.7, 0.34, 0.87, 0.93)], tela=(0.58, 0.6, 0.66, 0.8), recorte=(0.52, 0.32, 0.9, 0.95)),
     dict(id='pantcorteizceleste', foto='corteiztracksuit2.jpeg', slot='piernas', piernas=[(0.5, 0.09, 0.67, 0.91), (0.65, 0.09, 0.82, 0.91)], tela=(0.53, 0.5, 0.6, 0.7), recorte=(0.47, 0.07, 0.86, 0.93)),
     # ---- zapatillas: solo la foto del catálogo (en el pie son modelos 3D: js/zapatillas.js) ----
     dict(id='jordan1', foto='jordan1.jpeg', slot='pies'),
@@ -71,6 +71,32 @@ def abrir(nombre):
     if max(im.size) > 1000:
         im.thumbnail((1000, 1000), Image.LANCZOS)
     return im
+
+
+def sacar_manga_buzo(im):
+    """En la foto del conjunto Corteiz negro, la manga del buzo tapa el costado izquierdo del
+    jogging. Se borra: primero se rellena toda la manga (lo que cae adentro del pantalón) con
+    el negro de alrededor (inpainting de OpenCV, acá en la compu) y después lo que queda afuera
+    del borde del pantalón pasa a ser fondo."""
+    import cv2
+    a = np.asarray(im).copy()
+    h, w = a.shape[:2]
+    borde = lambda y: 0.60 + (0.545 - 0.60) * (min(max(y, 0.345), 0.66) - 0.345) / (0.66 - 0.345)
+    # Color del jogging (un pedazo limpio de la pierna derecha) con un poco de grano.
+    tela = np.median(a[int(0.45 * h):int(0.6 * h), int(0.72 * w):int(0.8 * w)].reshape(-1, 3), axis=0)
+    rng2 = np.random.default_rng(3)
+    junta = np.zeros((h, w), np.uint8)
+    for fila in range(int(0.33 * h), int(0.672 * h) + 1):
+        y = fila / h
+        # La manga llega hasta x = 0.62 y el puño baja hasta y = 0.665.
+        x1 = int(0.625 * w)
+        a[fila, int(0.5 * w):x1] = np.clip(tela + rng2.normal(0, 2.5, (x1 - int(0.5 * w), 1)), 0, 255)
+        junta[fila, x1 - 3:x1 + 3] = 255
+    junta[int(0.665 * h):int(0.68 * h), int(0.53 * w):int(0.63 * w)] = 255
+    a = cv2.inpaint(a, junta, 4, cv2.INPAINT_TELEA)
+    for fila in range(int(0.29 * h), int(0.672 * h) + 1):
+        a[fila, int(0.5 * w):int(borde(fila / h) * w)] = 255
+    return Image.fromarray(a)
 
 
 def px(im, caja):
@@ -129,6 +155,8 @@ def achicar(im, lado):
 colores = {}
 for p in PRENDAS:
     im = abrir(p['foto'])
+    if p.get('arreglo'):
+        im = globals()[p['arreglo']](im)
     mask = mascara_fondo(im)
     info = {}
     # Foto del catálogo: recortada al contenido, fondo transparente.

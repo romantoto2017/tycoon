@@ -595,6 +595,54 @@ async function iniciar() {
   };
   $('btn-config').addEventListener('click', abrirConfig);
   // ---------- Misiones ----------
+  // Ícono de las misiones que puede hacer cualquiera: tres muñequitos de bloques (como los
+  // personajes del juego) sobre un fondo violeta con brillo, y una estrellita dorada.
+  let icono = null;
+  const iconoBanda = () => {
+    if (icono) return icono;
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const f = g.createLinearGradient(0, 0, 128, 128);
+    f.addColorStop(0, '#7c3aed');
+    f.addColorStop(1, '#2563eb');
+    g.fillStyle = f;
+    g.fillRect(0, 0, 128, 128);
+    const brillo = g.createRadialGradient(64, 40, 4, 64, 40, 70);
+    brillo.addColorStop(0, 'rgba(255,255,255,0.35)');
+    brillo.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = brillo;
+    g.fillRect(0, 0, 128, 128);
+    const muneco = (x, y, e, remera) => {
+      g.fillStyle = 'rgba(0,0,0,0.25)';
+      g.fillRect(x - 15 * e + 3, y + 3, 30 * e, 62 * e);
+      g.fillStyle = '#ffd7a8';
+      g.fillRect(x - 10 * e, y, 20 * e, 20 * e); // cabeza
+      g.fillStyle = '#2b1d14';
+      g.fillRect(x - 10 * e, y, 20 * e, 6 * e); // pelo
+      g.fillStyle = '#111';
+      g.fillRect(x - 6 * e, y + 10 * e, 3 * e, 3 * e);
+      g.fillRect(x + 3 * e, y + 10 * e, 3 * e, 3 * e);
+      g.fillStyle = remera;
+      g.fillRect(x - 15 * e, y + 22 * e, 30 * e, 22 * e); // torso y brazos
+      g.fillStyle = '#1e3a8a';
+      g.fillRect(x - 10 * e, y + 44 * e, 9 * e, 18 * e);
+      g.fillRect(x + 1 * e, y + 44 * e, 9 * e, 18 * e);
+    };
+    muneco(34, 46, 0.95, '#ef4444');
+    muneco(94, 46, 0.95, '#22c55e');
+    muneco(64, 34, 1.15, '#fbbf24');
+    g.fillStyle = '#ffd23f';
+    g.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const r = i % 2 ? 6 : 14;
+      g.lineTo(108 + Math.cos(a) * r, 20 + Math.sin(a) * r);
+    }
+    g.fill();
+    icono = c.toDataURL();
+    return icono;
+  };
   const caras = {};
   const caraDe = async (id) => {
     if (!caras[id]) caras[id] = (await cargarCabeza(PERSONAJES.find((p) => p.id === id))).frente.toDataURL();
@@ -604,11 +652,10 @@ async function iniciar() {
     if (modo !== 'juego' || !misiones.abiertas || UI.visible('misiones') || UI.visible('dialogo')) return;
     if (gym.entrenando) gym.dejar(jugador);
     controles.activo = false;
-    // Las misiones de cualquiera (personaje: null) muestran al que estás usando.
-    const lista = await Promise.all(misiones.lista(jugador).map(async (m) => {
-      const id = m.personaje || estado.personaje || PERSONAJES[0].id;
-      return { ...m, cara: await caraDe(id), nombre: PERSONAJES.find((p) => p.id === id).nombre };
-    }));
+    // Las misiones de cualquiera (personaje: null) llevan el ícono de la banda, no una cara.
+    const lista = await Promise.all(misiones.lista(jugador).map(async (m) => (m.personaje
+      ? { ...m, cara: await caraDe(m.personaje), nombre: PERSONAJES.find((p) => p.id === m.personaje).nombre }
+      : { ...m, cara: iconoBanda(), nombre: 'Todos' })));
     UI.puntoMisiones(false);
     UI.abrirMisiones(lista, () => { controles.activo = modo === 'juego'; });
   };
