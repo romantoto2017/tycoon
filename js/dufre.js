@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, crearEtiqueta } from './texturas.js';
 import { CALLE_Z } from './constantes.js';
+import { paseoCiudad } from './ciudad.js';
 
-// Dufre: camina por la vereda de enfrente de la mansión, de punta a punta, siempre con el buzo
-// de entrenamiento con el cierre hasta arriba (cuello pegado a la cara) y las manos en los
+// Dufre: a veces camina por la vereda de la mansión, de punta a punta, y a veces anda dando
+// vueltas a la plaza de la Ciudad Vecibanda (así no está siempre). Siempre con el buzo de
+// entrenamiento con el cierre hasta arriba (cuello pegado a la cara) y las manos en los
 // bolsillos. Si te ve cerca, frena, te mira y te dice "¿Vamo a ver el interno?".
 export const DUFRE = {
   id: 'dufre', nombre: 'Dufre', foto: 'dufre.jpeg', recorte: [0.46, 0.225, 0.44], pelo: '#2a1d16', peinado: 'ondulado',
@@ -15,6 +17,12 @@ const VEREDA_Z = CALLE_Z - 7.25; // la vereda del lado de la mansión
 const DESDE = -130;
 const HASTA = 135;
 const VEL = 4.5;
+const CAMBIO = 240; // cada cuánto puede cambiar de lugar (solo si no lo estás viendo)
+const LEJOS = 300;
+const LUGARES = {
+  casa: () => ({ y: 0.25, puntos: [[DESDE, VEREDA_Z], [HASTA, VEREDA_Z]] }),
+  ciudad: paseoCiudad,
+};
 const LO_VE = 13; // a cuánto te ve
 const FRASE = '¿Vamo a ver el interno?';
 
@@ -24,8 +32,8 @@ export class Dufre {
     this.ui = ui;
     this.modelo = null;
     this.cargando = false;
-    this.sentido = 1;
-    this.x = -40;
+    this.reloj = 0;
+    this.ir(Math.random() < 0.5 ? 'casa' : 'ciudad');
     this.dijo = false; // ya te habló en este cruce (vuelve a hablar cuando te alejás)
     this.globo = 0;
   }
@@ -41,9 +49,29 @@ export class Dufre {
     this.etiqueta.sprite.position.y = 8.1;
     this.etiqueta.sprite.visible = false;
     m.grupo.add(this.etiqueta.sprite);
-    m.grupo.position.set(this.x, 0.25, VEREDA_Z);
     this.escena.add(m.grupo);
     this.modelo = m;
+    this.ubicar();
+  }
+
+  // Elige lugar y arranca en un punto al azar de su recorrido.
+  ir(lugar) {
+    this.lugar = lugar;
+    const { y, puntos } = LUGARES[lugar]();
+    this.y = y;
+    this.puntos = puntos;
+    const k = Math.floor(Math.random() * puntos.length);
+    const [ax, az] = puntos[k];
+    const [bx, bz] = puntos[(k + 1) % puntos.length];
+    const t = Math.random();
+    this.x = ax + (bx - ax) * t;
+    this.z = az + (bz - az) * t;
+    this.i = (k + 1) % puntos.length;
+    this.ubicar();
+  }
+
+  ubicar() {
+    this.modelo?.grupo.position.set(this.x, this.y, this.z);
   }
 
   actualizar(dt, jugador, jugando) {
@@ -68,12 +96,30 @@ export class Dufre {
       }
     } else {
       if (d > LO_VE + 12) this.dijo = false;
-      // Camina por la vereda, de punta a punta.
-      this.x += this.sentido * VEL * dt;
-      if (this.x > HASTA) { this.x = HASTA; this.sentido = -1; }
-      if (this.x < DESDE) { this.x = DESDE; this.sentido = 1; }
-      g.position.x = this.x;
-      const objetivo = this.sentido > 0 ? Math.PI / 2 : -Math.PI / 2;
+      // De vez en cuando se muda (de la casa a la ciudad o al revés), si estás lejos de los dos.
+      this.reloj += dt;
+      if (this.reloj > CAMBIO) {
+        this.reloj = 0;
+        const otro = this.lugar === 'casa' ? 'ciudad' : 'casa';
+        const [ox, oz] = LUGARES[otro]().puntos[0];
+        if (Math.random() < 0.5 && d > LEJOS && Math.hypot(jugador.pos.x - ox, jugador.pos.z - oz) > LEJOS) this.ir(otro);
+      }
+      // Camina su recorrido, de punto en punto.
+      const [px, pz] = this.puntos[this.i];
+      const dx = px - this.x;
+      const dz = pz - this.z;
+      const largo = Math.hypot(dx, dz);
+      const paso = VEL * dt;
+      if (largo <= paso) {
+        this.x = px;
+        this.z = pz;
+        this.i = (this.i + 1) % this.puntos.length;
+      } else {
+        this.x += (dx / largo) * paso;
+        this.z += (dz / largo) * paso;
+      }
+      this.ubicar();
+      const objetivo = Math.atan2(dx, dz);
       let a = objetivo - g.rotation.y;
       a = Math.atan2(Math.sin(a), Math.cos(a));
       g.rotation.y += a * Math.min(1, dt * 6);

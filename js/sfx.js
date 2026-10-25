@@ -83,6 +83,8 @@ export const sfx = {
   salto() { efecto([[330, 0, 0.12, 'triangle', 0.05], [500, 0.04, 0.1, 'triangle', 0.04]]); },
   gol() { efecto([392, 523, 659, 784, 1047, 1319].map((f, i) => [f, i * 0.09, 0.3, 'square', 0.05])); },
   brillo() { efecto([1568, 2093, 2637, 3136].map((f, i) => [f, 0.05 + i * 0.05, 0.25, 'sine', 0.035])); },
+  lechuga() { efecto([[240, 0, 0.07, 'triangle', 0.06], [180, 0.05, 0.1, 'triangle', 0.05]]); },
+  susto() { efecto([[1200, 0, 0.1, 'square', 0.035], [900, 0.08, 0.1, 'square', 0.035], [1300, 0.16, 0.18, 'square', 0.035]]); },
   disparo() { efecto([[150, 0, 0.06, 'square', 0.05], [70, 0.01, 0.08, 'sawtooth', 0.05]]); },
   microondas() { efecto([[120, 0, 3.4, 'sawtooth', 0.012]]); },
   pip() { efecto([[1760, 0, 0.18, 'sine', 0.06], [1760, 0.3, 0.18, 'sine', 0.06], [1760, 0.6, 0.18, 'sine', 0.06]]); },

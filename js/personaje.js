@@ -255,6 +255,7 @@ export function crearPersonaje(p, cabezaTex) {
     manoD: brazoD, // para colgarle el arma (la mano está en y = -1.9)
     apuntar: false, // con el arma en la mano: brazos al frente
     llevar: false, // llevando algo con las dos manos (un plato)
+    herramienta: false, // algo en la mano derecha (como las herramientas de Roblox): brazo al frente
     manosBolsillo: false, // caminando con las manos en los bolsillos (Dufre)
     brazosSentado: -1.2, // sentado: -1.2 llega al manubrio de la moto; menos, manos en la falda
     // velocidad: unidades/seg en el plano. enSuelo: para la pose de salto.
@@ -305,6 +306,10 @@ export function crearPersonaje(p, cabezaTex) {
         brazoD.rotation.set(0.18 + a * 0.06, 0, -0.06);
         brazoI.codo.rotation.x = -0.5;
         brazoD.codo.rotation.x = -0.5;
+      }
+      if (modelo.herramienta) {
+        brazoD.rotation.x = -1.35;
+        brazoD.rotation.z = 0;
       }
       if (modelo.apuntar) {
         brazoD.rotation.x = -1.5;

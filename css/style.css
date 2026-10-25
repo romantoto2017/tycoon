@@ -401,12 +401,18 @@ html, body {
 .btn-agachar[aria-pressed="true"] span { text-shadow: none; }
 .btn-agachar:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
 
-/* Barra de herramientas (como el hotbar de Roblox): por ahora, el AK-47. */
-.slot {
+/* Barra de herramientas (como el hotbar de Roblox): el AK-47 y lo que vayas consiguiendo. */
+.barra {
   position: fixed;
   left: 50%;
   bottom: calc(14px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: none;
+}
+.slot {
+  position: relative;
   width: 86px;
   height: 70px;
   border-radius: 10px;
@@ -423,7 +429,8 @@ html, body {
   transition: border-color 0.12s ease, background 0.12s ease;
 }
 .slot-num { position: absolute; top: 2px; left: 6px; font-size: 13px; font-weight: 700; opacity: 0.85; }
-.slot-nombre { font-size: 12px; font-weight: 700; margin-top: 2px; }
+.slot-nombre { font-size: 12px; font-weight: 700; margin-top: 2px; white-space: nowrap; }
+.slot-cant { opacity: 0.85; }
 .slot[aria-pressed="true"] { border-color: #ffffff; background: rgba(60, 130, 255, 0.55); }
 .slot:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
 #hud .btn-manejar { bottom: calc(96px + env(safe-area-inset-bottom)); }
@@ -545,7 +552,8 @@ html, body {
   #btn-saltar { width: 80px; height: 80px; right: calc(26px + env(safe-area-inset-right)); bottom: 26px; }
   .btn-agachar { width: 64px; height: 64px; right: calc(34px + env(safe-area-inset-right)); bottom: 118px; }
   #btn-disparar { width: 70px; height: 70px; right: calc(122px + env(safe-area-inset-right)); bottom: 36px; }
-  .slot { width: 72px; height: 56px; bottom: 8px; }
+  .barra { bottom: 8px; gap: 8px; }
+  .slot { width: 72px; height: 56px; }
   #hud .btn-manejar { bottom: 74px; }
 }
 

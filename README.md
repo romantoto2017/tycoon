@@ -91,7 +91,7 @@ La foto de la Vecibanda (`assets/cuadros/fotovecibanda.jpeg`) es un cuadro gigan
 
 ## La Mazza
 
-Cada minuto de juego hay un 0,5% de chance de que caiga la Mazza (está enamorada de Juanma). Si estás jugando con Juanma te persigue por toda la mansión (escaleras incluidas) y le salen corazones al verte; si no, entra a preguntar por él. No se la puede echar: se va sola a los 5 minutos. Todo está en `js/mazza.js`.
+Cada minuto de juego hay un 0,5% de chance de que caiga la Mazza (está enamorada de Juanma). Si estás jugando con Juanma te persigue por toda la mansión (escaleras incluidas) y le salen corazones al verte; si no, entra a preguntar por él. No se la puede echar a la fuerza: se va sola a los 5 minutos. Pero les tiene pánico a las lechugas (ver abajo): si hay una cerca, puesta en el piso o en la mano de alguien, sale corriendo para el otro lado gritando, como los creepers con los gatos; al tercer susto se va. Todo está en `js/mazza.js`.
 
 ## Moneda
 
@@ -114,7 +114,7 @@ El progreso se guarda solo en el navegador (localStorage). "Reiniciar partida" e
 
 ## Dufre, la moneda y los cuadros de los pasillos
 
-- **Dufre** (`js/dufre.js`) camina por la vereda de enfrente de la mansión, de punta a punta, con el buzo de entrenamiento negro (franjas blancas, logo y escudo, armado con `herramientas/dufre.py`), el cierre hasta la pera y las manos en los bolsillos. Si te acercás, frena, te mira y te dice "¿Vamo a ver el interno?" (vuelve a decirlo cuando te alejás y volvés).
+- **Dufre** (`js/dufre.js`) a veces camina por la vereda de la mansión, de punta a punta, y a veces da vueltas a la plaza de la Ciudad Vecibanda (cada 4 minutos puede mudarse, solo si estás lejos de los dos lugares, así nunca desaparece delante tuyo). Siempre con el buzo de entrenamiento negro (franjas blancas, logo y escudo, armado con `herramientas/dufre.py`), el cierre hasta la pera y las manos en los bolsillos. Si te acercás, frena, te mira y te dice "¿Vamo a ver el interno?" (vuelve a decirlo cuando te alejás y volvés).
 - **La moneda** tiene la cara del Negro Bebé: `assets/moneda.png`, hecha con `herramientas/moneda.py` desde `assets/especiales/moneda.jpeg`.
 - **Pasillos:** de las pinturas famosas solo quedó la Gioconda, con la cara de Bauti (bautizoom) puesta acá con OpenCV (`herramientas/gioconda_bauti.py`, sin servicios de IA externos) y su cartel de siempre. En los otros lugares van Masacre, Toto lindo, Veneca y el video de la flauta del pelado, sin cartel. Las pinturas famosas de las habitaciones y del restaurante se sacaron.
 - **Flauta del Pelado:** objeto Vecibanda nuevo (flauta dulce verde lima en su pedestal).
@@ -127,5 +127,10 @@ La ciudad (`js/ciudad.js`) está armada como una de verdad: una cuadrícula de 8
 
 - **Cancha de fútbol:** la pelota se patea caminando contra ella; gol en los arcos.
 - **Cancha de básquet:** al lado de la pelota aparece "Tirar al aro (E)". Sale en parábola al aro más cerca; de cerca entra casi siempre y de lejos se erra más (los de afuera de la línea de 3 valen 3).
+
+- **Verdulería** (sobre la avenida, a una cuadra de la plaza): toldo a rayas, cajones de verdura y el verdulero. En el mostrador aparece "Comprar lechuga $500K (E)". Es un easter egg: el juego no dice para qué sirven.
+- **Lechugas** (`js/lechugas.js`): van al slot 2 de la barra (al lado del AK, tecla 2). Con una en la mano, tocando (o haciendo clic en) el piso del terreno de la mansión, afuera de la casa, se deja ahí, una por una; tocando una que ya está, se levanta. Se guardan en la partida (`estado.lechugas` y `estado.lechugasPuestas`). Una fila en el portón es una valla que la Mazza no cruza. No hay ningún botón que lo explique.
+
+Hay unas 50 personas caminando (más en el centro); las que quedan lejos no se dibujan ni se mueven.
 
 Para la Chromebook: cada manzana es una sola malla por material (lo que no se ve no se dibuja), los choques de la ciudad están en una grilla (solo se miran los de alrededor) y la ciudad se arma recién cuando vas para ese lado, de a una manzana por cuadro, así no se traba.

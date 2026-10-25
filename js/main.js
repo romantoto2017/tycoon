@@ -23,6 +23,7 @@ import { Ciudad } from './ciudad.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM } from './constantes.js';
 import { crearAK } from './arma.js';
+import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -130,6 +131,7 @@ async function iniciar() {
       jugador.vel.set(0, 0, 0);
     } else if (cercaDelAuto()) {
       sacarArma(false);
+      sacarLechuga(false);
       conduciendo = true;
       a.vel = 0;
       controles.yaw = a.angulo + Math.PI;
@@ -230,6 +232,56 @@ async function iniciar() {
     controles.agacharse = !controles.agacharse;
   });
 
+  // ---------- Lechugas (slot 2) ----------
+  // Se compran en la verdulería de la ciudad. Con una en la mano, tocar el piso del terreno
+  // la deja ahí (y tocar una puesta la levanta). No se explica para qué sirven.
+  const lechugas = new Lechugas(escena, estado, guardarAhora);
+  const btnLechuga = document.getElementById('btn-lechuga');
+  const cantLechugas = btnLechuga.querySelector('.slot-cant');
+  let ultimoLechuga = null;
+  const hayLechugas = () => estado.lechugas > 0 || lechugas.puestas.length > 0;
+  const sacarLechuga = (v) => {
+    lechugas.enMano = v && hayLechugas() && !conduciendo && !gym.entrenando;
+    if (lechugas.enMano && armaEnMano) sacarArma(false);
+    if (lechugas.enMano) jugador.modelo.manoD.add(lechugas.mano);
+    else lechugas.mano.parent?.remove(lechugas.mano);
+    jugador.modelo.herramienta = lechugas.enMano;
+  };
+  btnLechuga.addEventListener('pointerdown', (e) => { e.preventDefault(); sacarLechuga(!lechugas.enMano); });
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Digit2' && modo === 'juego' && controles.activo && hayLechugas()) sacarLechuga(!lechugas.enMano);
+  });
+  controles.alTocar = (x, y) => {
+    if (!lechugas.enMano || modo !== 'juego' || conduciendo) return;
+    if (lechugas.tocar(x, y, camara, jugador, choquesActuales, tycoon.agua)) sfx.lechuga();
+  };
+  const actualizarLechugas = () => {
+    const ver = modo === 'juego' && hayLechugas() && !conduciendo;
+    if (!ver && lechugas.enMano) sacarLechuga(false);
+    const est = ver ? `${lechugas.enMano}|${estado.lechugas}` : '';
+    if (est === ultimoLechuga) return;
+    ultimoLechuga = est;
+    btnLechuga.classList.toggle('oculto', !ver);
+    btnLechuga.setAttribute('aria-pressed', String(lechugas.enMano));
+    cantLechugas.textContent = `×${estado.lechugas}`;
+    lechugas.mano.visible = estado.lechugas > 0;
+  };
+  mazza.lechugas = lechugas;
+  mazza.conLechuga = () => lechugas.enMano && estado.lechugas > 0;
+  ciudad.precioLechuga = formato(PRECIO_LECHUGA);
+  ciudad.alComprarLechuga = () => {
+    if (estado.plata < PRECIO_LECHUGA) {
+      UI.toast(`Te faltan ${formato(PRECIO_LECHUGA - estado.plata)}`, 'error');
+      sfx.error();
+      return;
+    }
+    estado.plata -= PRECIO_LECHUGA;
+    estado.lechugas++;
+    guardarAhora();
+    sfx.comprar();
+    UI.toast(estado.lechugas === 1 ? 'Compraste una lechuga' : `Compraste una lechuga (tenés ${estado.lechugas})`, 'plata');
+  };
+
   // ---------- AK-47 (para echar a la Schwepa) ----------
   // Como una herramienta de Roblox: se saca y se guarda con el slot de abajo o la tecla 1.
   // Con el arma en la mano el personaje mira hacia la cámara; clic izquierdo (o el botón
@@ -245,6 +297,7 @@ async function iniciar() {
   let ultimoArma = null;
   const sacarArma = (v) => {
     armaEnMano = v && tycoon.tieneArma && !conduciendo && !gym.entrenando;
+    if (armaEnMano && lechugas.enMano) sacarLechuga(false);
     if (armaEnMano) jugador.modelo.manoD.add(ak);
     else ak.parent?.remove(ak);
     jugador.modelo.apuntar = armaEnMano;
@@ -376,13 +429,16 @@ async function iniciar() {
 
   const ponerPersonaje = async (p) => {
     const enMano = armaEnMano;
+    const conLechuga = lechugas.enMano;
     if (enMano) sacarArma(false);
+    if (conLechuga) sacarLechuga(false);
     // Bauti cambia de cuerpo entrenando en el gym (gimnasio.js: fisico).
     const pf = fisico(p, estado);
     jugador.setModelo(crearPersonaje(pf, await cargarCabeza(p)));
     jugador.personaje = pf;
     jugador.estado = estado;
     if (enMano) sacarArma(true);
+    if (conLechuga) sacarLechuga(true);
     jugador.factorVel = pf.velocidad || 1;
     jugador.setEscala(p.alto || 1);
     puedeAgacharse = (p.alto || 1) > 1;
@@ -391,7 +447,10 @@ async function iniciar() {
     guardarAhora();
   };
   const personajeGuardado = () => PERSONAJES.find((p) => p.id === estado.personaje);
-  gym.alEntrar = () => { if (armaEnMano) sacarArma(false); };
+  gym.alEntrar = () => {
+    if (armaEnMano) sacarArma(false);
+    if (lechugas.enMano) sacarLechuga(false);
+  };
   gym.alCambiarFisico = async (mensaje) => {
     await ponerPersonaje(personajeGuardado());
     UI.toast(mensaje, 'plata');
@@ -497,7 +556,7 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ciudad };
+  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ciudad, lechugas, sacarLechuga };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -635,6 +694,7 @@ async function iniciar() {
     dufre.actualizar(dt, jugador, modo === 'juego');
     ciudad.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
+    actualizarLechugas();
     brillos.actualizar(dt);
     // Adentro del gym se prenden las luces (sube de a poco al entrar, como un fundido).
     luzGym += ((modo === 'juego' && gym.dentro(jugador.pos) ? 1 : 0) - luzGym) * Math.min(1, dt * 4);

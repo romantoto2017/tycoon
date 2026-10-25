@@ -25,6 +25,15 @@ const mediaCalle = (k) => (k === N / 2 ? 10 : 7); // las del medio son avenidas
 const VEREDA = 4;
 const PISO = 0.25; // alto de la vereda
 export const RADIO_CIUDAD = MEDIO + 40;
+const PEATONES = 48;
+const VER_GENTE = 190; // más lejos que esto, la gente ni se dibuja ni se mueve
+
+// Vuelta a la plaza (por la vereda), en coordenadas del mundo: el paseo de Dufre en la ciudad.
+export function paseoCiudad() {
+  const m = manzana(N / 2 - 1, N / 2 - 1);
+  const d = 2.8;
+  return { y: PISO, puntos: [[m.x0 + d, m.z1 - d], [m.x1 - d, m.z1 - d], [m.x1 - d, m.z0 + d], [m.x0 + d, m.z0 + d]].map(([x, z]) => [C.x + x, C.z + z]) };
+}
 
 // Bordes de la manzana (i, j) (con vereda) en coordenadas de la ciudad.
 function manzana(i, j) {
@@ -79,15 +88,17 @@ const texVidrio = () => lienzo(128, 128, (g) => {
   g.fillStyle = 'rgba(255,255,255,0.35)';
   g.fillRect(8, 4, 30, 104);
 });
-// Carteles de los negocios, todos en una imagen (16 lugares de 256 x 64).
+// Carteles de los negocios, todos en una imagen (lugares de 256 x 64, de a 4 por fila).
 const CARTELES = [
   ['BANCO VECIBANDA', '#1b3a63'], ['FARMACIA', '#1f9d55'], ['PIZZERÍA', '#c62828'], ['KIOSCO', '#f57c00'],
   ['CAFÉ', '#6d4c41'], ['PANADERÍA', '#b8860b'], ['HELADERÍA', '#ec407a'], ['BARBERÍA', '#263238'],
   ['FERRETERÍA', '#e65100'], ['LIBRERÍA', '#5e35b1'], ['SUPER VECIBANDA', '#d32f2f'], ['HOTEL VB', '#283593'],
   ['NAFTA VB', '#1565c0'], ['CIUDAD VECIBANDA', '#2e7d32'], ['PLAZA VECIBANDA', '#455a64'], ['ROPA', '#ad1457'],
+  ['VERDULERÍA', '#2e7d32'],
 ];
+const FILAS = Math.ceil(CARTELES.length / 4);
 const NEGOCIOS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 15];
-const texCarteles = () => lienzo(1024, 256, (g) => {
+const texCarteles = () => lienzo(1024, 64 * FILAS, (g) => {
   CARTELES.forEach(([texto, fondo], i) => {
     const x = (i % 4) * 256;
     const y = Math.floor(i / 4) * 64;
@@ -184,8 +195,8 @@ class Constructor {
   cartel(slot, x, y, z, mira, w, h) {
     const u0 = (slot % 4) / 4;
     const u1 = u0 + 0.25;
-    const v1 = 1 - Math.floor(slot / 4) / 4;
-    const v0 = v1 - 0.25;
+    const v1 = 1 - Math.floor(slot / 4) / FILAS;
+    const v0 = v1 - 1 / FILAS;
     const a = w / 2;
     const uvs = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
     const c = '#ffffff';
@@ -473,7 +484,7 @@ export class Ciudad {
     const anillo = Math.max(Math.abs(i - 3.5), Math.abs(j - 3.5));
     const clave = `${i},${j}`;
     const especial = {
-      '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel',
+      '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel', '5,3': 'verdu',
     }[clave];
     if (especial === 'plaza') this.plaza(c, lote, rnd);
     else if (especial === 'banco') this.banco(c, lote, rnd);
@@ -482,6 +493,7 @@ export class Ciudad {
     else if (especial === 'nafta') this.estacion(c, lote, rnd);
     else if (especial === 'parque') this.parque(c, lote, rnd);
     else if (especial === 'super') this.super(c, lote, rnd);
+    else if (especial === 'verdu') this.verduleria(c, lote, rnd);
     else if (especial === 'hotel') this.torre(c, lote.x0 + 6, lote.z0 + 6, lote.x1 - 6, lote.z1 - 6, 76, rnd, { cartel: 11 });
     else if (anillo < 1) this.centro(c, lote, rnd);
     else if (anillo < 2) this.comercial(c, lote, rnd, 3, 7);
@@ -907,6 +919,74 @@ export class Ciudad {
     for (let n = 0; n < 5; n++) this.autoEstacionado(c, lote.x0 + 6.5 + n * 10, lote.z1 - 12, 'z', AUTOS[Math.floor(rnd() * AUTOS.length)]);
   }
 
+  // Verdulería: un local abierto al frente, sobre la avenida, con toldo a rayas, cajones de
+  // verdura en la vereda y el verdulero atrás del mostrador. Atrás, edificios comunes.
+  verduleria(c, lote, rnd) {
+    const fondo = lote.z1 - 22;
+    this.comercial(c, { ...lote, z1: fondo }, rnd, 2, 4);
+    c.piso(lote.x0, fondo, lote.x1, lote.z1, PISO + 0.02, '#c9c2b4');
+    const xm = Math.round((lote.x0 + lote.x1) / 2);
+    const x0 = xm - 11;
+    const x1 = xm + 11;
+    const z0 = lote.z1 - 19;
+    const z1 = lote.z1 - 8;
+    const alto = PISO + 8;
+    const pared = '#f3ead7';
+    c.caja(x0, PISO, z0, x1, alto, z0 + 0.6, pared);
+    c.caja(x0, PISO, z0 + 0.6, x0 + 0.6, alto, z1, pared);
+    c.caja(x1 - 0.6, PISO, z0 + 0.6, x1, alto, z1, pared);
+    c.caja(x0, PISO + 6.2, z1 - 0.4, x1, alto, z1, pared);
+    c.caja(x0 - 0.4, alto, z0 - 0.2, x1 + 0.4, alto + 0.5, z1 + 0.2, '#6b7d4a');
+    c.piso(x0 + 0.6, z0 + 0.6, x1 - 0.6, z1, PISO + 0.05, '#d9cfbf');
+    this.solido(x0, 0, z0, x1, alto, z0 + 0.6);
+    this.solido(x0, 0, z0, x0 + 0.6, alto, z1);
+    this.solido(x1 - 0.6, 0, z0, x1, alto, z1);
+    this.solido(x0, PISO + 6.2, z1 - 0.4, x1, alto + 0.5, z1);
+    this.solido(x0 - 0.4, alto, z0 - 0.2, x1 + 0.4, alto + 0.5, z1 + 0.2);
+    // Toldo a rayas y cartel arriba.
+    for (let k = 0; k < 11; k++) c.caja(x0 + k * 2, PISO + 6, z1, x0 + k * 2 + 2, PISO + 6.25, z1 + 3, k % 2 ? '#f5f5f5' : '#2e7d32');
+    c.cartel(16, xm, PISO + 6.35, z1 + 0.03, '+z', 13, 1.4);
+    // Verduras: bolitas de pocos polígonos (lechugas, tomates, naranjas, papas, zanahorias).
+    const bola = (r, color, x, y, z, sy = 1) => {
+      const g = new THREE.IcosahedronGeometry(r, 0);
+      g.scale(1, sy, 1);
+      g.translate(x, y, z);
+      c.forma('liso', g, color);
+    };
+    const tipos = [
+      ['#5ea935', 0.5, 0.85], ['#e53935', 0.3, 1], ['#fb8c00', 0.32, 1], ['#a1887f', 0.3, 0.8],
+      ['#f57c00', 0.22, 2.2], ['#fdd835', 0.24, 1.8], ['#7b1fa2', 0.3, 1.1], ['#4caf50', 0.32, 1],
+    ];
+    const llenar = (a, b, y, z, ancho, t) => {
+      const [color, r, sy] = tipos[t % tipos.length];
+      for (let x = a + r + 0.1; x < b - r; x += r * 2.1) {
+        for (let k = 0; k < Math.max(1, Math.floor(ancho / (r * 2.1))); k++) {
+          bola(r, color, x + (rnd() - 0.5) * 0.1, y + r * sy * 0.8, z + r + k * r * 2.1, sy);
+        }
+      }
+    };
+    // Mostrador y estantes del fondo.
+    c.caja(x0 + 2, PISO, z1 - 4.5, x1 - 2, PISO + 1.8, z1 - 3.5, '#8d6e63', { arriba: '#c8a27a' });
+    this.solido(x0 + 2, 0, z1 - 4.5, x1 - 2, PISO + 1.8, z1 - 3.5);
+    for (const [y, t0] of [[PISO + 1.6, 0], [PISO + 3.4, 3]]) {
+      c.caja(x0 + 1, y - 0.15, z0 + 0.6, x1 - 1, y, z0 + 2, '#795548');
+      for (let n = 0; n < 5; n++) llenar(x0 + 1 + n * 4, x0 + 1 + n * 4 + 3.8, y, z0 + 0.65, 1.3, t0 + n);
+    }
+    c.caja(x0 + 1, PISO, z0 + 0.6, x1 - 1, PISO + 1.45, z0 + 2, '#6d4c41');
+    this.solido(x0 + 1, 0, z0 + 0.6, x1 - 1, PISO + 3.6, z0 + 2);
+    // Cajones afuera, a los dos lados de la entrada (los de lechuga, adelante de todo).
+    let t = 0;
+    for (const [a, b] of [[x0 + 0.5, xm - 3], [xm + 3, x1 - 0.5]]) {
+      for (let x = a; x < b - 1.9; x += 2.1) {
+        c.caja(x, PISO, z1 + 0.4, x + 2, PISO + 1.3, z1 + 2.4, '#b07a45', { arriba: '#5d3d1e' });
+        llenar(x, x + 2, PISO + 1.3, z1 + 0.45, 1.9, t === 0 || t === 5 ? 0 : t);
+        t++;
+      }
+      this.solido(a, 0, z1 + 0.4, b, PISO + 1.6, z1 + 2.4);
+    }
+    this.verdu = { x: xm, z: z1 - 2.2, xVerdulero: xm, zVerdulero: z1 - 6.5 };
+  }
+
   // ---------- Canchas jugables ----------
   crearJuegos() {
     const pelota = (r, color, x, z, raya) => {
@@ -1041,8 +1121,14 @@ export class Ciudad {
     }
   }
 
+  cercaVerdu(jugador) {
+    const v = this.verdu;
+    return v && jugador.pos.y < 3 && Math.hypot(jugador.pos.x - (C.x + v.x), jugador.pos.z - (C.z + v.z)) < 4.5;
+  }
+
   accion(jugador) {
     if (!this.lista || !this.adentro(jugador.pos)) return '';
+    if (this.cercaVerdu(jugador)) return `Comprar lechuga $${this.precioLechuga} (E)`;
     const p = this.pelotaBasquet;
     if (p.tiro) return '';
     const d = p.m.position.distanceTo(jugador.pos.clone().setY(p.m.position.y));
@@ -1050,7 +1136,8 @@ export class Ciudad {
   }
 
   hacer(jugador) {
-    if (this.accion(jugador)) this.tirar(jugador);
+    if (this.cercaVerdu(jugador)) this.alComprarLechuga?.();
+    else if (this.accion(jugador)) this.tirar(jugador);
   }
 
   // ---------- Gente caminando ----------
@@ -1060,9 +1147,11 @@ export class Ciudad {
     const pelos = ['#1b1411', '#3e2723', '#6d4c41', '#c8a165', '#2b2b2b', '#8d6e63'];
     const ropa = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#fb8c00', '#00acc1', '#6d4c41', '#f5f5f5', '#212121', '#ec407a'];
     const pantalones = ['#1e3a8a', '#37474f', '#212121', '#5d4037', '#795548', '#455a64'];
-    for (let n = 0; n < 20; n++) {
-      const i = Math.floor(rnd() * N);
-      const j = Math.floor(rnd() * N);
+    // Más gente en el centro que en las afueras.
+    for (let n = 0; n < PEATONES; n++) {
+      const cerca = n % 3 !== 2;
+      const i = cerca ? 2 + Math.floor(rnd() * 4) : Math.floor(rnd() * N);
+      const j = cerca ? 2 + Math.floor(rnd() * 4) : Math.floor(rnd() * N);
       const m = manzana(i, j);
       const p = {
         id: `peaton${n % 10}`, nombre: ' ', sinFoto: true, piel: pieles[n % pieles.length], pelo: pelos[(n * 3) % pelos.length], peinado: ['liso', 'ondulado', 'rulos'][n % 3],
@@ -1082,6 +1171,19 @@ export class Ciudad {
       this.grupo.add(mod.grupo);
       this.peatones.push(peaton);
       this.moverPeaton(peaton, 0);
+    }
+    // El verdulero, parado atrás del mostrador.
+    const v = this.verdu;
+    if (v) {
+      const p = { id: 'verdulero', nombre: ' ', sinFoto: true, piel: '#e0ac69', pelo: '#3e2723', peinado: 'liso', remera: '#f5f5f5', pantalon: '#5d4037', cuerpo: 'gordo' };
+      const cab = await cargarCabeza(p);
+      if (!cab.dibujada) {
+        dibujarCara(cab.frente, p.piel, p.pelo);
+        cab.dibujada = true;
+      }
+      this.verdulero = crearPersonaje(p, cab);
+      this.verdulero.grupo.position.set(v.xVerdulero, PISO, v.zVerdulero);
+      this.grupo.add(this.verdulero.grupo);
     }
   }
 
@@ -1120,7 +1222,15 @@ export class Ciudad {
     if (adentro && !this.estuvo && jugando) this.ui.toast('¡Bienvenido a Ciudad Vecibanda!', 'plata');
     this.estuvo = adentro;
     if (Math.abs(jugador.pos.x - C.x) > RADIO_CIUDAD + 400) return;
-    for (const p of this.peatones) this.moverPeaton(p, dt);
+    // Solo se mueve (y se dibuja) la gente de alrededor.
+    const l = this.local(jugador.pos);
+    for (const p of this.peatones) {
+      const g = p.mod.grupo.position;
+      const ver = Math.abs(g.x - l.x) < VER_GENTE && Math.abs(g.z - l.z) < VER_GENTE;
+      p.mod.grupo.visible = ver;
+      if (ver) this.moverPeaton(p, dt);
+    }
+    this.verdulero?.animar(dt, 0, true);
     this.futbolActualizar(dt, jugador);
     this.basquetActualizar(dt, jugador);
   }

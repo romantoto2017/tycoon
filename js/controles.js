@@ -36,6 +36,7 @@ export class Controles {
     this.joy = { x: 0, y: 0 };
     this.saltoTactil = false;
     this.punteros = new Map(); // pointerId -> { tipo: 'camara'|'stick', x, y, x0, y0 }
+    this.alTocar = null; // toque corto (o clic sin arrastrar) en la pantalla: (x, y)
     this.pellizco = 0; // distancia entre dos dedos de cámara
 
     this.tactil = document.getElementById('tactil');
@@ -171,7 +172,7 @@ export class Controles {
       this.base.style.top = `${e.clientY}px`;
       this.base.classList.add('activo');
     } else {
-      this.punteros.set(e.pointerId, { tipo: 'camara', x: e.clientX, y: e.clientY });
+      this.punteros.set(e.pointerId, { tipo: 'camara', x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now(), boton: e.button });
       this.pellizco = 0;
     }
   }
@@ -224,6 +225,11 @@ export class Controles {
       this.base.classList.remove('activo');
     } else {
       this.pellizco = 0;
+      const corto = performance.now() - p.t0 < 350 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12;
+      if (corto && p.boton === 0 && e.clientX !== undefined && this.dedosCamara().length === 0) {
+        const trabado = document.pointerLockElement === this.canvas;
+        this.alTocar?.(trabado ? window.innerWidth / 2 : p.x0, trabado ? window.innerHeight / 2 : p.y0);
+      }
     }
   }
 

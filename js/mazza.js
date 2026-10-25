@@ -19,6 +19,12 @@ const VEL_PERSIGUE = 0.8; // proporción de la velocidad del jugador: Juanma se 
 const VEL_CAMINA = 0.55;
 const FRASES = ['¿Dónde está Juanma?', '¿Viste a Juanma?', '¿Juanma está en casa?', 'Decile a Juanma que vine <3', '¿Juanma no está?'];
 const FRASES_JUANMA = ['¡JUANMAAA!', 'Juanma, esperame', 'Te amo Juanma <3', '¡No te escapes!'];
+// Las lechugas le dan pánico (como los gatos a los creepers): si hay una cerca (puesta en el
+// piso o en la mano de alguien) sale corriendo para el otro lado. Al tercer susto se va.
+const MIEDO = 6.5;
+const VEL_HUYE = 1.05;
+const SUSTOS = 3;
+const GRITOS = ['¡AAAAAH!', '¡UNA LECHUGA!', '¡NOOO, ESO NO!', '¡Sacá eso de acá!', '¡AUXILIOOO!'];
 
 // ---------- Navegación por la mansión ----------
 // Puntos de paso en el plano (x, z) con el piso al que pertenecen. Las escaleras alternan:
@@ -276,11 +282,14 @@ export class Mazza {
     this.tycoon = tycoon;
     this.ui = ui;
     this.reloj = 0;
-    this.estado = 'fuera'; // fuera | cargando | llegando | visitando | yendo
+    this.estado = 'fuera'; // fuera | cargando | llegando | visitando | yendo | huyendo
     this.corazones = new Corazones(escena);
     this.cuerpo = null;
     this.dir = new THREE.Vector3();
     this.cabeza = new THREE.Vector3();
+    this.lechugas = null; // las puestas en el terreno (lechugas.js)
+    this.conLechuga = () => false; // si el jugador tiene una en la mano
+    this.desde = new THREE.Vector3();
   }
 
   async aparecer() {
@@ -306,6 +315,8 @@ export class Mazza {
     this.decir('');
     this.ultimoVisto = -99;
     this.pausa = 0;
+    this.panico = 0;
+    this.sustos = 0;
     this.estado = 'llegando';
   }
 
@@ -349,6 +360,31 @@ export class Mazza {
     return false;
   }
 
+  // Lo más cercano que le da miedo (si está a menos de MIEDO): una lechuga puesta o el jugador
+  // con una en la mano.
+  susto(jugador) {
+    const c = this.cuerpo.pos;
+    let fuente = null;
+    let d = MIEDO;
+    const l = c.y < 3 && this.lechugas?.masCerca(c.x, c.z);
+    if (l && l.d < d) { fuente = l; d = l.d; }
+    if (this.conLechuga() && Math.abs(jugador.pos.y - c.y) < 3) {
+      const dj = Math.hypot(jugador.pos.x - c.x, jugador.pos.z - c.z);
+      if (dj < d) fuente = jugador.pos;
+    }
+    return fuente;
+  }
+
+  huir(dt) {
+    const c = this.cuerpo;
+    this.dir.set(c.pos.x - this.desde.x, 0, c.pos.z - this.desde.z);
+    if (this.dir.lengthSq() < 0.01) this.dir.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+    this.dir.normalize();
+    c.mirarA = null;
+    c.factorVel = VEL_HUYE;
+    c.actualizar(dt, this.dir, false, this.tycoon.colisiones, this.tycoon.agua);
+  }
+
   enTerreno() {
     return this.cuerpo.pos.z < 56;
   }
@@ -368,6 +404,41 @@ export class Mazza {
     this.cabeza.set(c.pos.x, c.pos.y + 6.2, c.pos.z);
     this.corazones.actualizar(dt, this.cabeza);
     if (!jugando) return;
+
+    const f = this.susto(jugador);
+    if (f) {
+      if (this.panico <= 0) {
+        this.sustos++;
+        this.grito = GRITOS[Math.floor(Math.random() * GRITOS.length)];
+        this.corazones.ocultar();
+        this.pausa = 0;
+      }
+      this.panico = 1.3;
+      this.desde.set(f.x, 0, f.z);
+    }
+    if (this.estado === 'huyendo') {
+      // Se rindió: corre para el otro lado un rato y desaparece.
+      this.tiempo += dt;
+      this.decir('¡ME VOY DE ACÁ!');
+      this.huir(dt);
+      if (this.tiempo > 4) this.irse();
+      return;
+    }
+    if (this.panico > 0) {
+      this.panico -= dt;
+      this.decir(this.grito);
+      this.huir(dt);
+      if (this.panico <= 0) {
+        this.recalculo = 0;
+        this.decir('');
+        if (this.sustos >= SUSTOS) {
+          this.estado = 'huyendo';
+          this.tiempo = 0;
+          this.ui.toast('La Mazza salió corriendo', 'info');
+        }
+      }
+      return;
+    }
 
     if (this.estado === 'llegando') {
       if (this.seguir(dt, VEL_CAMINA)) {
