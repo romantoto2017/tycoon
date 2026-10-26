@@ -959,3 +959,53 @@ html, body {
 
 /* Aviso adentro de la pantalla que está abierta (configuración o menú). */
 .aviso-pantalla { margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; background: #fff1f0; color: #b42318; font-size: 15px; font-weight: 700; text-align: center; }
+
+/* ---------- Autódromo ---------- */
+.autodromo-fondo { background: rgba(10, 10, 16, 0.78); }
+.panel-autodromo {
+  width: min(980px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; border-radius: 20px;
+  background: linear-gradient(160deg, #1b1d22, #2b2f36); color: #fff; padding: 18px 20px 20px;
+  border: 3px solid #e3241b; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.panel-autodromo header { position: relative; text-align: center; margin-bottom: 12px; }
+.panel-autodromo h2 { margin: 0; font-size: clamp(26px, 5vw, 40px); font-weight: 900; letter-spacing: 2px; font-style: italic; }
+.panel-autodromo h2 span { color: #e3241b; }
+.autodromo-info { margin: 4px 0 0; color: #cfd8dc; font-size: 15px; }
+.panel-autodromo .cerrar-x { position: absolute; right: 0; top: 0; }
+.autodromo-autos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.ad-auto { background: rgba(255, 255, 255, 0.06); border: 2px solid rgba(255, 255, 255, 0.12); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ad-auto.bloqueado { opacity: 0.45; }
+.ad-auto h3 { margin: 0; font-size: 19px; }
+.ad-barras { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font-size: 13px; color: #cfd8dc; }
+.ad-barra { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.ad-barra i { display: block; height: 100%; background: linear-gradient(90deg, #ff7a00, #e3241b); }
+.ad-medallas { display: flex; gap: 6px; }
+.ad-medalla { flex: 1; border-radius: 10px; padding: 4px 2px; text-align: center; font-size: 12px; background: rgba(255, 255, 255, 0.08); border: 2px solid transparent; }
+.ad-medalla b { display: block; font-size: 13px; }
+.ad-medalla.ganada { border-color: var(--color); color: #111; background: var(--color); }
+.ad-mejor { margin: 0; font-size: 15px; }
+.ad-mejor b { font-variant-numeric: tabular-nums; color: #8dff6a; }
+.ad-auto .btn { margin-top: 2px; }
+.carrera {
+  position: fixed; top: calc(70px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 230px;
+  background: rgba(16, 17, 21, 0.82); color: #fff; border-radius: 14px; padding: 10px 14px; border-left: 5px solid #e3241b; pointer-events: none;
+}
+.carrera p { margin: 0; }
+.carrera-auto { font-size: 13px; color: #cfd8dc; }
+.carrera-vuelta { font-size: 13px; letter-spacing: 1px; }
+.carrera-tiempo { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.carrera-datos { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0; font-size: 14px; }
+.carrera-datos dt { color: #9aa3ad; }
+.carrera-datos dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.carrera-vel { font-size: 15px; text-align: right; }
+.carrera-vel b { font-size: 24px; }
+.carrera-fuera { color: #ff5252; font-weight: 800; text-align: center; }
+.semaforo { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); display: flex; gap: 14px; padding: 12px 16px; background: #111; border-radius: 16px; border: 3px solid #333; pointer-events: none; }
+.semaforo i { width: clamp(40px, 8vw, 64px); aspect-ratio: 1; border-radius: 50%; background: #2a2a2a; }
+.semaforo i.rojo { background: #ff2a1a; box-shadow: 0 0 24px #ff2a1a; }
+.semaforo i.amarillo { background: #ffc21a; box-shadow: 0 0 24px #ffc21a; }
+.semaforo i.verde { background: #2bff5a; box-shadow: 0 0 24px #2bff5a; }
+@media (max-width: 700px) {
+  .carrera { width: 180px; top: 64px; padding: 8px 10px; }
+  .carrera-tiempo { font-size: 26px; }
+}

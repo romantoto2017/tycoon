@@ -86,5 +86,9 @@ export const AUTOS_DESDE = 0.6;
 // Concesionario Vecibanda Motors: a la salida de la ciudad, al costado de la autopista (del
 // lado de las casas), con la vidriera mirando a la autopista (-z).
 export const CONCESIONARIO = { x0: CIUDAD.x + 384, x1: CIUDAD.x + 444, z0: CALLE_Z + 26, z1: CALLE_Z + 64, alto: 13 };
-// Hasta dónde se puede ir caminando o en auto: el barrio, la autopista y la ciudad.
-export const LIMITE_MAPA = { x0: CIUDAD.x - 480, x1: 520, z0: -520, z1: 520 };
+// Autódromo Vecibanda Ring: a mitad de la autopista, del lado de las casas. x, z: dónde cae el
+// punto de arriba del dibujo del trazado (la recta de arriba, la más cerca de la autopista);
+// escala: unidades por píxel del dibujo; ancho: de la pista (unos 14 m).
+export const AUTODROMO = { x: (AUTOPISTA.x0 + AUTOPISTA.x1) / 2, z: CALLE_Z + 100, escala: 3.2, ancho: 34 };
+// Hasta dónde se puede ir caminando o en auto: el barrio, la autopista, el autódromo y la ciudad.
+export const LIMITE_MAPA = { x0: CIUDAD.x - 480, x1: 520, z0: -520, z1: 1000 };

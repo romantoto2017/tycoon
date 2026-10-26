@@ -102,15 +102,20 @@ export const LUJOS = [
 //             redondeado. 350 dólares es la Jordan 3 x J Balvin (9B); con la proporción
 //             exacta un McLaren costaría 41T (más de 50 horas de juego), así que se comprime.
 // - real:     precio de verdad (aprox., octubre 2026), para mostrar en el concesionario
-// - potencia: velocidad máxima comparada con el Auto Deportivo (1 = igual)
+// - vmax:     velocidad máxima de verdad (km/h); en la autopista y en el autódromo llega a eso
+// - cero100:  segundos de 0 a 100 km/h, de verdad (de ahí sale la aceleración)
+// - agarre:   cuánto dobla sin irse (g): a más velocidad, menos puede doblar
 const B = 1e9;
 const T = 1e12;
 
 export const AUTOS = [
-  { id: 'miata', nombre: 'Mazda MX-5 Miata', archivo: 'miata.glb', largo: 3.95, precio: 75 * B, real: 'US$ 12.000', potencia: 1.05 },
-  { id: 'bmw_e36', nombre: 'BMW Serie 3 E36', archivo: 'bmw_e36.glb', largo: 4.43, precio: 85 * B, real: 'US$ 14.000', potencia: 1.1 },
-  { id: 'golf_gti', nombre: 'VW Golf GTI Clubsport', archivo: 'golf_gti.glb', largo: 4.27, precio: 130 * B, real: 'US$ 28.000', potencia: 1.15 },
-  { id: 'gtr', nombre: 'Nissan GT-R R35', archivo: 'gtr.glb', largo: 4.71, precio: 350 * B, real: 'US$ 120.000', potencia: 1.35 },
-  { id: 'mclaren_p1', nombre: 'McLaren P1', archivo: 'mclaren_p1.glb', largo: 4.59, precio: 1.5 * T, real: 'US$ 1.600.000', potencia: 1.6 },
-  { id: 'ferrari_f40', nombre: 'Ferrari F40', archivo: 'ferrari_f40.glb', largo: 4.36, precio: 2.5 * T, real: 'US$ 3.200.000', potencia: 1.5 },
+  { id: 'miata', nombre: 'Mazda MX-5 Miata', archivo: 'miata.glb', largo: 3.95, precio: 75 * B, real: 'US$ 12.000', vmax: 185, cero100: 9.1, agarre: 0.86 },
+  { id: 'bmw_e36', nombre: 'BMW Serie 3 E36', archivo: 'bmw_e36.glb', largo: 4.43, precio: 85 * B, real: 'US$ 14.000', vmax: 233, cero100: 7.8, agarre: 0.86 },
+  { id: 'golf_gti', nombre: 'VW Golf GTI Clubsport', archivo: 'golf_gti.glb', largo: 4.27, precio: 130 * B, real: 'US$ 28.000', vmax: 250, cero100: 6.3, agarre: 0.95 },
+  { id: 'gtr', nombre: 'Nissan GT-R R35', archivo: 'gtr.glb', largo: 4.71, precio: 350 * B, real: 'US$ 120.000', vmax: 315, cero100: 2.8, agarre: 1.0 },
+  { id: 'mclaren_p1', nombre: 'McLaren P1', archivo: 'mclaren_p1.glb', largo: 4.59, precio: 1.5 * T, real: 'US$ 1.600.000', vmax: 350, cero100: 2.8, agarre: 1.25 },
+  { id: 'ferrari_f40', nombre: 'Ferrari F40', archivo: 'ferrari_f40.glb', largo: 4.36, precio: 2.5 * T, real: 'US$ 3.200.000', vmax: 324, cero100: 4.1, agarre: 1.0 },
 ];
+
+// El Auto Deportivo de la mansión (en realidad un BYD F0): también corre en el autódromo.
+export const AUTO_DEPORTIVO = { id: 'deportivo', nombre: 'Auto Deportivo (BYD F0)', largo: 3.46, real: 'el auto papa', vmax: 151, cero100: 15, agarre: 0.75 };

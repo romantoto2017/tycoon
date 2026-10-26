@@ -2,15 +2,65 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
-import { AUTOS } from '../data/objetos.js';
+import { AUTOS, AUTO_DEPORTIVO } from '../data/objetos.js';
 import { mat, formato } from './util.js';
 import { LIMITE_MAPA, CONCESIONARIO as CO, AUTOPISTA as AU, GALPON_LUGARES, AUTOS_DESDE } from './constantes.js';
 import { crearEtiqueta } from './texturas.js';
 import { sfx } from './sfx.js';
 
 const RADIO = 2.3;
-export const VEL_MAX = 34;
+export const VEL_MAX = 34; // tope en el barrio y en la ciudad para el Auto Deportivo (unos 50 km/h)
 const VEL_ATRAS = -10;
+const M = 2.47; // 1 m en unidades del juego
+const G = 9.8 * M; // 1 g
+
+// ---------- Física de verdad ----------
+// Cada auto con sus números reales (data/objetos.js): velocidad máxima, 0 a 100 km/h y agarre.
+// La aceleración baja a medida que se acerca a la máxima: a = a0 · (1 − v / vmax), con a0 sacado
+// del 0 a 100. Frena con el agarre (≈ 1 g) y, a más velocidad, menos puede doblar: el giro se
+// limita a agarre / velocidad (la aceleración lateral de verdad), así hay que frenar para las curvas.
+export function specsAuto(def) {
+  const v = (def.vmax / 3.6) * M;
+  const v100 = (100 / 3.6) * M;
+  return {
+    v, // velocidad máxima (unidades por segundo)
+    a0: (-v * Math.log(1 - v100 / v)) / def.cero100,
+    freno: def.agarre * G,
+    lateral: def.agarre * G,
+    // En el barrio y la ciudad hay un tope (como si fuera la velocidad permitida), más alto para los rápidos.
+    barrio: Math.min(v, VEL_MAX * Math.sqrt(def.vmax / AUTO_DEPORTIVO.vmax)),
+  };
+}
+
+// Un paso de manejo (sin choques), igual para el jugador y para la simulación del autódromo.
+// a: { pos: {x, z}, angulo, vel, direccion, velMax, specs }; ejes: { x: doblar, y: acelerar }.
+export function pasoAuto(a, ejes, dt) {
+  const sp = a.specs;
+  const tope = Math.min(a.velMax || sp.barrio, sp.v);
+  const acel = ejes.y;
+  if (acel > 0 && a.vel >= 0) {
+    if (a.vel < tope) a.vel = Math.min(tope, a.vel + sp.a0 * (1 - a.vel / sp.v) * acel * dt);
+  } else if (acel < 0 && a.vel > 0.3) {
+    a.vel = Math.max(0, a.vel + sp.freno * acel * dt); // frena
+  } else if (acel > 0 && a.vel < 0) {
+    a.vel = Math.min(0, a.vel + sp.freno * acel * dt);
+  } else if (acel < 0) {
+    a.vel = Math.max(VEL_ATRAS, a.vel + sp.a0 * 0.5 * acel * dt); // marcha atrás
+  } else {
+    // Sin acelerar: freno motor, rozamiento y el aire (que pesa mucho más a alta velocidad).
+    const s = Math.sign(a.vel);
+    a.vel -= s * Math.min(Math.abs(a.vel), (3 + 0.00029 * a.vel * a.vel) * dt);
+  }
+  // Al pasar a una zona más lenta (de la autopista al barrio) frena de a poco hasta el tope.
+  if (a.vel > tope) a.vel = Math.max(tope, a.vel - 70 * dt);
+  a.direccion += (ejes.x * 0.45 - a.direccion) * Math.min(1, dt * 8);
+  let giro = a.direccion * 3.6 * Math.max(-1, Math.min(1, a.vel / 10));
+  const maxGiro = sp.lateral / Math.max(Math.abs(a.vel), 1);
+  giro = Math.max(-maxGiro, Math.min(maxGiro, giro));
+  a.angulo -= giro * dt;
+  a.pos.x = Math.max(LIMITE_MAPA.x0, Math.min(LIMITE_MAPA.x1, a.pos.x + Math.sin(a.angulo) * a.vel * dt));
+  a.pos.z = Math.max(LIMITE_MAPA.z0, Math.min(LIMITE_MAPA.z1, a.pos.z + Math.cos(a.angulo) * a.vel * dt));
+}
 
 // "Auto Deportivo" (en el juego se llama así para trollear): en realidad es un BYD F0
 // plateado, el "auto papa" (ver assets/especiales/byd*.jpeg). Medidas del de verdad
@@ -212,6 +262,7 @@ export class Auto {
     this.angulo = angulo;
     this.vel = 0;
     this.direccion = 0;
+    this.specs = specsAuto(AUTO_DEPORTIVO);
     this.grupo = new THREE.Group();
     this.ruedas = [];
     this.delanteras = [];
@@ -406,28 +457,11 @@ export class Auto {
 
   // ejes: { x: doblar (+ derecha), y: acelerar (+ adelante) }.
   actualizar(dt, ejes, colisiones) {
-    const acel = ejes.y;
-    // En la autopista (velMax alto, lo pone main.js) acelera más y llega mucho más rápido.
-    const velMax = this.velMax || VEL_MAX;
-    const empuje = velMax > VEL_MAX ? 32 : 22;
-    if (acel) {
-      const frenando = acel * this.vel < 0;
-      this.vel += acel * (frenando ? 45 : empuje) * dt;
-    } else {
-      this.vel *= Math.max(0, 1 - 1.6 * dt);
-      if (Math.abs(this.vel) < 0.2) this.vel = 0;
-    }
-    // Al salir de la autopista frena de a poco hasta la velocidad normal.
-    if (this.vel > velMax) this.vel = Math.max(velMax, this.vel - 70 * dt);
-    this.vel = Math.max(this.vel, VEL_ATRAS);
-    this.direccion += (ejes.x * 0.45 - this.direccion) * Math.min(1, dt * 8);
-    this.angulo -= this.direccion * 3.6 * THREE.MathUtils.clamp(this.vel / 10, -1, 1) * dt;
-
+    // velMax lo pone main.js según la zona: en la autopista y el autódromo, la máxima de verdad.
     const p = this.pos;
     const antesX = p.x;
     const antesZ = p.z;
-    p.x = THREE.MathUtils.clamp(p.x + Math.sin(this.angulo) * this.vel * dt, LIMITE_MAPA.x0, LIMITE_MAPA.x1);
-    p.z = THREE.MathUtils.clamp(p.z + Math.cos(this.angulo) * this.vel * dt, LIMITE_MAPA.z0, LIMITE_MAPA.z1);
+    pasoAuto(this, ejes, dt);
     let choque = false;
     for (const b of colisiones) {
       if (b === this.caja || b.max.y < 0.35 || b.min.y > 2.5) continue;
@@ -527,12 +561,12 @@ export function cargarAuto(def) {
 }
 
 // ---------- Auto comprado (manejable) ----------
-// Igual que el Auto Deportivo (arriba), pero con el modelo del concesionario y su potencia.
+// Igual que el Auto Deportivo (arriba), pero con el modelo del concesionario y sus números.
 export class AutoComprado extends Auto {
   constructor(escena, def, x, z, angulo = 0) {
     super(escena, x, z, angulo);
     this.def = def;
-    this.potencia = def.potencia || 1;
+    this.specs = specsAuto(def);
     // Hasta que carga el modelo, la caja se estima con el largo.
     this.medio = [def.largo * ESCALA_AUTO * 0.23, (def.largo * ESCALA_AUTO) / 2];
     this.colocar();

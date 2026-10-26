@@ -247,6 +247,65 @@ export function ocultarKaraoke() {
   karaokePalabras = null;
 }
 
+// ---------- Autódromo ----------
+// datos: { autos: [{ id, nombre, tuyo, vmax, cero100, agarre, mejor, tieneMejor, medallas: [{ nombre, color, tiempo, ganada }] }], largo }
+export function abrirAutodromo(datos, alElegir, alCerrar) {
+  $('autodromo-info').textContent = `Trazado de ${datos.largo.replace('.', ',')} km · Vueltas cronometradas · Elegí tu auto`;
+  const ul = $('autodromo-autos');
+  ul.replaceChildren();
+  const barra = (v) => `<span class="ad-barra"><i style="width:${Math.round(Math.max(0.04, Math.min(1, v)) * 100)}%"></i></span>`;
+  for (const a of datos.autos) {
+    const li = document.createElement('li');
+    li.className = `ad-auto${a.tuyo ? '' : ' bloqueado'}`;
+    li.innerHTML = `
+      <h3></h3>
+      <div class="ad-barras">
+        <span>Velocidad</span>${barra(a.vmax / 350)}<span>${a.vmax} km/h</span>
+        <span>Aceleración</span>${barra((16 - a.cero100) / 13.5)}<span>0-100 ${String(a.cero100).replace('.', ',')} s</span>
+        <span>Agarre</span>${barra((a.agarre - 0.6) / 0.7)}<span>${String(a.agarre).replace('.', ',')} g</span>
+      </div>
+      <div class="ad-medallas">${a.medallas.map((m) => `<span class="ad-medalla${m.ganada ? ' ganada' : ''}" style="--color:${m.color}">${m.nombre}<b>${m.tiempo}</b></span>`).join('')}</div>
+      <p class="ad-mejor">Tu récord: <b>${a.tieneMejor ? a.mejor : 'sin tiempo'}</b></p>`;
+    li.querySelector('h3').textContent = a.nombre;
+    const btn = document.createElement('button');
+    btn.className = `btn ${a.tuyo ? 'rojo' : 'gris'}`;
+    btn.textContent = a.tuyo ? 'Correr' : 'No lo tenés';
+    btn.disabled = !a.tuyo;
+    btn.onclick = () => { mostrar('autodromo', false); alElegir(a.id); };
+    li.append(btn);
+    ul.append(li);
+  }
+  $('btn-cerrar-autodromo').onclick = () => { mostrar('autodromo', false); alCerrar?.(); };
+  mostrar('autodromo', true);
+  ul.querySelector('.btn:not([disabled])')?.focus();
+}
+
+export function hudCarrera(d) {
+  $('carrera-auto').textContent = d.auto;
+  $('carrera-vuelta').textContent = d.vuelta;
+  $('carrera-tiempo').textContent = d.tiempo;
+  $('carrera-ultima').textContent = d.ultima;
+  $('carrera-mejor').textContent = d.mejor;
+  const o = $('carrera-objetivo');
+  o.textContent = d.objetivo;
+  o.style.color = d.colorObjetivo;
+  $('carrera-vel').textContent = d.velocidad;
+  $('carrera-fuera').classList.toggle('oculto', !d.fuera);
+  mostrar('carrera', true);
+}
+
+// luz: 0 rojo, 1 amarillo, 2 verde, -1 apagado (se oculta).
+export function semaforoCarrera(luz) {
+  const s = $('semaforo');
+  s.classList.toggle('oculto', luz < 0);
+  s.querySelectorAll('i').forEach((el, i) => { el.className = i === luz ? ['rojo', 'amarillo', 'verde'][i] : ''; });
+}
+
+export function ocultarCarrera() {
+  mostrar('carrera', false);
+  mostrar('semaforo', false);
+}
+
 // ---------- Misiones ----------
 // lista: [{ titulo, texto, detalle, avance, hecha, tuya, cara (dataURL), nombre }]
 export function abrirMisiones(lista, alCerrar) {

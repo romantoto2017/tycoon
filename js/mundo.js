@@ -16,9 +16,10 @@ export function crearMundo(escena) {
   const ancho = LIMITE_MAPA.x1 - LIMITE_MAPA.x0 + 1000;
   // Dividido en pedazos de 100: con dos triángulos gigantes la profundidad pierde precisión y
   // el pasto tapa la autopista (que está apenas arriba).
-  const pasto = new THREE.Mesh(new THREE.PlaneGeometry(ancho, 2000, Math.ceil(ancho / 100), 20), matTex('pastoLibre', '#79b957', 6));
+  // De z −1100 a 1500: llega hasta pasando el autódromo.
+  const pasto = new THREE.Mesh(new THREE.PlaneGeometry(ancho, 2600, Math.ceil(ancho / 100), 26), matTex('pastoLibre', '#79b957', 6));
   pasto.rotation.x = -Math.PI / 2;
-  pasto.position.set((LIMITE_MAPA.x0 + LIMITE_MAPA.x1) / 2, 0, 0);
+  pasto.position.set((LIMITE_MAPA.x0 + LIMITE_MAPA.x1) / 2, 0, 200);
   escena.add(pasto);
 
   // Bloques quietos del barrio: main.js los pasa al lote para dibujarlos juntos.

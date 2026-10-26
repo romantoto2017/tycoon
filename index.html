@@ -42,6 +42,19 @@
       <p id="karaoke-actual" class="karaoke-actual"></p>
       <p id="karaoke-siguiente" class="karaoke-siguiente"></p>
     </div>
+    <div id="carrera" class="carrera oculto" aria-live="off">
+      <p id="carrera-auto" class="carrera-auto"></p>
+      <p class="carrera-vuelta">VUELTA <b id="carrera-vuelta">1</b></p>
+      <p id="carrera-tiempo" class="carrera-tiempo">0:00.000</p>
+      <dl class="carrera-datos">
+        <dt>Última</dt><dd id="carrera-ultima">–</dd>
+        <dt>Récord</dt><dd id="carrera-mejor">–</dd>
+        <dt>Próxima</dt><dd id="carrera-objetivo">–</dd>
+      </dl>
+      <p class="carrera-vel"><b id="carrera-vel">0</b> km/h</p>
+      <p id="carrera-fuera" class="carrera-fuera oculto">¡Por el pasto!</p>
+    </div>
+    <div id="semaforo" class="semaforo oculto" aria-hidden="true"><i></i><i></i><i></i></div>
     <button id="btn-manejar" class="btn azul btn-manejar oculto">Manejar (E)</button>
     <div id="barra" class="barra">
       <button id="btn-arma" class="slot oculto" aria-pressed="false" title="Sacar / guardar el AK-47 (1)">
@@ -183,6 +196,17 @@
   </section>
 
   <!-- Misiones -->
+  <div id="autodromo" class="pantalla autodromo-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="autodromo-titulo">
+    <div class="panel-autodromo">
+      <header>
+        <h2 id="autodromo-titulo">VECIBANDA <span>RING</span></h2>
+        <p id="autodromo-info" class="autodromo-info"></p>
+        <button id="btn-cerrar-autodromo" class="cerrar-x" aria-label="Cerrar">✕</button>
+      </header>
+      <ul id="autodromo-autos" class="autodromo-autos"></ul>
+    </div>
+  </div>
+
   <div id="misiones" class="pantalla misiones-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="misiones-titulo">
     <div class="panel-misiones">
       <header>

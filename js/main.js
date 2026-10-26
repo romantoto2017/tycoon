@@ -20,7 +20,8 @@ import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
 import { Ciudad } from './ciudad.js';
-import { VEL_MAX, Concesionario, Flota } from './auto.js';
+import { Concesionario, Flota } from './auto.js';
+import { Autodromo } from './autodromo.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
 import { crearAK } from './arma.js';
@@ -105,6 +106,7 @@ async function iniciar() {
   const ciudad = new Ciudad(escena, UI);
   const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
+  const autodromo = new Autodromo({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso, tycoon, flota });
   concesionario.alComprar = () => misiones.revisarAutos();
   const karaoke = new Karaoke(UI); // la canción con la letra al ritmo, en la sala del karaoke
   // Choques de este cuadro: en la ciudad, solo los de alrededor (son muchos); si no, los de siempre.
@@ -151,6 +153,8 @@ async function iniciar() {
   };
   const enHeli = () => conduciendo && vehiculo === tycoon.heli;
   const subirOBajar = () => {
+    // En el autódromo, bajarse es salir de la pista (el auto de la carrera desaparece).
+    if (conduciendo && autodromo.corriendo) { autodromo.salir(); return; }
     if (conduciendo) {
       const v = vehiculo;
       // Del helicóptero solo te bajás apoyado.
@@ -181,6 +185,28 @@ async function iniciar() {
     jugador.contenedor.visible = !conduciendo;
     jugador.sombra.visible = !conduciendo;
   };
+  // El autódromo te sube al auto de la carrera y, al salir, te deja a pie en la entrada.
+  autodromo.alSubir = (v) => {
+    sacarArma(false);
+    sacarLechuga(false);
+    conduciendo = true;
+    vehiculo = v;
+    controles.yaw = v.angulo + Math.PI;
+    controles.activo = modo === 'juego';
+    jugador.conduciendo = true;
+    jugador.contenedor.visible = false;
+    jugador.sombra.visible = false;
+  };
+  autodromo.alBajar = (p) => {
+    conduciendo = false;
+    vehiculo = null;
+    jugador.pos.set(p.x, 0.2, p.z);
+    jugador.vel.set(0, 0, 0);
+    jugador.conduciendo = false;
+    jugador.contenedor.visible = true;
+    jugador.sombra.visible = true;
+  };
+  autodromo.alCerrar = () => { controles.activo = modo === 'juego'; };
   // ---------- Dormir ----------
   // De noche, cerca de una cama comprada aparece "Dormir": fundido a negro y se despierta
   // a la mañana. La hora va aparte del tiempo jugado (estado.desfaseHora), así no cambian
@@ -221,6 +247,11 @@ async function iniciar() {
     }
     if (!conduciendo && karaoke.accion(jugador)) {
       karaoke.hacer(jugador);
+      return;
+    }
+    if (!conduciendo && autodromo.accion(jugador)) {
+      controles.activo = false;
+      autodromo.hacer(jugador);
       return;
     }
     if (misiones.accion(jugador)) {
@@ -766,7 +797,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, lechugas, sacarLechuga };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, autodromo, lechugas, sacarLechuga };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -863,15 +894,16 @@ async function iniciar() {
       jugador.pos.copy(tycoon.heli.pos);
     } else if (conduciendo) {
       vehiculo.terreno = mundo.altura;
-      // En la autopista el auto va mucho más rápido (la ciudad queda a 20 km). Los del
-      // concesionario, según su potencia.
+      // En la autopista (la ciudad queda a 20 km) y en el autódromo, cada auto llega a su
+      // velocidad máxima de verdad; en el barrio y en la ciudad, a su tope de calle.
       const enAutopista = ciudad.enAutopista(vehiculo.pos);
-      vehiculo.velMax = (enAutopista ? 150 : VEL_MAX) * (vehiculo.potencia || 1);
+      vehiculo.velMax = enAutopista || autodromo.enPista(vehiculo.pos) ? vehiculo.specs.v : vehiculo.specs.barrio;
       if (enAutopista && !avisoAutopista) {
         avisoAutopista = true;
         UI.toast('¡Autopista! Acá el auto vuela: a fondo hasta la Ciudad Vecibanda', 'info');
       }
-      vehiculo.actualizar(dt, controles.ejes(ejes), choquesActuales);
+      // Con el semáforo en rojo o amarillo, el auto no se mueve.
+      vehiculo.actualizar(dt, autodromo.bloqueado ? { x: 0, y: 0 } : controles.ejes(ejes), choquesActuales);
       jugador.pos.copy(vehiculo.pos);
     } else if (gym.entrenando) {
       // Entrenando en el gym: moverse lo saca de la máquina; saltar (o el botón) hace la repetición.
@@ -891,8 +923,8 @@ async function iniciar() {
     }
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando ? ''
-      : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : 'Bajar del auto (E)')
-      : ciudad.accion(jugador) || concesionario.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : 'Bajar del auto (E)')
+      : ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -914,6 +946,7 @@ async function iniciar() {
     ottati.actualizar(dt, jugador, modo === 'juego');
     concesionario.actualizar(dt, jugador);
     karaoke.actualizar(dt, jugador);
+    autodromo.actualizar(dt, jugador);
     flota.actualizar();
     ciudad.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
