@@ -29,10 +29,15 @@ def tela(w, h):
     return Image.fromarray(base.clip(0, 255).astype(np.uint8))
 
 tela(256, 256).save('assets/ropa/ottati_tela.jpg', quality=90)
-# Del cuello a la cintura y de hombro a hombro, estirada a todo el torso (512x440).
+# Como las otras remeras (512x380): del cuello hasta abajo del logo, de lado a lado del pecho.
+# Lo que asoma de las mangas (el logo de Turil y las rayitas) se tapa con tela blanca.
 for lado_remera, nombre in (('frente', 'frente'), ('atras', 'espalda')):
     foto = Image.open(f'assets/especiales/remeraottati{lado_remera}.jpeg').convert('RGB')
-    foto.crop((120, 56, 328, 283)).resize((512, 440), Image.LANCZOS).save(f'assets/ropa/ottati_{nombre}.jpg', quality=90)
+    pecho = foto.crop((108, 62, 341, 235))
+    d = ImageDraw.Draw(pecho)
+    for x0, x1 in ((0, 34), (198, 233)):
+        d.rectangle((x0, 45, x1, 173), fill=pecho.getpixel((116, 150)))
+    pecho.resize((512, 380), Image.LANCZOS).save(f'assets/ropa/ottati_{nombre}.jpg', quality=90)
 # Manga: el pedazo de la manga derecha de la foto (con el logo y las rayitas del puño).
 foto = Image.open('assets/especiales/remeraottatifrente.jpeg').convert('RGB')
 foto.crop((98, 112, 142, 200)).resize((128, 256), Image.LANCZOS).save('assets/ropa/ottati_manga.jpg', quality=90)
