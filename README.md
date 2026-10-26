@@ -135,6 +135,8 @@ Los precios de la mansión están en `js/precios.js` y se calculan con `herramie
 
 El progreso se guarda solo en el navegador (localStorage). "Reiniciar partida" en la configuración lo borra.
 
+La música del juego es `assets/especiales/vecicoon.mp3`, en loop sin cortes (`js/sfx.js`: se decodifica en un AudioBuffer y el loop corta donde termina el sonido, salteando el silencio del final del mp3). En el restaurante se baja y suena la radio de Lourdes. En la configuración, al lado del volumen de la música, el botón del parlante la prende y apaga (`musicaOn` en los ajustes, se guarda aunque se reinicie la partida). Los efectos de sonido siguen generados con WebAudio.
+
 ## Muebles y pinturas (créditos)
 
 - Los muebles son modelos 3D del **Furniture Kit de Kenney** (kenney.nl), licencia CC0 (dominio público). Están en `assets/muebles/` y se cargan al empezar (`js/modelos.js`): ahí se cambian los colores (madera, metal, tapizados) y qué modelos se usan. Cada habitación los acomoda en `js/muebles.js`.

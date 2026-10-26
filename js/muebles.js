@@ -920,7 +920,7 @@ const cine = [
     filaButacas(s, -1.0, 0.7);
     filaButacas(s, -4.6, 1.4);
   }),
-  M('pochoclos', 'Máquina de pochoclos', -7.4, -4.6, (k, s) => {
+  M('pochoclos', 'Máquina de pochoclos', -5.2, -5.6, (k, s) => {
     s.b(-8.4, 0, -6.5, -6.6, 2.4, -5.0, '#c62828');
     s.d(-8.42, 0.4, -5.0, -6.58, 0.6, -4.98, '#ffd54f');
     s.d(-8.3, 2.4, -6.4, -6.7, 4.6, -5.1, k.vidrio);
@@ -1749,7 +1749,7 @@ const karaoke = [
     }
     [-3.6, 3.6].forEach((z) => s.modelo('speaker', 7.8, 0.55, z, -Math.PI / 2, { alto: 3.6 }));
   }),
-  M('pantalla', 'Pantalla de letras', 5, -2.4, (k, s) => {
+  M('pantalla', 'Pantalla de letras', 2.8, -2.4, (k, s) => {
     s.d(8.55, 2.4, -3.2, 8.75, 7.4, 3.2, '#0b0b0f');
     s.plano(lamina(k, (g, w, h) => {
       const d = g.createLinearGradient(0, 0, w, h);

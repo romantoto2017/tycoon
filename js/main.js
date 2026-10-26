@@ -108,7 +108,7 @@ async function iniciar() {
   const ajustes = cargarAjustes();
   const aplicarAjustes = () => {
     ponerCalidad(ajustes.calidad);
-    setVolumenes({ general: ajustes.general, musica: ajustes.musica, efectos: ajustes.efectos });
+    setVolumenes({ general: ajustes.general, musica: ajustes.musica, efectos: ajustes.efectos, musicaOn: ajustes.musicaOn });
     controles.sensibilidad = ajustes.sensibilidad;
     guardarAjustes(ajustes);
   };

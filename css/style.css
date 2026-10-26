@@ -186,6 +186,18 @@ html, body {
 .ajuste input { width: 100%; accent-color: #2f8cff; height: 24px; }
 .ajuste .valor { color: #2f8cff; float: right; }
 .ajuste .ayuda { font-size: 13px; font-weight: 500; color: #666; }
+.fila-musica { display: flex; align-items: center; gap: 10px; }
+.btn-musica {
+  flex: none; width: 44px; height: 44px; padding: 8px; border: 0; border-radius: 12px; cursor: pointer;
+  background: #2f8cff; color: #fff; box-shadow: 0 3px 0 #1c5fb3;
+}
+.btn-musica svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-musica .parlante { fill: currentColor; }
+.btn-musica .tachado { display: none; }
+.btn-musica.apagada { background: #9aa3ad; box-shadow: 0 3px 0 #6b737c; }
+.btn-musica.apagada .ondas { display: none; }
+.btn-musica.apagada .tachado { display: inline; }
+.btn-musica:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
 .columna { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
 .dorado { color: #e2a200 !important; }
 .subtitulo, #msg-carga {

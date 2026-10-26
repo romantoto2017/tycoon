@@ -1,11 +1,13 @@
-// Sonido generado con WebAudio (sin archivos): efectos + una musiquita en loop.
+// Sonido con WebAudio: efectos generados (sin archivos) y la canción del juego en loop (assets/especiales/vecicoon.mp3).
 let ctx = null;
 let maestro = null;
 let busMusica = null;
 let busEfectos = null;
 let busRadio = null; // la radio de Lourdes: suena filtrada, como una radio vieja
 let radio = false;
-const volumenes = { general: 0.8, musica: 0.5, efectos: 0.8 };
+const volumenes = { general: 0.8, musica: 0.5, efectos: 0.8, musicaOn: true };
+const CANCION = 'assets/especiales/vecicoon.mp3';
+let ganCancion = null; // la canción pasa por acá para poder bajarla cuando suena la radio
 
 export function iniciarAudio() {
   try {
@@ -24,8 +26,12 @@ export function iniciarAudio() {
       busRadio.connect(banda).connect(busMusica);
       busEfectos.connect(maestro);
       maestro.connect(ctx.destination);
+      ganCancion = ctx.createGain();
+      ganCancion.gain.value = radio ? 0 : 1.2;
+      ganCancion.connect(busMusica);
       aplicarVolumenes();
-      setInterval(programarMusica, 100);
+      cargarCancion();
+      setInterval(programarRadio, 100);
     }
     if (ctx.state === 'suspended') ctx.resume();
   } catch {
@@ -41,7 +47,7 @@ export function setVolumenes(v) {
 function aplicarVolumenes() {
   if (!ctx) return;
   maestro.gain.value = volumenes.general;
-  busMusica.gain.value = volumenes.musica * 0.35;
+  busMusica.gain.value = volumenes.musicaOn ? volumenes.musica * 0.35 : 0;
   busEfectos.gain.value = volumenes.efectos;
 }
 
@@ -50,6 +56,27 @@ export function setRadio(v) {
   if (v === radio) return;
   radio = v;
   paso = 0;
+  if (ganCancion) ganCancion.gain.setTargetAtTime(v ? 0 : 1.2, ctx.currentTime, 0.3);
+}
+
+// Loop sin cortes: un AudioBuffer con loop (el <audio loop> del navegador deja un hueco con los mp3).
+// El final se recorta donde termina el sonido, para saltear el silencio y el relleno del mp3.
+async function cargarCancion() {
+  try {
+    const datos = await (await fetch(CANCION)).arrayBuffer();
+    const buffer = await ctx.decodeAudioData(datos);
+    const canal = buffer.getChannelData(0);
+    let fin = canal.length - 1;
+    while (fin > 0 && Math.abs(canal[fin]) < 0.001) fin--;
+    const fuente = ctx.createBufferSource();
+    fuente.buffer = buffer;
+    fuente.loop = true;
+    fuente.loopEnd = (fin + 1) / buffer.sampleRate;
+    fuente.connect(ganCancion);
+    fuente.start();
+  } catch {
+    // Sin canción (sin red o archivo roto): el juego sigue con los efectos.
+  }
 }
 
 export function pausarAudio(pausa) {
@@ -116,49 +143,18 @@ function tocarRadio() {
   tono(3600, proximo + CORCHEA_RADIO / 2, 0.015, 'square', 0.008, busRadio);
 }
 
-// ---------- Música ----------
-// Progresión alegre C - Am - F - G, bajo + arpegio + percusión suave.
-const NEGRA = 60 / 116;
-const CORCHEA = NEGRA / 2;
-const ACORDES = [
-  [130.81, [261.63, 329.63, 392.0, 523.25]],
-  [110.0, [220.0, 261.63, 329.63, 440.0]],
-  [87.31, [174.61, 220.0, 261.63, 349.23]],
-  [98.0, [196.0, 246.94, 293.66, 392.0]],
-];
-const PATRON = [0, 1, 2, 3, 2, 1, 2, 3];
 let proximo = 0;
 let paso = 0;
 
-function programarMusica() {
-  if (!ctx || ctx.state !== 'running' || volumenes.musica <= 0) {
+function programarRadio() {
+  if (!ctx || ctx.state !== 'running' || !radio || !volumenes.musicaOn || volumenes.musica <= 0) {
     if (ctx) proximo = ctx.currentTime + 0.1;
     return;
   }
   if (proximo < ctx.currentTime) proximo = ctx.currentTime + 0.05;
-  while (radio && proximo < ctx.currentTime + 0.3) {
+  while (proximo < ctx.currentTime + 0.3) {
     tocarRadio();
     proximo += CORCHEA_RADIO;
-    paso++;
-  }
-  while (!radio && proximo < ctx.currentTime + 0.3) {
-    const [bajo, notas] = ACORDES[Math.floor(paso / 8) % ACORDES.length];
-    const p = paso % 8;
-    if (p === 0 || p === 4) tono(bajo, proximo, NEGRA * 1.6, 'triangle', 0.35, busMusica);
-    tono(notas[PATRON[p]] * (Math.floor(paso / 32) % 2 ? 2 : 1), proximo, CORCHEA * 0.9, 'square', 0.06, busMusica);
-    if (p % 2 === 1) tono(6000, proximo, 0.03, 'square', 0.015, busMusica);
-    if (p === 0 || p === 4) {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.frequency.setValueAtTime(140, proximo);
-      osc.frequency.exponentialRampToValueAtTime(40, proximo + 0.15);
-      g.gain.setValueAtTime(0.4, proximo);
-      g.gain.exponentialRampToValueAtTime(0.001, proximo + 0.18);
-      osc.connect(g).connect(busMusica);
-      osc.start(proximo);
-      osc.stop(proximo + 0.2);
-    }
-    proximo += CORCHEA;
     paso++;
   }
 }

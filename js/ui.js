@@ -107,6 +107,19 @@ export function prepararConfig(ajustes, alCambiar) {
       alCambiar(ajustes);
     });
   }
+  // Música on/off: el parlante con ondas o tachado.
+  const btnMusica = $('btn-musica');
+  const verMusica = () => {
+    btnMusica.classList.toggle('apagada', !ajustes.musicaOn);
+    btnMusica.setAttribute('aria-pressed', String(ajustes.musicaOn));
+    btnMusica.setAttribute('aria-label', ajustes.musicaOn ? 'Música encendida' : 'Música apagada');
+  };
+  verMusica();
+  btnMusica.addEventListener('click', () => {
+    ajustes.musicaOn = !ajustes.musicaOn;
+    verMusica();
+    alCambiar(ajustes);
+  });
   // Calidad de imagen: 50% a 100% de la resolución de la pantalla.
   const calidad = $('aj-calidad');
   const texto = $('aj-calidad-valor');

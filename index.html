@@ -79,7 +79,19 @@
     <div class="modal config">
       <h2>Configuración</h2>
       <label class="ajuste">Volumen general <input id="aj-general" type="range" min="0" max="100"></label>
-      <label class="ajuste">Música <input id="aj-musica" type="range" min="0" max="100"></label>
+      <div class="ajuste">
+        <label for="aj-musica">Música</label>
+        <div class="fila-musica">
+          <input id="aj-musica" type="range" min="0" max="100">
+          <button id="btn-musica" class="btn-musica" type="button" aria-pressed="true" aria-label="Música encendida" title="Música on/off">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="parlante" d="M3 9h4l5-4v14l-5-4H3z"/>
+              <path class="ondas" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>
+              <path class="tachado" d="M16 9l6 6M22 9l-6 6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
       <label class="ajuste">Efectos de sonido <input id="aj-efectos" type="range" min="0" max="100"></label>
       <label class="ajuste">Sensibilidad de cámara <input id="aj-sensibilidad" type="range" min="20" max="250"></label>
       <label class="ajuste">
