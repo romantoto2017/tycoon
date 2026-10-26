@@ -317,6 +317,14 @@ async function iniciar() {
     e.preventDefault();
     controles.agacharse = !controles.agacharse;
   });
+  // Derrapar: en el mismo lugar (manejando no te agachás). Se mantiene apretado, como Shift.
+  let ultimoDerrape = null;
+  const btnDerrapar = document.getElementById('btn-derrapar');
+  btnDerrapar.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    controles.derrapeTactil = true;
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) btnDerrapar.addEventListener(ev, () => { controles.derrapeTactil = false; });
 
   // ---------- Lechugas (slot 2) ----------
   // Se compran en la verdulería de la ciudad. Con una en la mano, tocar el piso del terreno
@@ -907,6 +915,7 @@ async function iniciar() {
       // En el auto, el botón de saltar es el freno.
       const mando = autodromo.bloqueado ? { x: 0, y: 0 } : controles.ejes(ejes);
       mando.freno = !autodromo.bloqueado && controles.saltar;
+      mando.derrape = !autodromo.bloqueado && controles.derrapar;
       vehiculo.actualizar(dt, mando, choquesActuales);
       jugador.pos.copy(vehiculo.pos);
     } else if (gym.entrenando) {
@@ -934,6 +943,13 @@ async function iniciar() {
       ultimoAgachar = estadoAgachar;
       btnAgachar.classList.toggle('oculto', !estadoAgachar);
       btnAgachar.setAttribute('aria-pressed', estadoAgachar || 'false');
+    }
+    controles.manejando = conduciendo && !enHeli();
+    const estadoDerrape = modo === 'juego' && controles.manejando ? String(!!vehiculo.deriva && Math.abs(vehiculo.deriva) > 0.08) : '';
+    if (estadoDerrape !== ultimoDerrape) {
+      ultimoDerrape = estadoDerrape;
+      btnDerrapar.classList.toggle('oculto', !estadoDerrape);
+      btnDerrapar.setAttribute('aria-pressed', estadoDerrape || 'false');
     }
     if (texto !== textoManejar) {
       textoManejar = texto;

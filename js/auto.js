@@ -34,7 +34,12 @@ export function specsAuto(def) {
 
 // Un paso de manejo (sin choques), igual para el jugador y para la simulación del autódromo.
 // a: { pos: {x, z}, angulo, vel, direccion, velMax, specs }; ejes: { x: doblar, y: acelerar,
-// freno: el botón de saltar (frena a fondo, para adelante o para atrás) }.
+// freno: el botón de saltar (frena a fondo, para adelante o para atrás), derrape: Shift o el
+// botón de derrapar }.
+//
+// Derrapar: la cola se suelta. La trompa gira más rápido que la trayectoria (a.deriva es el
+// ángulo entre para dónde mira el auto y para dónde va) y el auto se va de costado, perdiendo
+// velocidad según cuánto cruce. Al soltar, las ruedas agarran de nuevo y el auto se endereza.
 export function pasoAuto(a, ejes, dt) {
   const sp = a.specs;
   const tope = Math.min(a.velMax || sp.barrio, sp.v);
@@ -59,12 +64,22 @@ export function pasoAuto(a, ejes, dt) {
   // Al pasar a una zona más lenta (de la autopista al barrio) frena de a poco hasta el tope.
   if (a.vel > tope) a.vel = Math.max(tope, a.vel - 70 * dt);
   a.direccion += (ejes.x * 0.45 - a.direccion) * Math.min(1, dt * 8);
-  let giro = a.direccion * 3.6 * Math.max(-1, Math.min(1, a.vel / 10));
-  const maxGiro = sp.lateral / Math.max(Math.abs(a.vel), 1);
+  const derrapa = !!ejes.derrape && a.vel > 6;
+  let giro = a.direccion * 3.6 * Math.max(-1, Math.min(1, a.vel / 10)) * (derrapa ? 1.6 : 1);
+  const maxGiro = (sp.lateral / Math.max(Math.abs(a.vel), 1)) * (derrapa ? 1.35 : 1);
   giro = Math.max(-maxGiro, Math.min(maxGiro, giro));
   a.angulo -= giro * dt;
-  a.pos.x = Math.max(LIMITE_MAPA.x0, Math.min(LIMITE_MAPA.x1, a.pos.x + Math.sin(a.angulo) * a.vel * dt));
-  a.pos.z = Math.max(LIMITE_MAPA.z0, Math.min(LIMITE_MAPA.z1, a.pos.z + Math.cos(a.angulo) * a.vel * dt));
+  let deriva = a.deriva || 0;
+  if (derrapa) deriva -= giro * dt * 0.7; // la cola se va para afuera
+  deriva *= Math.exp(-(derrapa ? 0.9 : 6) * dt); // las ruedas vuelven a agarrar
+  deriva = Math.max(-1.1, Math.min(1.1, deriva));
+  if (Math.abs(deriva) < 0.002) deriva = 0;
+  a.deriva = deriva;
+  // De costado frena (el rozamiento de las gomas cruzadas).
+  if (deriva) a.vel -= Math.sign(a.vel) * Math.min(Math.abs(a.vel), Math.abs(Math.sin(deriva)) * sp.freno * dt);
+  const rumbo = a.angulo - deriva; // para dónde va de verdad
+  a.pos.x = Math.max(LIMITE_MAPA.x0, Math.min(LIMITE_MAPA.x1, a.pos.x + Math.sin(rumbo) * a.vel * dt));
+  a.pos.z = Math.max(LIMITE_MAPA.z0, Math.min(LIMITE_MAPA.z1, a.pos.z + Math.cos(rumbo) * a.vel * dt));
 }
 
 // "Auto Deportivo" (en el juego se llama así para trollear): en realidad es un BYD F0
@@ -76,6 +91,8 @@ export function pasoAuto(a, ejes, dt) {
 // lateral, y en las puntas se achica para cerrar la trompa y la cola. Los vidrios, faros,
 // ópticas, parrilla, manijas y pasaruedas son "calcos" que siguen esa misma superficie.
 
+const APAGADA = '#7c0b12'; // ópticas traseras apagadas y prendidas (al frenar)
+const PRENDIDA = '#ff2a1c';
 const L = 4.25; // medio largo
 const ANCHO = 2.02; // medio ancho
 const N_ARRIBA = 3.2; // exponente de la superelipse arriba (más redondo: la papa)
@@ -274,7 +291,6 @@ export class Auto {
     this.delanteras = [];
     this.armar();
     escena.add(this.grupo);
-    this.ponerLucesFreno();
     // Caja de choque para el jugador a pie (la cámara la ignora).
     this.caja = new THREE.Box3();
     this.caja.camara = false;
@@ -396,11 +412,14 @@ export class Auto {
     // ---------- Cola ----------
     const cola = (s, t) => delFrente(s, t, -0.8, -1);
     pon(calco(-1.25, 1.25, (s) => 2.32 + 0.12 * (s / 1.25) ** 4, (s) => 3.08 - 0.3 * (s / 1.25) ** 4, cola, 0.014, 18, 6), vidrio);
-    pon(calco(...pastilla(-0.28, 0.28, 3.2, 0.035), cola, 0.02, 6, 2), luz('#d0101a'));
+    // Las ópticas rojas (y la tercera luz de arriba) se prenden al frenar (luzFreno).
+    const freno = luz(APAGADA);
+    this.frenoMats = [freno];
+    pon(calco(...pastilla(-0.28, 0.28, 3.2, 0.035), cola, 0.02, 6, 2), freno);
     for (const lado of [1, -1]) {
       const co = (s, t) => delFrente(lado * s, t, -0.8, -1);
       // Ópticas altas y verticales en las esquinas (con la parte blanca abajo).
-      pon(calco(1.32, 1.82, () => 1.55, (s) => 2.95 - 0.3 * ((s - 1.32) / 0.5) ** 2, co, 0.016, 8, 10), luz('#c3121b'));
+      pon(calco(1.32, 1.82, () => 1.55, (s) => 2.95 - 0.3 * ((s - 1.32) / 0.5) ** 2, co, 0.016, 8, 10), freno);
       pon(calco(1.38, 1.76, () => 1.62, () => 1.92, co, 0.03, 6, 3), calcoMat('#e9ecef', true));
       pon(calco(...elipse(1.55, 0.95, 0.12, 0.05), co, 0.02, 6, 2), luz('#a50d14'));
     }
@@ -450,19 +469,13 @@ export class Auto {
     }
   }
 
-  // Luces de freno: dos rojas atrás y una arriba al medio; solo se ven (y brillan) al frenar.
-  ponerLucesFreno() {
-    if (!this.lucesFreno) {
-      const mat = new THREE.MeshBasicMaterial({ color: '#ff1a1a' });
-      this.lucesFreno = [0, 1, 2].map((i) => {
-        const l = new THREE.Mesh(new THREE.BoxGeometry(i < 2 ? 0.95 : 1.3, i < 2 ? 0.4 : 0.18, 0.12), mat);
-        l.visible = false;
-        this.grupo.add(l);
-        return l;
-      });
-    }
-    const [mx, mz] = this.medio || [2.1, 4.35];
-    this.lucesFreno.forEach((l, i) => l.position.set(i === 2 ? 0 : (i ? 1 : -1) * mx * 0.66, this.alto * (i === 2 ? 0.86 : 0.56), -mz - 0.04));
+  // Luces de freno: se prenden las ópticas de atrás de cada auto (las del Auto Deportivo, que
+  // están en armar, o la capa roja que cargarAuto arma encima de las de cada modelo).
+  luzFreno(prendida) {
+    if (this.frenoPrendido === prendida) return;
+    this.frenoPrendido = prendida;
+    for (const m of this.frenoMats || []) m.color.set(prendida ? PRENDIDA : APAGADA);
+    if (this.capaFreno) this.capaFreno.visible = prendida;
   }
 
   colocar() {
@@ -484,7 +497,7 @@ export class Auto {
     const antesX = p.x;
     const antesZ = p.z;
     pasoAuto(this, ejes, dt);
-    if (this.lucesFreno) for (const l of this.lucesFreno) l.visible = this.frenando;
+    this.luzFreno(this.frenando);
     let choque = false;
     for (const b of colisiones) {
       if (b === this.caja || b.max.y < 0.35 || b.min.y > 2.5) continue;
@@ -542,7 +555,67 @@ function aliviar(m) {
   };
   const nuevo = brilla ? new THREE.MeshPhongMaterial({ ...opts, specular: '#ffffff', shininess: 70 }) : new THREE.MeshLambertMaterial(opts);
   if (m.emissive && m.emissive.getHex()) nuevo.emissive = m.emissive;
+  nuevo.name = m.name;
   return nuevo;
+}
+
+// Las ópticas traseras de cada modelo (por el nombre del material). Al frenar se les pone
+// encima una capa roja que brilla con la misma forma: los triángulos de esas piezas que están
+// en la cola, copiados un poquito más afuera. La Ferrari tiene las cuatro luces redondas
+// dibujadas en la tapa de la cola: ahí la capa lleva esa textura teñida de rojo (se prenden
+// los círculos y la rejilla queda oscura).
+const OPTICAS = {
+  miata: /^RLA_miata_brakelight$/,
+  bmw_e36: /^(E36_lights\.001|BMWE36_signal_L\.003|BMWE36_brakelight)$/,
+  golf_gti: /^vwphong5SG1$/,
+  gtr: /^(r35_taillight_2017|r35_glass\.001)$/,
+  mclaren_p1: /^Taillights$/,
+  ferrari_f40: /^material_7$/,
+};
+const CON_TEXTURA = { ferrari_f40: true };
+const matCapa = (map) => new THREE.MeshBasicMaterial({
+  color: map ? '#ff3a2a' : PRENDIDA, map, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+});
+
+function capaFreno(modelo, def, medioLargo) {
+  const nombre = OPTICAS[def.id];
+  if (!nombre) return null;
+  const textura = CON_TEXTURA[def.id];
+  const puntos = [];
+  const uvs = [];
+  let map = null;
+  const v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const n = new THREE.Vector3();
+  const lado = new THREE.Vector3();
+  modelo.traverse((o) => {
+    if (!o.isMesh) return;
+    const mat = (Array.isArray(o.material) ? o.material : [o.material]).find((m) => nombre.test(m.name));
+    if (!mat) return;
+    if (textura) map = mat.map;
+    const pos = o.geometry.attributes.position;
+    const uv = o.geometry.attributes.uv;
+    const ind = o.geometry.index;
+    const cant = ind ? ind.count : pos.count;
+    for (let i = 0; i < cant; i += 3) {
+      const k = [0, 1, 2].map((j) => (ind ? ind.getX(i + j) : i + j));
+      k.forEach((x, j) => v[j].fromBufferAttribute(pos, x).applyMatrix4(o.matrixWorld));
+      if (Math.max(v[0].z, v[1].z, v[2].z) > -medioLargo * 0.72) continue; // solo lo de la cola
+      // Un poco hacia afuera (por la normal que mira para atrás), así no titila con la pieza.
+      n.subVectors(v[2], v[1]).cross(lado.subVectors(v[1], v[0])).normalize();
+      if (n.z > 0) n.negate();
+      n.multiplyScalar(0.012);
+      for (const p of v) puntos.push(p.x + n.x, p.y + n.y, p.z + n.z);
+      if (textura && uv) for (const x of k) uvs.push(uv.getX(x), uv.getY(x));
+    }
+  });
+  if (!puntos.length) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(puntos, 3));
+  if (map && uvs.length) geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  const capa = new THREE.Mesh(geo, matCapa(map && uvs.length ? map : null));
+  capa.name = 'capaFreno';
+  capa.visible = false;
+  return capa;
 }
 
 export function cargarAuto(def) {
@@ -572,6 +645,9 @@ export function cargarAuto(def) {
       const centro = caja.getCenter(new THREE.Vector3()).multiplyScalar(k);
       modelo.position.set(-centro.x, -caja.min.y * k, -centro.z);
       g.add(modelo);
+      g.updateMatrixWorld(true);
+      const capa = capaFreno(modelo, def, (tam.z * k) / 2);
+      if (capa) g.add(capa);
       g.userData.medio = [(tam.x * k) / 2, (tam.z * k) / 2];
       g.userData.alto = tam.y * k;
       return g;
@@ -599,12 +675,13 @@ export class AutoComprado extends Auto {
       this.grupo.add(m);
       this.medio = m.userData.medio;
       this.alto = m.userData.alto;
-      this.ponerLucesFreno();
+      this.capaFreno = m.getObjectByName('capaFreno');
+      this.frenoPrendido = undefined;
       this.colocar();
     }).catch(() => {});
   }
 
-  armar() {} // el modelo llega después (cargarAuto)
+  armar() {} // el modelo llega después (cargarAuto); sus luces de freno, también
 }
 
 // Los autos que tenés, estacionados en el galpón (uno por lugar, en el orden en que se compraron).

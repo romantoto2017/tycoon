@@ -14,6 +14,7 @@ export const ZOOM = { inicial: 12.5, min: 0.5, max: 40, primeraPersona: 1.2 };
 // Controles al estilo Roblox.
 // PC: WASD/flechas, espacio, arrastrar con el mouse (botón derecho o izquierdo) para girar la
 // cámara, rueda o I/O para el zoom, coma/punto para girar de a poco, Shift para el Shift Lock
+// (en el auto, Shift es derrapar)
 // y C para agacharse (solo los personajes que pueden).
 // Celu: joystick que aparece donde apoyás el pulgar izquierdo, arrastrar el resto de la
 // pantalla para girar, pellizcar para el zoom y el botón de salto (mantenerlo salta seguido).
@@ -109,6 +110,7 @@ export class Controles {
     if (!v) {
       this.teclas.clear();
       this.saltoTactil = false;
+      this.derrapeTactil = false;
       this.disparando = false;
       for (const id of [...this.punteros.keys()]) this.alSoltar({ pointerId: id });
       if (this.shiftLock) this.ponerShiftLock(false);
@@ -119,7 +121,8 @@ export class Controles {
   get primeraPersona() { return this.dist <= ZOOM.primeraPersona; }
 
   atajo(code) {
-    if (code === 'ShiftLeft' || code === 'ShiftRight') this.ponerShiftLock(!this.shiftLock);
+    // Manejando, Shift es derrapar (mientras se mantiene), no el Shift Lock.
+    if (code === 'ShiftLeft' || code === 'ShiftRight') { if (!this.manejando) this.ponerShiftLock(!this.shiftLock); }
     else if (code === 'KeyC') this.agacharse = !this.agacharse;
     else if (code === 'KeyI') this.zoom(-Math.max(1, this.dist * 0.2));
     else if (code === 'KeyO') this.zoom(Math.max(1, this.dist * 0.2));
@@ -239,6 +242,11 @@ export class Controles {
 
   get saltar() {
     return this.activo && (this.tecla('saltar') || this.saltoTactil);
+  }
+
+  // Derrapar (en el auto): Shift o el botón de derrapar, mientras se mantienen.
+  get derrapar() {
+    return this.activo && (this.teclas.has('ShiftLeft') || this.teclas.has('ShiftRight') || this.derrapeTactil);
   }
 
   // Ejes crudos (para manejar): x = doblar (+ derecha), y = acelerar (+ adelante).
