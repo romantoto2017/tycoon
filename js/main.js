@@ -19,6 +19,7 @@ import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre } from './dufre.js';
+import { Ottati } from './ottati.js';
 import { Ciudad } from './ciudad.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
@@ -99,6 +100,7 @@ async function iniciar() {
   const gym = new Gimnasio(escena, UI);
   const misiones = new Misiones(escena, tycoon, UI);
   const dufre = new Dufre(escena, UI);
+  const ottati = new Ottati(escena, UI);
   const ciudad = new Ciudad(escena, UI);
   // Choques de este cuadro: en la ciudad, solo los de alrededor (son muchos); si no, los de siempre.
   let choquesActuales = colisiones;
@@ -206,6 +208,10 @@ async function iniciar() {
     }
     if (gym.accion(jugador)) {
       gym.hacer(jugador);
+      return;
+    }
+    if (!conduciendo && ottati.accion(jugador)) {
+      ottati.hacer(jugador);
       return;
     }
     if (resto.accion(jugador)) {
@@ -739,7 +745,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ciudad, lechugas, sacarLechuga };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, lechugas, sacarLechuga };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -864,7 +870,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : 'Bajar del auto (E)')
-      : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -883,6 +889,7 @@ async function iniciar() {
     gym.actualizar(dt, jugador, modo === 'juego');
     misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
     dufre.actualizar(dt, jugador, modo === 'juego');
+    ottati.actualizar(dt, jugador, modo === 'juego');
     ciudad.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     actualizarLechugas();

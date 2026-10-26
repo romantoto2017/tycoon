@@ -93,7 +93,7 @@ function brazoPorPuntos(brazo, E, H, pliegue) {
 }
 
 // Lleva la mano a T (torso) con el codo para el lado de "pliegue" (torso).
-function brazoA(brazo, T, pliegue) {
+export function brazoA(brazo, T, pliegue) {
   const S = brazo.position;
   const u = new THREE.Vector3().subVectors(T, S);
   const d = THREE.MathUtils.clamp(u.length(), 0.2, LARGO_BRAZO + LARGO_ANTEBRAZO - 0.002);
@@ -326,11 +326,7 @@ export class Gimnasio {
 
   // ---------- Choque de manos con Kelvin ----------
   chocar(jugador) {
-    const k = this.kelvin.grupo;
-    jugador.angulo = Math.atan2(k.position.x - jugador.pos.x, k.position.z - jugador.pos.z);
-    // Se encuentran a mitad de camino, a la altura del pecho.
-    const punto = new THREE.Vector3((jugador.pos.x + k.position.x) / 2, 4.25, (jugador.pos.z + k.position.z) / 2);
-    this.choque = { t: 0, punto, sono: false };
+    this.choque = empezarChoque(jugador, this.kelvin.grupo.position);
     this.oferta = 0;
   }
 
@@ -714,45 +710,59 @@ export class Gimnasio {
     k.partes.brazoI.codo.rotation.set(0, 0, 0);
     k.animar(dt, 0, true);
     if (this.oferta > 0) this.oferta -= dt;
-    k.grupo.updateMatrixWorld(true);
-    const { brazoI } = k.partes;
     // Mano extendida esperando el choque.
-    if (this.oferta > 0 && !this.choque) {
-      const frente = k.grupo.localToWorld(new THREE.Vector3(-0.6, 3.75, 1.6));
-      brazoA(brazoI, k.partes.cuerpo.worldToLocal(frente), new THREE.Vector3(-1, -1, 0));
-    }
+    if (this.oferta > 0 && !this.choque) ofrecerMano(k);
     if (this.choque) this.animarChoque(dt, jugador);
   }
 
   animarChoque(dt, jugador) {
     const c = this.choque;
     c.t += dt;
-    // 0 a 0,35 s: se acercan las manos; choque; hasta 0,6 quietas; después vuelven.
-    const ida = THREE.MathUtils.clamp(c.t / 0.35, 0, 1);
-    const vuelta = THREE.MathUtils.clamp((c.t - 0.6) / 0.4, 0, 1);
-    const f = ida * (1 - vuelta);
     if (c.t >= 0.35 && !c.sono) {
       c.sono = true;
       sfx.choque();
       this.hablar('¡Eeeso bro! A entrenar', 3);
     }
-    for (const modelo of [this.kelvin, jugador.modelo]) {
-      if (!modelo) continue;
-      const { cuerpo, brazoI } = modelo.partes;
-      modelo.grupo.updateMatrixWorld(true);
-      const hombro = cuerpo.localToWorld(brazoI.position.clone());
-      const descanso = cuerpo.localToWorld(brazoI.position.clone().add(new THREE.Vector3(0, -1.9, 0.2)));
-      const meta = descanso.lerp(c.punto, f);
-      brazoA(brazoI, cuerpo.worldToLocal(meta.clone()), new THREE.Vector3(-1, -0.6, -0.2));
-      if (hombro.distanceTo(c.punto) > 2.6 && f > 0.5) brazoI.codo.rotation.x *= 0.2; // de lejos estira el brazo entero
-    }
-    if (c.t > 1.05) {
-      this.choque = null;
-      for (const modelo of [this.kelvin, jugador.modelo]) {
-        if (!modelo) continue;
-        modelo.partes.brazoI.rotation.set(0, 0, 0);
-        modelo.partes.brazoI.codo.rotation.set(0, 0, 0);
-      }
-    }
+    if (moverChoque(c, [this.kelvin, jugador.modelo])) this.choque = null;
   }
+}
+
+// ---------- Choque de manos (Kelvin y Ottati) ----------
+// Mano extendida hacia adelante, esperando que se la choquen.
+export function ofrecerMano(modelo) {
+  modelo.grupo.updateMatrixWorld(true);
+  const frente = modelo.grupo.localToWorld(new THREE.Vector3(-0.6, 3.75, 1.6));
+  brazoA(modelo.partes.brazoI, modelo.partes.cuerpo.worldToLocal(frente), new THREE.Vector3(-1, -1, 0));
+}
+
+// Arranca el choque: el jugador mira al otro y las manos se encuentran a mitad de camino,
+// a la altura del pecho. Devuelve el estado que después se pasa a moverChoque().
+export function empezarChoque(jugador, otro) {
+  jugador.angulo = Math.atan2(otro.x - jugador.pos.x, otro.z - jugador.pos.z);
+  return { t: 0, punto: new THREE.Vector3((jugador.pos.x + otro.x) / 2, otro.y + 4.05, (jugador.pos.z + otro.z) / 2) };
+}
+
+// Mueve los brazos derechos de los dos (c.t ya avanzado). Devuelve true cuando terminó.
+// 0 a 0,35 s: se acercan las manos; choque; hasta 0,6 quietas; después vuelven.
+export function moverChoque(c, modelos) {
+  const ida = THREE.MathUtils.clamp(c.t / 0.35, 0, 1);
+  const vuelta = THREE.MathUtils.clamp((c.t - 0.6) / 0.4, 0, 1);
+  const f = ida * (1 - vuelta);
+  const fin = c.t > 1.05;
+  for (const modelo of modelos) {
+    if (!modelo) continue;
+    const { cuerpo, brazoI } = modelo.partes;
+    if (fin) {
+      brazoI.rotation.set(0, 0, 0);
+      brazoI.codo.rotation.set(0, 0, 0);
+      continue;
+    }
+    modelo.grupo.updateMatrixWorld(true);
+    const hombro = cuerpo.localToWorld(brazoI.position.clone());
+    const descanso = cuerpo.localToWorld(brazoI.position.clone().add(new THREE.Vector3(0, -1.9, 0.2)));
+    const meta = descanso.lerp(c.punto, f);
+    brazoA(brazoI, cuerpo.worldToLocal(meta.clone()), new THREE.Vector3(-1, -0.6, -0.2));
+    if (hombro.distanceTo(c.punto) > 2.6 && f > 0.5) brazoI.codo.rotation.x *= 0.2; // de lejos estira el brazo entero
+  }
+  return fin;
 }

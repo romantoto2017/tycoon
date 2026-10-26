@@ -130,12 +130,20 @@ function colorPromedio(img, x, y, w, h, oscuros = false) {
   return `rgb(${m[0]},${m[1]},${m[2]})`;
 }
 
-// Textura del pelo según el peinado: 'liso' (mechones rectos), 'ondulado' u 'rulos'.
+// Textura del pelo según el peinado: 'liso' (mechones rectos), 'ondulado', 'rulos' o
+// 'rapado' (pelito cortito: puntitos, y la piel se transparenta un poco).
 function mechones(g, s, y0, y1, semilla, peinado = 'liso') {
   let a = semilla;
   const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
   const tono = () => (rnd() < 0.5 ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.16)');
   g.lineCap = 'round';
+  if (peinado === 'rapado') {
+    for (let i = 0; i < 1400; i++) {
+      g.fillStyle = tono();
+      g.fillRect(rnd() * s, y0 + rnd() * (y1 - y0), 1.5, 1.5);
+    }
+    return;
+  }
   if (peinado === 'rulos') {
     for (let i = 0; i < 260; i++) {
       g.strokeStyle = tono();
@@ -183,6 +191,7 @@ function dibujarCostado(g, s, pelo, piel, peinado) {
   g.fillStyle = piel;
   g.fillRect(0, 0, s, s);
   g.fillStyle = pelo;
+  g.globalAlpha = peinado === 'rapado' ? 0.82 : 1;
   g.beginPath();
   g.moveTo(0, 0);
   g.lineTo(s, 0);
@@ -195,6 +204,7 @@ function dibujarCostado(g, s, pelo, piel, peinado) {
   g.lineTo(0, s * 0.26);
   g.closePath();
   g.fill();
+  g.globalAlpha = 1;
   if (peinado === 'rulos') bordeRulos(g, s, [[0.05, 0.28], [0.15, 0.32], [0.38, 0.38], [0.55, 0.42], [0.62, 0.55], [0.66, 0.68], [0.75, 0.8], [0.88, 0.84], [1, 0.84]], pelo);
   mechones(g, s, 0, s * 0.85, 7, peinado);
   // Oreja.
@@ -212,6 +222,7 @@ function dibujarAtras(g, s, pelo, piel, peinado) {
   g.fillStyle = piel;
   g.fillRect(0, 0, s, s);
   g.fillStyle = pelo;
+  g.globalAlpha = peinado === 'rapado' ? 0.82 : 1;
   g.beginPath();
   g.moveTo(0, 0);
   g.lineTo(s, 0);
@@ -219,6 +230,7 @@ function dibujarAtras(g, s, pelo, piel, peinado) {
   for (let i = 8; i >= 0; i--) g.lineTo((s * i) / 8, s * (i % 2 ? 0.88 : 0.82));
   g.closePath();
   g.fill();
+  g.globalAlpha = 1;
   if (peinado === 'rulos') bordeRulos(g, s, [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => [i / 8, 0.86]), pelo);
   mechones(g, s, 0, s * 0.9, 3, peinado);
 }
@@ -324,18 +336,23 @@ export function cargarCabeza(p) {
         dibujarAtras(ga, s, pelo, piel, peinado);
       }
       const [arriba, gar] = lienzo();
-      gar.fillStyle = pelo;
+      gar.fillStyle = piel;
       gar.fillRect(0, 0, s, s);
+      gar.fillStyle = pelo;
+      gar.globalAlpha = peinado === 'rapado' ? 0.82 : 1;
+      gar.fillRect(0, 0, s, s);
+      gar.globalAlpha = 1;
       mechones(gar, s, 0, s, 11, peinado);
       const [abajo, gab] = lienzo();
       gab.fillStyle = piel;
       gab.fillRect(0, 0, s, s);
-      // Remera con foto (opcional): { frente, tela } en assets/.
+      // Remera con foto (opcional): { frente, tela, espalda? } en assets/.
       let ropa = null;
       if (p.remeraFotos) {
-        const [imgFrente, imgTela] = await Promise.all([
+        const [imgFrente, imgTela, imgEspalda] = await Promise.all([
           cargarImagen(`assets/${p.remeraFotos.frente}`),
           cargarImagen(`assets/${p.remeraFotos.tela}`),
+          p.remeraFotos.espalda ? cargarImagen(`assets/${p.remeraFotos.espalda}`) : null,
         ]);
         if (imgFrente && imgTela) {
           const aCanvas = (img) => {
@@ -343,7 +360,7 @@ export function cargarCabeza(p) {
             c.getContext('2d').drawImage(img, 0, 0);
             return c;
           };
-          ropa = { frente: aCanvas(imgFrente), tela: aCanvas(imgTela) };
+          ropa = { frente: aCanvas(imgFrente), tela: aCanvas(imgTela), espalda: imgEspalda ? aCanvas(imgEspalda) : null };
         }
       }
       if (p.barba) {

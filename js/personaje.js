@@ -79,7 +79,8 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
 
   const tex = (c) => { const t = texturaDeCanvas(c); extras.push(t); return t; };
   const lambert = (t) => { const m = new THREE.MeshLambertMaterial(t.isTexture ? { map: t } : { color: t }); extras.push(m); return m; };
-  // Remera con foto: frente con el diseño y el resto (espalda, costados, mangas) con la tela.
+  // Remera con foto: frente con el diseño y el resto (costados, mangas y la espalda, si no
+  // tiene foto propia) con la tela.
   let remera = p.remera;
   let torso;
   let panzaFrente = null;
@@ -127,7 +128,8 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     cuello = null;
   } else if (cabezaTex.ropa) {
     const tela = lambert(tex(cabezaTex.ropa.tela));
-    torso = [tela, tela, tela, tela, lambert(tex(cabezaTex.ropa.frente)), tela];
+    const espalda = cabezaTex.ropa.espalda ? lambert(tex(cabezaTex.ropa.espalda)) : tela;
+    torso = [tela, tela, tela, tela, lambert(tex(cabezaTex.ropa.frente)), espalda];
     // La panza muestra la parte del frente que tapa, así el diseño sigue continuo.
     const u0 = (anchoTorso / 2 - anchoPanza / 2) / anchoTorso;
     const frentePanza = lambert(tex(recorteCanvas(cabezaTex.ropa.frente, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2)));
