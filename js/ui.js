@@ -11,8 +11,12 @@ let plataMostrada = '';
 let ppsMostrado = '';
 let progresoMostrado = '';
 
+// Cuando la plata baja de golpe (una compra), el contador baja animado (unos 200 ms); cuando
+// sube (lo que vas ganando), va al toque.
+let plataAnimada = 0;
 export function actualizarHUD(plata, pps, progreso) {
-  const p = formato(plata);
+  plataAnimada = plata >= plataAnimada || plataAnimada - plata < 1 ? plata : plataAnimada + (plata - plataAnimada) * 0.22;
+  const p = formato(plataAnimada);
   if (p !== plataMostrada) { $('plata').textContent = p; plataMostrada = p; }
   const s = `+${pps < 100 ? (Math.round(pps * 10) / 10) : formato(pps)}/s`;
   if (s !== ppsMostrado) { $('pps').textContent = s; ppsMostrado = s; }
@@ -486,4 +490,279 @@ export function abrirRopero({ titulo, slots, tuyas, puesto, aviso, alProbar, alL
   window.addEventListener('keydown', teclas);
   dibujar();
   mostrar('ropero', true);
+}
+
+// ======================= Taller =======================
+// Menú a la izquierda (pestañas con íconos y el contenido) y, a la derecha, el auto de verdad en la
+// escena (se gira arrastrando) con la tarjeta de stats abajo. d: lo que arma Taller.entrar (auto.js).
+const STATS = [
+  { id: 'velocidad', nombre: 'Velocidad máx.', color: '#ff7a00', barra: (v) => v / 420, texto: (v) => `${v} km/h` },
+  { id: 'aceleracion', nombre: 'Aceleración', color: '#ffd23f', barra: (v) => (16 - v) / 14.2, texto: (v) => `0-100 ${v.toFixed(1).replace('.', ',')} s` },
+  { id: 'manejo', nombre: 'Manejo', color: '#3ccf4e', barra: (v) => v / 1.65, texto: (v) => `${v.toFixed(2).replace('.', ',')} g` },
+  { id: 'frenado', nombre: 'Frenado', color: '#2f8cff', barra: (v) => v / 1.75, texto: (v) => `${v.toFixed(2).replace('.', ',')} g` },
+];
+const PARTES_PINTURA = { pintura: { parte: 'carroceria', nombre: 'Pintura', icono: '🎨' }, llantas: { parte: 'llantas', nombre: 'Llantas', icono: '⚪' } };
+let monedaTaller = null;
+
+const hexAHsv = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: ((h * 60) + 360) % 360, s: max ? d / max : 0, v: max };
+};
+const hsvAHex = ({ h, s, v }) => {
+  const f = (n) => {
+    const k = (n + h / 60) % 6;
+    return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 255);
+  };
+  return `#${[f(5), f(3), f(1)].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+};
+
+export function abrirTaller(d) {
+  monedaTaller ??= canvasMoneda(48).toDataURL();
+  $('taller-auto').textContent = d.nombre;
+  const pestanas = [...d.categorias.map((c) => ({ id: c.id, nombre: c.nombre, icono: c.icono })), ...Object.entries(PARTES_PINTURA).map(([id, p]) => ({ id, nombre: p.nombre, icono: p.icono }))];
+  let actual = pestanas[0].id;
+  let previa = null; // mejoras que se están mirando (para la franja de la tarjeta de stats)
+  const plataTxt = (n) => `<img src="${monedaTaller}" alt="">${formato(n)}`;
+
+  // ---- Tarjeta de stats ----
+  const dibujarStats = () => {
+    const ahora = d.stats(d.niveles());
+    const nuevo = previa ? d.stats(previa) : null;
+    $('taller-stats').innerHTML = STATS.map((st) => {
+      const a = Math.max(0.03, Math.min(1, st.barra(ahora[st.id])));
+      const b = nuevo ? Math.max(a, Math.min(1, st.barra(nuevo[st.id]))) : a;
+      // Mejora en %: para la aceleración, cuánto baja el 0 a 100.
+      const pct = nuevo ? Math.round((st.id === 'aceleracion' ? ahora[st.id] / nuevo[st.id] - 1 : nuevo[st.id] / ahora[st.id] - 1) * 100) : 0;
+      return `<div class="ts-fila"><span class="ts-nombre">${st.nombre}</span>
+        <span class="ts-barra" style="--c:${st.color}"><i style="width:${a * 100}%"></i><b style="left:${a * 100}%;width:${(b - a) * 100}%"></b></span>
+        <span class="ts-valor">${st.texto(nuevo && pct ? nuevo[st.id] : ahora[st.id])}</span><span class="ts-mas">${pct > 0 ? `+${pct}%` : ''}</span></div>`;
+    }).join('');
+  };
+
+  // ---- Pestañas ----
+  const nav = $('taller-pestanas');
+  nav.replaceChildren(...pestanas.map((p) => {
+    const b = document.createElement('button');
+    b.className = 'tp';
+    b.setAttribute('role', 'tab');
+    b.dataset.id = p.id;
+    b.innerHTML = `<span class="tp-icono" aria-hidden="true">${p.icono}</span><span>${p.nombre}</span>`;
+    b.onclick = () => elegir(p.id);
+    return b;
+  }));
+  $('taller-partes').replaceChildren(...Object.entries(PARTES_PINTURA).map(([id, p]) => {
+    const b = document.createElement('button');
+    b.className = 'tparte';
+    b.dataset.id = id;
+    b.title = `Pintar ${p.nombre.toLowerCase()}`;
+    b.innerHTML = `<span aria-hidden="true">${p.icono}</span> ${p.nombre}`;
+    b.onclick = () => elegir(id);
+    return b;
+  }));
+
+  // ---- Mejoras: una tarjeta por nivel ----
+  const mejoras = (cat) => {
+    const niveles = d.niveles();
+    const tengo = niveles[cat.id] || 0;
+    const grilla = document.createElement('div');
+    grilla.className = 'taller-niveles';
+    cat.niveles.forEach((n, i) => {
+      const nivel = i + 1;
+      const comprado = nivel <= tengo;
+      const siguiente = nivel === tengo + 1;
+      const falta = n.precio - d.plata();
+      const caro = siguiente && falta > 0;
+      const t = document.createElement('div');
+      t.className = `tn${comprado ? ' comprado' : siguiente ? ' siguiente' : ' bloqueado'}${caro ? ' caro' : ''}`;
+      t.tabIndex = 0;
+      t.innerHTML = `<span class="tn-icono" aria-hidden="true">${comprado ? '✔' : siguiente ? n.icono : '🔒'}</span>
+        <b class="tn-nombre"></b><span class="tn-efecto">+${Math.round(n.efecto * 100)}% ${STATS.find((s) => s.id === cat.stat).nombre.toLowerCase()}</span>
+        <span class="tn-precio">${comprado ? 'Instalado' : plataTxt(n.precio)}</span>`;
+      t.querySelector('.tn-nombre').textContent = n.nombre;
+      const btn = document.createElement('button');
+      btn.className = `btn ${comprado ? 'gris' : siguiente && !caro ? 'verde' : 'gris'}`;
+      btn.textContent = comprado ? '✔ Comprado' : siguiente ? 'Comprar' : `Nivel ${nivel}`;
+      btn.disabled = !siguiente || caro;
+      if (caro) t.dataset.tip = `Te faltan ${formato(falta)}`;
+      btn.onclick = () => {
+        if (!d.alComprar(cat.id, nivel)) return;
+        previa = null;
+        mostrarContenido(false);
+        const nueva = $('taller-contenido').querySelectorAll('.tn')[i];
+        nueva?.classList.add('destello');
+      };
+      t.append(btn);
+      // Mirando una tarjeta: la franja de la mejora en la tarjeta de stats.
+      const mirar = () => { previa = comprado ? null : { ...niveles, [cat.id]: nivel }; dibujarStats(); };
+      const dejar = () => { previa = null; dibujarStats(); };
+      t.addEventListener('pointerenter', mirar);
+      t.addEventListener('focusin', mirar);
+      t.addEventListener('pointerleave', dejar);
+      t.addEventListener('focusout', dejar);
+      grilla.append(t);
+    });
+    return grilla;
+  };
+
+  // ---- Pintura: los 8 colores, la rueda con el cuadrado y el código ----
+  const pintura = (id) => {
+    const { parte } = PARTES_PINTURA[id];
+    const guardado = d.color(parte);
+    let color = guardado;
+    let hsv = hexAHsv(color);
+    const caja = document.createElement('div');
+    caja.className = 'taller-pintura';
+    caja.innerHTML = `<div class="tc-colores" role="radiogroup" aria-label="Colores"></div>
+      <div class="tc-selector"><canvas width="220" height="220" aria-label="Rueda de color"></canvas>
+      <label class="tc-hex">Código <input type="text" maxlength="7" spellcheck="false" autocomplete="off"></label>
+      <span class="tc-muestra"></span></div>
+      <div class="tc-acciones"></div>`;
+    const lienzo = caja.querySelector('canvas');
+    const g = lienzo.getContext('2d');
+    const hex = caja.querySelector('input');
+    const muestra = caja.querySelector('.tc-muestra');
+    const R = 110;
+    const r = 88;
+    const lado = r * Math.SQRT2 * 0.92;
+    const q0 = R - lado / 2;
+    const dibujar = () => {
+      g.clearRect(0, 0, 220, 220);
+      for (let a = 0; a < 360; a += 2) {
+        g.beginPath();
+        g.strokeStyle = `hsl(${a},100%,50%)`;
+        g.lineWidth = R - r;
+        g.arc(R, R, (R + r) / 2, ((a - 1) * Math.PI) / 180, ((a + 2) * Math.PI) / 180);
+        g.stroke();
+      }
+      const base = g.createLinearGradient(q0, 0, q0 + lado, 0);
+      base.addColorStop(0, '#fff');
+      base.addColorStop(1, `hsl(${hsv.h},100%,50%)`);
+      g.fillStyle = base;
+      g.fillRect(q0, q0, lado, lado);
+      const negro = g.createLinearGradient(0, q0, 0, q0 + lado);
+      negro.addColorStop(0, 'rgba(0,0,0,0)');
+      negro.addColorStop(1, '#000');
+      g.fillStyle = negro;
+      g.fillRect(q0, q0, lado, lado);
+      // Marcas: en la rueda (tono) y en el cuadrado (saturación y brillo).
+      const ah = (hsv.h * Math.PI) / 180;
+      g.lineWidth = 3;
+      g.strokeStyle = '#fff';
+      g.beginPath(); g.arc(R + Math.cos(ah) * (R + r) / 2, R + Math.sin(ah) * (R + r) / 2, 8, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc(q0 + hsv.s * lado, q0 + (1 - hsv.v) * lado, 7, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = '#000';
+      g.lineWidth = 1;
+      g.beginPath(); g.arc(q0 + hsv.s * lado, q0 + (1 - hsv.v) * lado, 8.5, 0, Math.PI * 2); g.stroke();
+    };
+    const acciones = caja.querySelector('.tc-acciones');
+    const poner = (nuevo, desde) => {
+      color = nuevo.toLowerCase();
+      if (desde !== 'rueda') hsv = hexAHsv(color);
+      if (desde !== 'hex') hex.value = color.toUpperCase();
+      muestra.style.background = color;
+      caja.querySelectorAll('.tc-color').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.color === color)));
+      dibujar();
+      d.alPrevisualizarColor(parte, color); // en vivo sobre el auto
+      ponerAcciones();
+    };
+    const ponerAcciones = () => {
+      const cambio = color !== guardado;
+      const falta = d.precioPintura - d.plata();
+      acciones.innerHTML = '';
+      const pintar = document.createElement('button');
+      pintar.className = `btn ${cambio && falta <= 0 ? 'verde' : 'gris'}`;
+      pintar.innerHTML = `Pintar · ${plataTxt(d.precioPintura)}`;
+      pintar.disabled = !cambio || falta > 0;
+      const envoltura = document.createElement('span');
+      envoltura.className = `tc-pintar${falta > 0 ? ' caro' : ''}`;
+      if (falta > 0) envoltura.dataset.tip = `Te faltan ${formato(falta)}`;
+      envoltura.append(pintar);
+      pintar.onclick = () => {
+        if (!d.alPintar(parte, color)) return;
+        mostrarContenido(false);
+        $('taller-contenido').querySelector('.taller-pintura')?.classList.add('destello');
+      };
+      const deshacer = document.createElement('button');
+      deshacer.className = 'btn gris';
+      deshacer.textContent = 'Deshacer';
+      deshacer.disabled = !cambio;
+      deshacer.onclick = () => poner(guardado);
+      acciones.append(envoltura, deshacer);
+    };
+    const colores = caja.querySelector('.tc-colores');
+    for (const c of d.colores) {
+      const b = document.createElement('button');
+      b.className = 'tc-color';
+      b.dataset.color = c.toLowerCase();
+      b.style.background = c;
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-label', c);
+      b.onclick = () => poner(c);
+      colores.append(b);
+    }
+    hex.addEventListener('input', () => {
+      const v = hex.value.trim().replace(/^([^#])/, '#$1');
+      if (/^#[0-9a-f]{6}$/i.test(v)) poner(v, 'hex');
+    });
+    const tocar = (e) => {
+      const rect = lienzo.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 220;
+      const y = ((e.clientY - rect.top) / rect.height) * 220;
+      const dist = Math.hypot(x - R, y - R);
+      if (e.type === 'pointerdown') lienzo.zona = dist > r - 4 && dist < R + 4 ? 'rueda' : x > q0 - 6 && x < q0 + lado + 6 && y > q0 - 6 && y < q0 + lado + 6 ? 'cuadrado' : null;
+      if (lienzo.zona === 'rueda') hsv.h = ((Math.atan2(y - R, x - R) * 180) / Math.PI + 360) % 360;
+      else if (lienzo.zona === 'cuadrado') {
+        hsv.s = Math.max(0, Math.min(1, (x - q0) / lado));
+        hsv.v = Math.max(0, Math.min(1, 1 - (y - q0) / lado));
+      } else return;
+      poner(hsvAHex(hsv), 'rueda');
+    };
+    lienzo.addEventListener('pointerdown', (e) => { lienzo.setPointerCapture(e.pointerId); tocar(e); });
+    lienzo.addEventListener('pointermove', (e) => { if (lienzo.zona && e.buttons) tocar(e); });
+    lienzo.addEventListener('pointerup', () => { lienzo.zona = null; });
+    poner(color, 'inicio');
+    return caja;
+  };
+
+  const mostrarContenido = (animar = true) => {
+    const cont = $('taller-contenido');
+    const cat = d.categorias.find((c) => c.id === actual);
+    const titulo = document.createElement('h3');
+    titulo.textContent = cat ? cat.nombre : `${PARTES_PINTURA[actual].nombre} · ${formato(d.precioPintura)} cada vez`;
+    cont.replaceChildren(titulo, cat ? mejoras(cat) : pintura(actual));
+    if (animar) { cont.classList.remove('entra'); void cont.offsetWidth; cont.classList.add('entra'); }
+    nav.querySelectorAll('.tp').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.id === actual)));
+    $('taller-partes').querySelectorAll('.tparte').forEach((b) => b.classList.toggle('activa', b.dataset.id === actual));
+    dibujarStats();
+  };
+  const elegir = (id) => {
+    if (id === actual) return;
+    // Al cambiar de pestaña, el color que no se confirmó vuelve al guardado.
+    if (PARTES_PINTURA[actual]) d.alPrevisualizarColor(PARTES_PINTURA[actual].parte, d.colorGuardado(PARTES_PINTURA[actual].parte));
+    actual = id;
+    previa = null;
+    mostrarContenido();
+  };
+
+  // ---- Girar el auto arrastrando ----
+  const girar = $('taller-girar');
+  let ultimoX = null;
+  girar.onpointerdown = (e) => { ultimoX = e.clientX; girar.setPointerCapture(e.pointerId); };
+  girar.onpointermove = (e) => { if (ultimoX == null) return; d.alGirar((e.clientX - ultimoX) * 0.012); ultimoX = e.clientX; };
+  girar.onpointerup = () => { ultimoX = null; };
+  girar.onpointercancel = () => { ultimoX = null; };
+
+  const cerrar = () => { mostrar('taller', false); document.body.classList.remove('en-taller'); document.removeEventListener('keydown', teclas); d.alCerrar(); };
+  const teclas = (e) => { if (e.key === 'Escape') cerrar(); };
+  document.addEventListener('keydown', teclas);
+  $('btn-cerrar-taller').onclick = cerrar;
+  document.body.classList.add('en-taller'); // la plata se corre a la derecha (no la tapa el menú)
+  mostrar('taller', true);
+  mostrarContenido(false);
+  nav.querySelector('.tp')?.focus();
 }

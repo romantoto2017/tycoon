@@ -4,8 +4,9 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import { AUTOS, AUTO_DEPORTIVO } from '../data/objetos.js';
 import { mat, formato } from './util.js';
-import { LIMITE_MAPA, CONCESIONARIO as CO, AUTOPISTA as AU, GALPON_LUGARES, AUTOS_DESDE } from './constantes.js';
+import { LIMITE_MAPA, CONCESIONARIO as CO, AUTOPISTA as AU, GALPON_LUGARES, AUTOS_DESDE, TALLER as TA } from './constantes.js';
 import { crearEtiqueta } from './texturas.js';
+import { CATEGORIAS, PINTURA, COLORES, PRECIO_DEPORTIVO } from '../data/taller.js';
 import { sfx } from './sfx.js';
 
 const RADIO = 2.3;
@@ -19,14 +20,21 @@ const G = 9.8 * M; // 1 g
 // La aceleración baja a medida que se acerca a la máxima: a = a0 · (1 − v / vmax), con a0 sacado
 // del 0 a 100. Frena con el agarre (≈ 1 g) y, a más velocidad, menos puede doblar: el giro se
 // limita a agarre / velocidad (la aceleración lateral de verdad), así hay que frenar para las curvas.
-export function specsAuto(def) {
-  const v = (def.vmax / 3.6) * M;
+//
+// mejoras: los niveles del taller ({ motor, turbo, gomas, frenos }, de 0 a 4; data/taller.js).
+export function efectoMejora(cat, nivel) {
+  const c = CATEGORIAS.find((k) => k.id === cat);
+  return nivel > 0 && c ? c.niveles[Math.min(nivel, c.niveles.length) - 1].efecto : 0;
+}
+export function specsAuto(def, mejoras = {}) {
+  const m = (cat) => 1 + efectoMejora(cat, mejoras[cat] || 0);
+  const v = (def.vmax / 3.6) * M * m('motor');
   const v100 = (100 / 3.6) * M;
   return {
     v, // velocidad máxima (unidades por segundo)
-    a0: (-v * Math.log(1 - v100 / v)) / def.cero100,
-    freno: def.agarre * G,
-    lateral: def.agarre * G,
+    a0: (-v * Math.log(1 - v100 / v)) / (def.cero100 / m('turbo')),
+    freno: def.agarre * G * m('frenos'),
+    lateral: def.agarre * G * m('gomas'),
     // En el barrio y la ciudad hay un tope (como si fuera la velocidad permitida), más alto para los rápidos.
     barrio: Math.min(v, VEL_MAX * Math.sqrt(def.vmax / AUTO_DEPORTIVO.vmax)),
   };
@@ -284,6 +292,7 @@ export class Auto {
     this.angulo = angulo;
     this.vel = 0;
     this.direccion = 0;
+    this.def = AUTO_DEPORTIVO;
     this.specs = specsAuto(AUTO_DEPORTIVO);
     this.alto = 3.6;
     this.grupo = new THREE.Group();
@@ -301,6 +310,7 @@ export class Auto {
     const g = this.grupo;
     // Plata con brillo (el único material con reflejo del juego: es el auto).
     const plata = new THREE.MeshPhongMaterial({ color: '#b9bec3', specular: '#7d858c', shininess: 35 });
+    this.partes = { carroceria: [plata], llantas: [] }; // lo que se pinta en el taller
     const calcoMat = (color, brillo = false) => new THREE.MeshPhongMaterial({
       color, specular: brillo ? '#ffffff' : '#222222', shininess: brillo ? 90 : 10, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
@@ -450,6 +460,7 @@ export class Auto {
     const geoTaza = new THREE.CylinderGeometry(0.5, 0.5, 0.04, 20);
     const goma = mat('#17181a');
     const taza = new THREE.MeshPhongMaterial({ map: texturaTaza(), specular: '#ffffff', shininess: 60 });
+    this.partes.llantas.push(taza);
     const lisa = mat('#9ba1a7');
     for (const [x, z] of [[-RUEDA.x, RUEDA.adelante], [RUEDA.x, RUEDA.adelante], [-RUEDA.x, RUEDA.atras], [RUEDA.x, RUEDA.atras]]) {
       const soporte = new THREE.Group();
@@ -476,6 +487,33 @@ export class Auto {
     this.frenoPrendido = prendida;
     for (const m of this.frenoMats || []) m.color.set(prendida ? PRENDIDA : APAGADA);
     if (this.capaFreno) this.capaFreno.visible = prendida;
+  }
+
+  // Lo del taller (estado.taller[id]: niveles de las mejoras y colores): la física y la pintura.
+  aplicarTaller(datos = {}) {
+    this.mejoras = datos;
+    this.specs = specsAuto(this.def, datos);
+    for (const parte of ['carroceria', 'llantas']) this.pintar(parte, datos[parte] || null);
+  }
+
+  // Pinta una parte (null: el color de fábrica). Los materiales de cada parte son de este auto.
+  pintar(parte, color) {
+    const mats = this.materialesDe(parte);
+    this.colorFabrica ??= {};
+    for (const m of mats) {
+      this.colorFabrica[m.uuid] ??= m.color.getHex();
+      m.color.set(color || this.colorFabrica[m.uuid]);
+    }
+  }
+
+  materialesDe(parte) {
+    return this.partes?.[parte] || [];
+  }
+
+  // Color que se ve ahora en esa parte (para arrancar el selector).
+  colorDe(parte) {
+    const m = this.materialesDe(parte)[0];
+    return m ? `#${m.color.getHexString()}` : '#ffffff';
   }
 
   colocar() {
@@ -673,8 +711,10 @@ export class AutoComprado extends Auto {
     this.colocar();
     this.listo = cargarAuto(def).then((m) => {
       this.grupo.add(m);
+      this.modelo = m;
       this.medio = m.userData.medio;
       this.alto = m.userData.alto;
+      if (this.mejoras) this.aplicarTaller(this.mejoras); // los colores, ahora que hay modelo
       this.capaFreno = m.getObjectByName('capaFreno');
       this.frenoPrendido = undefined;
       this.colocar();
@@ -682,7 +722,40 @@ export class AutoComprado extends Auto {
   }
 
   armar() {} // el modelo llega después (cargarAuto); sus luces de freno, también
+
+  // Los materiales de la carrocería o las llantas (PARTES), copiados para este auto la primera vez
+  // (los modelos comparten materiales entre copias: si no, se pintarían todos).
+  materialesDe(parte) {
+    this.propios ??= {};
+    if (this.propios[parte]) return this.propios[parte];
+    const re = PARTES[this.def.id]?.[parte];
+    if (!re || !this.modelo) return [];
+    const copias = new Map();
+    this.modelo.traverse((o) => {
+      if (!o.isMesh) return;
+      const lista = Array.isArray(o.material) ? o.material : [o.material];
+      const nuevos = lista.map((m) => {
+        if (!re.test(m.name) && !re.test(o.name)) return m;
+        if (!copias.has(m)) copias.set(m, m.clone());
+        return copias.get(m);
+      });
+      o.material = Array.isArray(o.material) ? nuevos : nuevos[0];
+    });
+    this.propios[parte] = [...copias.values()];
+    return this.propios[parte];
+  }
 }
+
+// Lo que se pinta en el taller de cada modelo: la carrocería y las llantas (por el nombre del
+// material o, si es uno genérico, por el de la pieza).
+const PARTES = {
+  miata: { carroceria: /^RRpbrPaintPrimary$/, llantas: /^RRpbrAluminumSemiPolish$/ },
+  bmw_e36: { carroceria: /^BMWE36_paint$/, llantas: /^BMWE36_felgen$/ },
+  golf_gti: { carroceria: /^vwphong2SG1$/, llantas: /^vwphong2[12]SG1$/ },
+  gtr: { carroceria: /^r35_paint$/, llantas: /^r35_wheel_05a$/ },
+  mclaren_p1: { carroceria: /^Carpaint$/, llantas: /^Rim_/ },
+  ferrari_f40: { carroceria: /^Metallic$/, llantas: /^Object_32$/ },
+};
 
 // Los autos que tenés, estacionados en el galpón (uno por lugar, en el orden en que se compraron).
 export class Flota {
@@ -704,6 +777,7 @@ export class Flota {
       // Si hay más autos que lugares, los que sobran van adelante, cerca de la boca.
       const fila = Math.floor(i / GALPON_LUGARES.length);
       const auto = new AutoComprado(this.escena, def, lugar.x, lugar.z + fila * 14, 0);
+      auto.aplicarTaller(this.estado.taller?.[def.id]);
       this.colisiones.push(auto.caja);
       this.autos.push(auto);
     }
@@ -956,5 +1030,441 @@ export class Concesionario {
       this.disco.rotation.y += dt * 0.3;
       if (this.plataforma) this.plataforma.soporte.rotation.y += dt * 0.3;
     }
+  }
+}
+
+// ======================= El Taller =======================
+// Al lado de Vecibanda Motors (abre al 60%, igual que el concesionario; antes, el portón está
+// bajo y el cartel dice a qué % abre). Galpón de chapa naranja con el portón levantado, franjas
+// amarillas y negras, el cartel de neón "TALLER" y lámparas colgando con luz cálida. Llegás
+// manejando: cerca del portón aparece la "E" y, al entrar, el auto queda en el box (las líneas
+// amarillas, adelante de la pared con las herramientas) y la cámara lo mira desde arriba. Las
+// mejoras y los colores (data/taller.js) se guardan en estado.taller[id del auto].
+const PORTON = { x: (TA.x0 + TA.x1) / 2, z: TA.z0 };
+const BOX = { x: PORTON.x, z: TA.z0 + 16 };
+const CERCA_TALLER = 8; // a cuánto del portón aparece la "E" (unos 3 m)
+const ALTO_PORTON = 7;
+
+// Chapa acanalada: franjas verticales claras y oscuras, con un poco de óxido.
+function texChapa(color) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = color;
+  g.fillRect(0, 0, 128, 128);
+  for (let x = 0; x < 128; x += 16) {
+    const lado = g.createLinearGradient(x, 0, x + 16, 0);
+    lado.addColorStop(0, 'rgba(0,0,0,0.28)');
+    lado.addColorStop(0.45, 'rgba(255,255,255,0.18)');
+    lado.addColorStop(1, 'rgba(0,0,0,0.28)');
+    g.fillStyle = lado;
+    g.fillRect(x, 0, 16, 128);
+  }
+  let a = 7;
+  const rnd = () => { a = (a * 9301 + 49297) % 233280; return a / 233280; };
+  for (let i = 0; i < 60; i++) {
+    g.fillStyle = `rgba(110,45,15,${0.1 + rnd() * 0.2})`;
+    g.fillRect(rnd() * 128, rnd() * 128, 2 + rnd() * 5, 2 + rnd() * 9);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// Franjas amarillas y negras (marco del portón y bordes del elevador).
+function texPeligro() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f6c200';
+  g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#151515';
+  for (let i = -64; i < 128; i += 32) {
+    g.beginPath();
+    g.moveTo(i, 0); g.lineTo(i + 16, 0); g.lineTo(i + 80, 64); g.lineTo(i + 64, 64);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// Panel perforado con las herramientas colgadas (siluetas): llaves, martillo, destornilladores,
+// pinzas y una sierra, y abajo la mesada.
+function canvasHerramientas() {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#8b6f4e';
+  g.fillRect(0, 0, 1024, 256);
+  g.fillStyle = 'rgba(40,28,18,0.55)';
+  for (let y = 10; y < 256; y += 18) for (let x = 10; x < 1024; x += 18) { g.beginPath(); g.arc(x, y, 2.4, 0, Math.PI * 2); g.fill(); }
+  const gris = '#2b2e33';
+  const llave = (x, y, l) => {
+    g.fillStyle = gris;
+    g.fillRect(x - 5, y, 10, l);
+    g.beginPath(); g.arc(x, y, 13, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(x, y + l, 10, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#8b6f4e';
+    g.fillRect(x - 4, y - 14, 8, 12);
+  };
+  for (let i = 0; i < 7; i++) llave(40 + i * 34, 40, 70 + i * 14);
+  // Martillo.
+  g.fillStyle = '#7a4a22'; g.fillRect(310, 60, 12, 130);
+  g.fillStyle = gris; g.fillRect(285, 48, 62, 26);
+  // Destornilladores (mango rojo, amarillo, azul).
+  ['#d32f2f', '#f9a825', '#1e88e5', '#d32f2f', '#43a047'].forEach((col, i) => {
+    const x = 380 + i * 30;
+    g.fillStyle = col; g.fillRect(x - 7, 40, 14, 46);
+    g.fillStyle = '#c9ccd0'; g.fillRect(x - 2, 86, 4, 70);
+  });
+  // Pinzas.
+  g.strokeStyle = gris; g.lineWidth = 9; g.lineCap = 'round';
+  for (const x of [560, 610]) { g.beginPath(); g.moveTo(x - 14, 190); g.lineTo(x + 6, 70); g.moveTo(x + 14, 190); g.lineTo(x - 6, 70); g.stroke(); }
+  // Sierra.
+  g.fillStyle = '#c9ccd0';
+  g.beginPath(); g.moveTo(660, 60); g.lineTo(860, 60); g.lineTo(860, 100); g.lineTo(700, 110); g.closePath(); g.fill();
+  g.fillStyle = '#d84315'; g.fillRect(860, 50, 40, 70);
+  // Llaves de cruz y un rollo de cinta.
+  g.lineWidth = 10;
+  for (const x of [940, 990]) { g.beginPath(); g.moveTo(x - 30, 60); g.lineTo(x + 30, 160); g.moveTo(x + 30, 60); g.lineTo(x - 30, 160); g.stroke(); }
+  g.fillStyle = '#c62828'; g.beginPath(); g.arc(470, 205, 24, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#8b6f4e'; g.beginPath(); g.arc(470, 205, 10, 0, Math.PI * 2); g.fill();
+  return c;
+}
+
+// El cartel de neón: TALLER en naranja con brillo, en una caja negra con borde celeste.
+function canvasNeon(texto, color, borde) {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0d0f12';
+  g.fillRect(0, 0, 1024, 256);
+  g.strokeStyle = borde;
+  g.lineWidth = 10;
+  g.shadowColor = borde;
+  g.shadowBlur = 24;
+  g.strokeRect(22, 22, 980, 212);
+  g.font = '900 170px Arial Black, Arial, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.shadowColor = color;
+  g.shadowBlur = 40;
+  g.fillStyle = color;
+  g.fillText(texto, 512, 136);
+  g.shadowBlur = 0;
+  g.fillStyle = '#fff3d6';
+  g.globalAlpha = 0.55;
+  g.fillText(texto, 512, 136);
+  return c;
+}
+
+export class Taller {
+  constructor({ escena, colisiones, kit, estado, ui, guardar, progreso, tycoon, flota }) {
+    this.escena = escena;
+    this.colisiones = colisiones;
+    this.kit = kit;
+    this.estado = estado;
+    this.ui = ui;
+    this.guardar = guardar;
+    this.progreso = progreso;
+    this.tycoon = tycoon;
+    this.flota = flota;
+    this.abierto = null;
+    this.auto = null; // el auto que está adentro (con el menú abierto)
+    this.grupo = new THREE.Group();
+    this.grupo.visible = false;
+    escena.add(this.grupo);
+    this.armar();
+    // El "E" que aparece arriba del portón cuando llegás con el auto.
+    this.indicador = crearEtiqueta([{ texto: 'E · Entrar al taller', tam: 60, color: '#ffd23f' }], 8);
+    this.indicador.sprite.position.set(PORTON.x, ALTO_PORTON - 1.2, PORTON.z - 3.5);
+    this.indicador.sprite.visible = false;
+    this.grupo.add(this.indicador.sprite);
+    this.aviso = crearEtiqueta([{ texto: `CERRADO · ABRE AL ${Math.round(AUTOS_DESDE * 100)}%`, tam: 60, color: '#ffd23f' }], 10);
+    this.aviso.sprite.position.set(PORTON.x, 4.2, PORTON.z - 4);
+    this.grupo.add(this.aviso.sprite);
+  }
+
+  armar() {
+    const k = this.kit;
+    const g = this.grupo;
+    const solido = (m) => { g.add(m); this.colisiones.push(new THREE.Box3().setFromObject(m)); return m; };
+    const chapa = (color, rx, ry) => {
+      const t = texChapa(color);
+      t.repeat.set(rx, ry);
+      return new THREE.MeshLambertMaterial({ map: t });
+    };
+    const { x0, x1, z0, z1, alto } = TA;
+    const mitad = TA.porton / 2;
+    const pared = chapa('#d4581f', 6, 2);
+    const paredFondo = chapa('#d4581f', 6, 2);
+    // Piso de cemento y la explanada hasta la autopista.
+    g.add(k.noSolido(k.cajaDe(x0, 0, z0, x1, 0.12, z1, k.tex('baldosa', '#6d7076', 4))));
+    g.add(k.noSolido(k.cajaDe(x0 - 4, 0, AU.z + AU.medioAncho + 1.6, x1 + 4, 0.07, z0, k.tex('baldosa', '#8e9196', 3))));
+    // Paredes de chapa (adelante, con el hueco del portón).
+    solido(k.cajaDe(x0, 0, z1 - 0.4, x1, alto, z1, paredFondo));
+    solido(k.cajaDe(x0, 0, z0, x0 + 0.4, alto, z1, pared));
+    solido(k.cajaDe(x1 - 0.4, 0, z0, x1, alto, z1, pared));
+    solido(k.cajaDe(x0, 0, z0, PORTON.x - mitad, alto, z0 + 0.4, pared));
+    solido(k.cajaDe(PORTON.x + mitad, 0, z0, x1, alto, z0 + 0.4, pared));
+    g.add(k.noSolido(k.cajaDe(PORTON.x - mitad, ALTO_PORTON, z0, PORTON.x + mitad, alto, z0 + 0.4, pared)));
+    // Techo de chapa gris a dos aguas (bajo) con alero sobre el portón.
+    const techo = chapa('#8d949b', 8, 2);
+    g.add(k.noSolido(k.cajaDe(x0 - 0.6, alto, z0 - 2.4, x1 + 0.6, alto + 0.35, z1 + 0.6, techo)));
+    g.add(k.noSolido(k.cajaDe(x0 - 0.6, alto + 0.35, (z0 + z1) / 2 - 3, x1 + 0.6, alto + 1.4, (z0 + z1) / 2 + 3, techo)));
+    // Marco del portón con franjas amarillas y negras.
+    const peligro = texPeligro();
+    const franja = (rx, ry) => { const t = peligro.clone(); t.needsUpdate = true; t.repeat.set(rx, ry); return new THREE.MeshLambertMaterial({ map: t }); };
+    for (const s of [-1, 1]) g.add(k.noSolido(k.cajaDe(PORTON.x + s * mitad - 0.35, 0, z0 - 0.15, PORTON.x + s * mitad + 0.35, ALTO_PORTON, z0 + 0.45, franja(1, 10))));
+    g.add(k.noSolido(k.cajaDe(PORTON.x - mitad - 0.35, ALTO_PORTON, z0 - 0.15, PORTON.x + mitad + 0.35, ALTO_PORTON + 0.6, z0 + 0.45, franja(18, 1))));
+    // Portón levantado: la chapa enrollada arriba del hueco.
+    const rollo = k.noSolido(k.cilindro(0.55, 0.55, TA.porton, '#9aa1a8', PORTON.x, ALTO_PORTON - 0.2, z0 + 0.9, 14));
+    rollo.rotation.z = Math.PI / 2;
+    g.add(rollo);
+    g.add(k.noSolido(k.cajaDe(PORTON.x - mitad, ALTO_PORTON - 0.9, z0 + 0.6, PORTON.x + mitad, ALTO_PORTON - 0.4, z0 + 0.7, chapa('#aab1b8', 8, 1))));
+    // Portón bajo (cerrado), hasta que abre.
+    this.cerrado = k.cajaDe(PORTON.x - mitad, 0, z0 + 0.1, PORTON.x + mitad, ALTO_PORTON, z0 + 0.3, chapa('#aab1b8', 8, 3));
+    this.cajaCerrado = new THREE.Box3().setFromObject(this.cerrado);
+    g.add(this.cerrado);
+    this.colisiones.push(this.cajaCerrado);
+    // Cartel de neón TALLER arriba del portón (se ve de día y de noche).
+    const neon = new THREE.CanvasTexture(canvasNeon('TALLER', '#ff8a1f', '#4dd0ff'));
+    neon.colorSpace = THREE.SRGBColorSpace;
+    neon.anisotropy = 4;
+    const cartel = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), new THREE.MeshBasicMaterial({ map: neon }));
+    cartel.position.set(PORTON.x, alto - 0.2, z0 - 0.5);
+    cartel.rotation.y = Math.PI;
+    g.add(k.noSolido(cartel));
+    // Cartel alto al costado de la autopista (se ve de lejos, de los dos lados).
+    const xt = x1 + 4;
+    const zt = z0 - 7;
+    solido(k.cajaDe(xt - 0.3, 0, zt - 0.3, xt + 0.3, 13, zt + 0.3, '#2b2e33'));
+    for (const lado of [-1, 1]) {
+      const placa = new THREE.Mesh(new THREE.PlaneGeometry(9, 2.25), new THREE.MeshBasicMaterial({ map: neon }));
+      placa.position.set(xt + lado * 0.35, 14, zt);
+      placa.rotation.y = lado * Math.PI / 2;
+      g.add(k.noSolido(placa));
+    }
+    g.add(k.noSolido(k.cajaDe(xt - 0.3, 12.8, zt - 4.6, xt + 0.3, 15.2, zt + 4.6, '#0d0f12')));
+    // Tira de neón naranja a lo largo del alero.
+    g.add(k.noSolido(k.cajaDe(x0, alto - 0.12, z0 - 2.45, x1, alto + 0.02, z0 - 2.3, k.brillo('#ff8a1f'))));
+    // Adentro: lámparas colgando con luz cálida (y su manchón de luz en el piso).
+    const manchon = new THREE.MeshBasicMaterial({ color: '#ffb54a', transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending });
+    for (const [dx, dz] of [[-6, 7], [6, 7], [-6, 17], [6, 17], [0, 25]]) {
+      const x = PORTON.x + dx;
+      const z = z0 + dz;
+      g.add(k.noSolido(k.cajaDe(x - 0.04, 8.3, z - 0.04, x + 0.04, alto, z + 0.04, '#222')));
+      const pantalla = k.noSolido(k.cono(0.8, 0.6, '#2b2e33', x, 8.1, z, 10));
+      pantalla.rotation.x = Math.PI; // abierta para abajo
+      g.add(pantalla);
+      g.add(k.noSolido(k.esfera(0.28, k.brillo('#ffd27a'), x, 7.75, z)));
+      const luz = new THREE.Mesh(new THREE.CircleGeometry(3.2, 20), manchon);
+      luz.rotation.x = -Math.PI / 2;
+      luz.position.set(x, 0.14, z);
+      g.add(k.noSolido(luz));
+    }
+    // El box: líneas amarillas en el piso y el elevador (plano, con bordes de franjas).
+    const amarillo = k.brillo('#f6c200');
+    const [bw, bl] = [8, 14];
+    for (const s of [-1, 1]) {
+      g.add(k.noSolido(k.cajaDe(BOX.x + s * bw / 2 - 0.12, 0.12, BOX.z - bl / 2, BOX.x + s * bw / 2 + 0.12, 0.15, BOX.z + bl / 2, amarillo)));
+      g.add(k.noSolido(k.cajaDe(BOX.x - bw / 2, 0.12, BOX.z + s * bl / 2 - 0.12, BOX.x + bw / 2, 0.15, BOX.z + s * bl / 2 + 0.12, amarillo)));
+      // Columnas del elevador.
+      g.add(k.noSolido(k.cajaDe(BOX.x + s * (bw / 2 + 0.9) - 0.35, 0, BOX.z + 5.2, BOX.x + s * (bw / 2 + 0.9) + 0.35, 6, BOX.z + 5.9, '#c62828')));
+    }
+    g.add(k.noSolido(k.cajaDe(BOX.x - 3, 0.12, BOX.z - 5.8, BOX.x + 3, 0.16, BOX.z + 5.8, '#3b3f45')));
+    g.add(k.noSolido(k.cajaDe(BOX.x - 3.1, 0.12, BOX.z - 5.9, BOX.x + 3.1, 0.14, BOX.z + 5.9, franja(1, 12))));
+    // La pared del fondo: panel con las herramientas, banco de trabajo, carro de herramientas
+    // rojo, gomas apiladas y un tambor.
+    const panelTex = new THREE.CanvasTexture(canvasHerramientas());
+    panelTex.colorSpace = THREE.SRGBColorSpace;
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(20, 5), new THREE.MeshLambertMaterial({ map: panelTex }));
+    panel.position.set(PORTON.x, 4.6, z1 - 0.42);
+    panel.rotation.y = Math.PI;
+    g.add(k.noSolido(panel));
+    solido(k.cajaDe(PORTON.x - 8, 0, z1 - 2.2, PORTON.x + 8, 1.9, z1 - 0.4, '#5d4037'));
+    g.add(k.noSolido(k.cajaDe(PORTON.x - 8.2, 1.9, z1 - 2.3, PORTON.x + 8.2, 2.05, z1 - 0.4, '#9aa1a8')));
+    solido(k.cajaDe(x0 + 1.5, 0, z1 - 6, x0 + 4, 3.2, z1 - 4.2, '#c62828'));
+    for (let i = 1; i < 5; i++) g.add(k.noSolido(k.cajaDe(x0 + 1.45, i * 0.62, z1 - 6.05, x0 + 4.05, i * 0.62 + 0.05, z1 - 4.15, '#8e1b1b')));
+    for (let i = 0; i < 4; i++) {
+      const goma = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.85, 16), k.material('#1b1b1d'));
+      goma.position.set(x1 - 2.4, 0.43 + i * 0.86, z1 - 3);
+      g.add(k.noSolido(goma));
+    }
+    this.colisiones.push(new THREE.Box3(new THREE.Vector3(x1 - 3.6, 0, z1 - 4.2), new THREE.Vector3(x1 - 1.2, 3.5, z1 - 1.8)));
+    solido(k.cilindro(0.8, 0.8, 2.4, '#1565c0', x1 - 2.4, 1.2, z0 + 3, 14));
+  }
+
+  // ---------- Cada cuadro ----------
+  actualizar(dt, jugador, vehiculo) {
+    if (!this.abierto) {
+      if (this.progreso() < AUTOS_DESDE) this.abierto = false;
+      else {
+        this.abierto = true;
+        this.grupo.remove(this.cerrado);
+        const i = this.colisiones.indexOf(this.cajaCerrado);
+        if (i >= 0) this.colisiones.splice(i, 1);
+        this.aviso.sprite.visible = false;
+      }
+    }
+    this.grupo.visible = Math.hypot(jugador.pos.x - PORTON.x, jugador.pos.z - PORTON.z) < 900;
+    this.indicador.sprite.visible = !this.auto && !!this.cercaDelPorton(vehiculo);
+  }
+
+  // Un auto (no el helicóptero) cerca del portón, de afuera.
+  cercaDelPorton(vehiculo) {
+    if (!vehiculo?.specs || !vehiculo.def || !this.abierto) return false;
+    return Math.hypot(vehiculo.pos.x - PORTON.x, vehiculo.pos.z - (PORTON.z - 2)) < CERCA_TALLER && vehiculo.pos.z < PORTON.z + 2;
+  }
+
+  accion(jugador, vehiculo) {
+    if (this.auto) return '';
+    if (vehiculo && !this.abierto && Math.hypot(vehiculo.pos.x - PORTON.x, vehiculo.pos.z - PORTON.z) < CERCA_TALLER + 4) {
+      return `Taller cerrado: abre al ${Math.round(AUTOS_DESDE * 100)}%`;
+    }
+    return this.cercaDelPorton(vehiculo) ? 'Entrar al taller (E)' : '';
+  }
+
+  datosDe(id) {
+    this.estado.taller ??= {};
+    this.estado.taller[id] ??= {};
+    return this.estado.taller[id];
+  }
+
+  // Precio de referencia del auto: el del concesionario (el Deportivo cuenta como uno barato).
+  precioBase(def) {
+    return def.precio || PRECIO_DEPORTIVO;
+  }
+
+  redondo(n) {
+    const e = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1);
+    return Math.round(n / e) * e;
+  }
+
+  precioNivel(def, cat, nivel) {
+    return this.redondo(this.precioBase(def) * CATEGORIAS.find((c) => c.id === cat).niveles[nivel - 1].precio);
+  }
+
+  precioPintura(def) {
+    return this.redondo(this.precioBase(def) * PINTURA.precio);
+  }
+
+  // Todos los autos de este modelo que hay en el mundo (el que manejás y el del galpón son el
+  // mismo; el de la carrera se arma aparte), para que tomen la mejora al toque.
+  copias(id) {
+    const lista = [this.tycoon.auto, ...(this.flota?.autos || [])].filter((a) => a?.def?.id === id);
+    if (this.auto && !lista.includes(this.auto)) lista.push(this.auto);
+    return lista;
+  }
+
+  // La E: si está cerrado avisa; si no, entra. Devuelve true si se abrió el menú.
+  hacer(vehiculo) {
+    if (!this.abierto) {
+      sfx.error();
+      this.ui.toast(`El taller abre cuando la mansión llegue al ${Math.round(AUTOS_DESDE * 100)}%`, 'error');
+      return false;
+    }
+    if (!this.cercaDelPorton(vehiculo)) return false;
+    this.entrar(vehiculo);
+    return true;
+  }
+
+  entrar(vehiculo) {
+    this.auto = vehiculo;
+    vehiculo.vel = 0;
+    vehiculo.pos.set(BOX.x, 0, BOX.z);
+    vehiculo.angulo = -2.5; // tres cuartos de frente, mirando a la cámara
+    vehiculo.colocar();
+    const def = vehiculo.def;
+    const datos = this.datosDe(def.id);
+    sfx.brillo();
+    this.ui.abrirTaller({
+      nombre: def.nombre,
+      plata: () => this.estado.plata,
+      categorias: CATEGORIAS.map((c) => ({
+        id: c.id, nombre: c.nombre, icono: c.icono, stat: c.stat,
+        niveles: c.niveles.map((n, i) => ({ ...n, precio: this.precioNivel(def, c.id, i + 1) })),
+      })),
+      colores: COLORES,
+      precioPintura: this.precioPintura(def),
+      niveles: () => ({ ...datos }),
+      stats: (mejoras) => this.stats(def, mejoras),
+      color: (parte) => vehiculo.colorDe(parte),
+      colorGuardado: (parte) => datos[parte] || null, // null: el de fábrica
+      alComprar: (cat, nivel) => this.comprar(def, cat, nivel),
+      alPrevisualizarColor: (parte, color) => vehiculo.pintar(parte, color),
+      alPintar: (parte, color) => this.pintar(def, parte, color),
+      alGirar: (d) => { vehiculo.angulo += d; vehiculo.colocar(); },
+      alCerrar: () => this.salir(),
+    });
+  }
+
+  // Los números de la tarjeta de stats (con las mejoras que se le pasen).
+  stats(def, mejoras) {
+    const ef = (cat) => efectoMejora(cat, mejoras[cat] || 0);
+    return {
+      velocidad: Math.round(def.vmax * (1 + ef('motor'))),
+      aceleracion: def.cero100 / (1 + ef('turbo')),
+      manejo: def.agarre * (1 + ef('gomas')),
+      frenado: def.agarre * (1 + ef('frenos')),
+    };
+  }
+
+  comprar(def, cat, nivel) {
+    const datos = this.datosDe(def.id);
+    if ((datos[cat] || 0) !== nivel - 1) return false;
+    const precio = this.precioNivel(def, cat, nivel);
+    if (this.estado.plata < precio) return false;
+    this.estado.plata -= precio;
+    datos[cat] = nivel;
+    for (const a of this.copias(def.id)) a.aplicarTaller(datos);
+    sfx.comprar();
+    this.guardar();
+    return true;
+  }
+
+  pintar(def, parte, color) {
+    const precio = this.precioPintura(def);
+    if (this.estado.plata < precio) return false;
+    this.estado.plata -= precio;
+    const datos = this.datosDe(def.id);
+    datos[parte] = color;
+    for (const a of this.copias(def.id)) a.aplicarTaller(datos);
+    sfx.comprar();
+    this.guardar();
+    return true;
+  }
+
+  // Al cerrar el menú: lo que no se confirmó vuelve a su color y el auto sale por el portón.
+  salir() {
+    const a = this.auto;
+    if (!a) return;
+    a.aplicarTaller(this.datosDe(a.def.id));
+    a.pos.set(PORTON.x, 0, PORTON.z - 7);
+    a.angulo = Math.PI; // mirando a la autopista
+    a.vel = 0;
+    a.colocar();
+    this.auto = null;
+    this.alSalir?.();
+  }
+
+  // La cámara del taller: más alta y alejada, con la pared de las herramientas de fondo. El auto
+  // queda a la derecha de la pantalla (a la izquierda está el menú).
+  camara(cam) {
+    cam.position.set(BOX.x + 7.5, 5.6, BOX.z - 13.5);
+    cam.lookAt(BOX.x, 1.5, BOX.z + 1);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const corrido = w > 700 ? 0.23 : 0;
+    cam.setViewOffset(w, h, -w * corrido, h * 0.04, w, h);
+  }
+
+  soltarCamara(cam) {
+    cam.clearViewOffset();
   }
 }

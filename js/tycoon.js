@@ -384,6 +384,7 @@ export class Tycoon {
     if (item.id === 'ak47') this.tieneArma = true;
     if (item.id === 'auto' && !this.auto) {
       this.auto = new Auto(this.escena, (GARAGE.x0 + GARAGE.x1) / 2, (GARAGE.z0 + GARAGE.z1) / 2 - 1, 0);
+      this.auto.aplicarTaller(this.estado.taller?.deportivo);
       this.colisiones.push(this.auto.caja);
     }
     // El helicóptero del helipuerto se puede manejar (main.js): parado en el centro del helipuerto.

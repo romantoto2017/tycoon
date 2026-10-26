@@ -4,6 +4,7 @@ import { AUTODROMO as AD, AUTOPISTA as AU, AUTOS_DESDE } from './constantes.js';
 import { Auto, AutoComprado, specsAuto, pasoAuto } from './auto.js';
 import { formato } from './util.js';
 import { crearEtiqueta } from './texturas.js';
+import { CATEGORIAS, NIVEL_MEDALLA } from '../data/taller.js';
 import { sfx } from './sfx.js';
 
 // Autódromo Vecibanda Ring, a mitad de la autopista (abre con los autos, al 60%). Afuera, el
@@ -15,8 +16,9 @@ import { sfx } from './sfx.js';
 // Jugabilidad: en la entrada, "Entrar al autódromo" abre la pantalla para elegir uno de tus autos
 // (con tus tiempos y las medallas). Largás detenido con el semáforo y son vueltas cronometradas.
 // Bronce, plata y oro salen de una simulación: un piloto automático da vueltas con la misma física
-// del juego (auto.js) siguiendo el medio de la pista y frenando justo para cada curva. Oro es ganarle
-// por un 4%, plata es ir apenas más lento (2%) y bronce, un 7% más lento. Pasarse de los límites de
+// del juego (auto.js) siguiendo el medio de la pista y frenando justo para cada curva, con el auto
+// mejorado en el taller: bronce es ir un 4% más lento que él con el auto de fábrica, plata empatarle
+// con todo al nivel 2 y oro ganarle por un 2% con todo al máximo (objetivosDe). Pasarse de los límites de
 // pista (más allá del piano) anula la vuelta. Cada medalla paga una vez por auto y cada récord tuyo
 // por debajo del bronce paga un poco más cuanto más mejorás. Las misiones Hot-Wheels y Verstappen
 // (misiones.js) piden el oro con un auto y con todos.
@@ -38,9 +40,9 @@ const LIMITE = MEDIO + 7; // límites de pista: pasando el piano y la franja bla
 const PARED = MEDIO + 28; // las paredes de publicidad (y el alambrado): ahí el auto choca
 const GRILLA = 9; // puntos antes de la línea donde se larga
 export const MEDALLAS = [
-  { id: 'oro', nombre: 'Oro', factor: 0.96, premio: { base: 3e8, minutos: 5 }, color: '#ffd23f' },
-  { id: 'plata', nombre: 'Plata', factor: 1.02, premio: { base: 1.2e8, minutos: 2.5 }, color: '#cfd8dc' },
-  { id: 'bronce', nombre: 'Bronce', factor: 1.07, premio: { base: 5e7, minutos: 1 }, color: '#d18b47' },
+  { id: 'oro', nombre: 'Oro', factor: 0.98, premio: { base: 3e8, minutos: 5 }, color: '#ffd23f' },
+  { id: 'plata', nombre: 'Plata', factor: 1.0, premio: { base: 1.2e8, minutos: 2.5 }, color: '#cfd8dc' },
+  { id: 'bronce', nombre: 'Bronce', factor: 1.04, premio: { base: 5e7, minutos: 1 }, color: '#d18b47' },
 ];
 const RECORD = { base: 1.5e7, minutos: 0.3, tope: 6 }; // por cada segundo que mejorás tu récord
 
@@ -189,8 +191,8 @@ class Cronometro {
 // Un piloto automático con la física del juego: mira la pista adelante, frena para llegar a cada
 // curva a la velocidad que el agarre permite (con un margen) y apunta a un punto más adelante en el
 // medio de la pista. Da dos vueltas; la que cuenta es la segunda (lanzada).
-export function simular(def) {
-  const sp = specsAuto(def);
+export function simular(def, mejoras = {}) {
+  const sp = specsAuto(def, mejoras);
   const { puntos, n } = PISTA;
   const g = puntos[n - GRILLA];
   const a = { pos: { x: g.x, z: g.z }, angulo: Math.atan2(g.tx, g.tz), vel: 0, direccion: 0, velMax: sp.v, specs: sp };
@@ -225,11 +227,27 @@ export function simular(def) {
 
 // Tiempo de cada medalla para un auto (cacheado: la simulación tarda unos milisegundos).
 const objetivos = new Map();
+// Cada medalla se compara con el piloto automático manejando el auto con las mejoras del taller
+// al nivel de esa medalla (NIVEL_MEDALLA en data/taller.js): bronce de fábrica, plata con todo al
+// 2 y oro con todo al máximo. Sin mejorar el auto, el oro es casi imposible.
+// Son tres simulaciones por auto (en la Chromebook, un par de segundos para todos): se guardan en
+// el navegador con una firma de todo lo que las cambia, y se vuelven a calcular solo si algo cambió.
+const CLAVE_OBJETIVOS = 'vecibanda-objetivos';
+let guardados = null;
 export function objetivosDe(def) {
   if (!objetivos.has(def.id)) {
-    const s = simular(def);
-    const base = s.lanzada || s.largada || 999;
-    objetivos.set(def.id, Object.fromEntries(MEDALLAS.map((m) => [m.id, Math.round(base * m.factor * 10) / 10])));
+    const firma = JSON.stringify([def.vmax, def.cero100, def.agarre, PISTA.n, MEDALLAS.map((m) => m.factor), NIVEL_MEDALLA, CATEGORIAS.map((c) => c.niveles.map((n) => n.efecto))]);
+    try { guardados ??= JSON.parse(localStorage.getItem(CLAVE_OBJETIVOS)) || {}; } catch { guardados = {}; }
+    if (guardados[def.id]?.firma === firma) objetivos.set(def.id, guardados[def.id].tiempos);
+    else {
+      objetivos.set(def.id, Object.fromEntries(MEDALLAS.map((m) => {
+        const nivel = NIVEL_MEDALLA[m.id];
+        const s = simular(def, Object.fromEntries(CATEGORIAS.map((c) => [c.id, nivel])));
+        return [m.id, Math.round((s.lanzada || s.largada || 999) * m.factor * 10) / 10];
+      })));
+      guardados[def.id] = { firma, tiempos: objetivos.get(def.id) };
+      try { localStorage.setItem(CLAVE_OBJETIVOS, JSON.stringify(guardados)); } catch { /* sin guardar: se recalcula */ }
+    }
   }
   return objetivos.get(def.id);
 }
@@ -335,7 +353,7 @@ export class Autodromo {
     const g = puntos[n - GRILLA];
     const angulo = Math.atan2(g.tx, g.tz);
     const auto = id === 'deportivo' ? new Auto(this.escena, g.x, g.z, angulo) : new AutoComprado(this.escena, def, g.x, g.z, angulo);
-    auto.specs = specsAuto(def);
+    auto.aplicarTaller(this.estado.taller?.[id]); // corre con sus mejoras y su pintura
     this.carrera = { auto, def, fase: 'semaforo', t: 0, crono: new Cronometro(), vuelta: 1, ultima: null, mejorSesion: null, objetivos: objetivosDe(def) };
     this.ponerSemaforo(0);
     this.alSubir?.(auto);

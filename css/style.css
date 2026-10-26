@@ -1011,3 +1011,90 @@ html, body {
   .carrera { width: 180px; top: 64px; padding: 8px 10px; }
   .carrera-tiempo { font-size: 26px; }
 }
+
+/* ---------- Taller ---------- */
+/* Sin fondo: atrás se ve el auto en el taller. Paneles semitransparentes con borde fino. */
+.taller { position: fixed; inset: 0; display: flex; gap: 12px; padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left)); pointer-events: none; color: #fff; z-index: 20; }
+.taller-panel, .taller-stats, .taller-partes { pointer-events: auto; background: rgba(16, 17, 21, 0.78); border: 1px solid var(--panel-borde); border-radius: 16px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.taller-panel { width: min(470px, 46vw); display: flex; flex-direction: column; overflow: hidden; }
+.taller-cabeza { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 14px 8px; border-bottom: 1px solid var(--panel-borde); }
+.taller-cabeza h2 { margin: 0; font-size: 26px; font-weight: 900; letter-spacing: 3px; color: #ff8a1f; text-shadow: 0 0 12px rgba(255, 138, 31, 0.45); }
+.taller-auto { margin: 2px 0 0; font-size: 14px; color: #cfd8dc; }
+.taller-cuerpo { flex: 1; display: flex; min-height: 0; }
+.taller-pestanas { display: flex; flex-direction: column; gap: 4px; padding: 8px 6px; border-right: 1px solid var(--panel-borde); overflow-y: auto; }
+.tp { font-family: var(--fuente); width: 74px; padding: 7px 4px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: #cfd8dc; font-size: 12px; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease; }
+.tp-icono { font-size: 24px; line-height: 1; }
+.tp:hover { background: rgba(255, 255, 255, 0.08); }
+.tp[aria-selected="true"] { background: rgba(255, 138, 31, 0.18); border-color: #ff8a1f; color: #fff; }
+.tp:focus-visible, .tn:focus-visible, .tc-color:focus-visible, .tparte:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.taller-contenido { flex: 1; padding: 10px 12px 14px; overflow-y: auto; }
+.taller-contenido h3 { margin: 0 0 10px; font-size: 18px; }
+.taller-contenido.entra { animation: tallerEntra 0.2s ease; }
+@keyframes tallerEntra { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+.taller-niveles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tn { position: relative; aspect-ratio: 1; min-height: 150px; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); transition: border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease; }
+.tn-icono { font-size: 30px; line-height: 1; }
+.tn-nombre { font-size: 14px; line-height: 1.15; }
+.tn-efecto { font-size: 12px; color: #8dff6a; }
+.tn-precio { font-size: 15px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.tn-precio img, .tc-pintar img, .btn img { width: 18px; height: 18px; vertical-align: -3px; }
+.tn .btn { width: 100%; font-size: 14px; padding: 5px 8px; border-width: 2px; box-shadow: 0 3px 0 var(--borde); }
+.tn.comprado { border-color: rgba(60, 207, 78, 0.6); }
+.tn.comprado .tn-icono { color: var(--verde); }
+.tn.comprado .tn-precio { color: var(--verde); }
+.tn.siguiente { border-color: #ff8a1f; box-shadow: 0 0 0 1px #ff8a1f, 0 0 14px rgba(255, 138, 31, 0.35); }
+.tn.bloqueado { opacity: 0.5; filter: grayscale(1); }
+.tn.caro .tn-precio { color: var(--rojo); }
+.tn.destello, .taller-pintura.destello { animation: tallerDestello 0.25s ease; }
+@keyframes tallerDestello { from { box-shadow: 0 0 0 3px #fff, 0 0 24px rgba(255, 255, 255, 0.8); } to { box-shadow: none; } }
+.btn:disabled { cursor: not-allowed; filter: none; opacity: 0.7; }
+/* Cuánto falta (con el mouse arriba o al tocarlo). */
+[data-tip]:hover::after, [data-tip]:focus-within::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); white-space: nowrap; padding: 4px 8px; border-radius: 8px; background: #111; border: 1px solid var(--panel-borde); color: #ffb4ae; font-size: 13px; font-weight: 700; pointer-events: none; z-index: 2; }
+.taller-pintura { border-radius: 14px; padding: 4px 2px; }
+.tc-colores { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 12px; }
+.tc-color { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0, 0, 0, 0.45); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.tc-color[aria-checked="true"] { box-shadow: 0 0 0 3px #fff; transform: scale(1.06); }
+.tc-selector { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; }
+.tc-selector canvas { grid-row: span 2; width: 190px; height: 190px; touch-action: none; cursor: crosshair; }
+.tc-hex { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #cfd8dc; }
+.tc-hex input { font-family: ui-monospace, monospace; font-size: 16px; width: 100%; max-width: 120px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--panel-borde); background: rgba(0, 0, 0, 0.35); color: #fff; text-transform: uppercase; }
+.tc-muestra { width: 100%; max-width: 120px; height: 34px; border-radius: 8px; border: 1px solid var(--panel-borde); }
+.tc-acciones { display: flex; gap: 8px; margin-top: 12px; }
+.tc-pintar { position: relative; flex: 1; display: flex; }
+.tc-pintar .btn { flex: 1; }
+.tc-pintar.caro .btn { color: #ffb4ae; }
+.taller-vista { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; min-width: 0; }
+.taller-girar { position: absolute; inset: 0; pointer-events: auto; cursor: grab; touch-action: none; }
+.taller-girar:active { cursor: grabbing; }
+.taller-partes { position: relative; display: flex; gap: 6px; padding: 6px; align-self: center; margin-top: 52px; }
+.tparte { font-family: var(--fuente); font-weight: 700; font-size: 13px; color: #fff; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--panel-borde); background: rgba(255, 255, 255, 0.06); cursor: pointer; transition: background 0.18s ease, border-color 0.18s ease; }
+.tparte.activa { background: rgba(255, 138, 31, 0.22); border-color: #ff8a1f; }
+.taller-stats { position: relative; width: min(420px, 100%); padding: 10px 14px; display: grid; gap: 6px; }
+.ts-fila { display: grid; grid-template-columns: 104px 1fr 92px 46px; align-items: center; gap: 8px; font-size: 13px; }
+.ts-nombre { color: #cfd8dc; }
+.ts-barra { position: relative; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.ts-barra i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); border-radius: 5px; transition: width 0.22s ease; }
+.ts-barra b { position: absolute; top: 0; bottom: 0; background: var(--c); opacity: 0.4; transition: width 0.18s ease; }
+.ts-valor { text-align: right; font-variant-numeric: tabular-nums; }
+.ts-mas { color: #8dff6a; font-weight: 800; }
+@media (max-width: 700px) {
+  .taller { flex-direction: column; }
+  .taller-panel { width: 100%; flex: 1; }
+  .taller-vista { flex: 0 0 auto; }
+  .taller-girar { display: none; }
+  .taller-partes { margin-top: 0; }
+  .taller-stats { width: 100%; }
+  .tn { min-height: 128px; }
+}
+@media (max-height: 520px) {
+  .tn { min-height: 120px; aspect-ratio: auto; }
+  .tc-selector canvas { width: 150px; height: 150px; }
+  .ts-fila { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .taller-contenido.entra, .tn.destello, .taller-pintura.destello { animation: none; }
+}
+/* En el taller la plata pasa a la derecha (arriba del auto), así se ve bajar al comprar. */
+body.en-taller #hud { z-index: 25; }
+body.en-taller .hud-centro { align-items: flex-end; }
+body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }

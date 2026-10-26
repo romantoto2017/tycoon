@@ -212,6 +212,28 @@
     </div>
   </div>
 
+  <!-- Taller: el menú a la izquierda y, a la derecha, el auto en la escena (se gira arrastrando) -->
+  <div id="taller" class="taller oculto" role="dialog" aria-modal="true" aria-labelledby="taller-titulo">
+    <section class="taller-panel">
+      <header class="taller-cabeza">
+        <div>
+          <h2 id="taller-titulo">TALLER</h2>
+          <p id="taller-auto" class="taller-auto"></p>
+        </div>
+        <button id="btn-cerrar-taller" class="cerrar-x" aria-label="Salir del taller">✕</button>
+      </header>
+      <div class="taller-cuerpo">
+        <nav id="taller-pestanas" class="taller-pestanas" role="tablist" aria-label="Mejoras"></nav>
+        <div id="taller-contenido" class="taller-contenido" role="tabpanel"></div>
+      </div>
+    </section>
+    <section class="taller-vista">
+      <div id="taller-girar" class="taller-girar" title="Arrastrá para girar el auto"></div>
+      <div id="taller-partes" class="taller-partes" aria-label="Qué pintar"></div>
+      <div id="taller-stats" class="taller-stats" aria-live="polite"></div>
+    </section>
+  </div>
+
   <div id="misiones" class="pantalla misiones-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="misiones-titulo">
     <div class="panel-misiones">
       <header>

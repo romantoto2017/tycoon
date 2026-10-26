@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CIUDAD as C, AUTOPISTA as AU, CONCESIONARIO as CO, AUTODROMO as AD } from './constantes.js';
+import { CIUDAD as C, AUTOPISTA as AU, CONCESIONARIO as CO, AUTODROMO as AD, TALLER as TA } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, cargarImagen, crearEtiqueta } from './texturas.js';
 import { TIENDAS } from '../data/ropa.js';
@@ -348,7 +348,7 @@ export class Ciudad {
         const lado = rnd() < 0.5 ? -1 : 1;
         const z = lado * (AU.medioAncho + 12 + rnd() * 110);
         const s = 0.9 + rnd() * 0.7;
-        if (x + x0 > CO.x0 - 10 && x + x0 < CO.x1 + 10 && z + AU.z > AU.z && z + AU.z < CO.z1 + 10) continue; // concesionario
+        if (x + x0 > CO.x0 - 10 && x + x0 < TA.x1 + 10 && z + AU.z > AU.z && z + AU.z < CO.z1 + 10) continue; // concesionario y taller
         if (Math.abs(x + x0 - AD.x) < 900 && z > 0) continue; // autódromo
         const t = new THREE.BoxGeometry(1.1 * s, 4 * s, 1.1 * s);
         t.translate(x + x0, 2 * s, z + AU.z);

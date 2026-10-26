@@ -20,7 +20,7 @@ import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
 import { Ciudad } from './ciudad.js';
-import { Concesionario, Flota } from './auto.js';
+import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo } from './autodromo.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
@@ -107,6 +107,9 @@ async function iniciar() {
   const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
   const autodromo = new Autodromo({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso, tycoon, flota });
+  // El Taller, al lado de Vecibanda Motors: se entra manejando (la E en el portón).
+  const taller = new Taller({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso, tycoon, flota });
+  taller.alSalir = () => { taller.soltarCamara(camara); controles.activo = modo === 'juego'; };
   concesionario.alComprar = () => misiones.revisarAutos();
   const karaoke = new Karaoke(UI); // la canción con la letra al ritmo, en la sala del karaoke
   // Choques de este cuadro: en la ciudad, solo los de alrededor (son muchos); si no, los de siempre.
@@ -238,6 +241,10 @@ async function iniciar() {
   };
   // Un solo botón de acción (como los avisos de Roblox): manejar o dormir, con la E.
   const accion = () => {
+    if (conduciendo && !enHeli() && !autodromo.corriendo && taller.accion(jugador, vehiculo)) {
+      if (taller.hacer(vehiculo)) controles.activo = false;
+      return;
+    }
     if (!conduciendo && ciudad.accion(jugador)) {
       ciudad.hacer(jugador);
       return;
@@ -806,7 +813,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, autodromo, lechugas, sacarLechuga };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, autodromo, taller, lechugas, sacarLechuga };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -936,7 +943,7 @@ async function iniciar() {
     }
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando ? ''
-      : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : 'Bajar del auto (E)')
+      : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
       : ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
@@ -944,7 +951,7 @@ async function iniciar() {
       btnAgachar.classList.toggle('oculto', !estadoAgachar);
       btnAgachar.setAttribute('aria-pressed', estadoAgachar || 'false');
     }
-    controles.manejando = conduciendo && !enHeli();
+    controles.manejando = conduciendo && !enHeli() && !taller.auto; // en el taller no hay botón de derrapar
     const estadoDerrape = modo === 'juego' && controles.manejando ? String(!!vehiculo.deriva && Math.abs(vehiculo.deriva) > 0.08) : '';
     if (estadoDerrape !== ultimoDerrape) {
       ultimoDerrape = estadoDerrape;
@@ -961,6 +968,7 @@ async function iniciar() {
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     resto.actualizar(dt, jugador, modo === 'juego');
     gym.actualizar(dt, jugador, modo === 'juego');
+    taller.actualizar(dt, jugador, conduciendo ? vehiculo : null);
     misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
     dufre.actualizar(dt, jugador, modo === 'juego');
     ottati.actualizar(dt, jugador, modo === 'juego');
@@ -978,7 +986,8 @@ async function iniciar() {
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);
-      if (!depurar.camaraLibre) camaraJuego(dt);
+      if (taller.auto) taller.camara(camara); // adentro del taller, con el menú
+      else if (!depurar.camaraLibre) camaraJuego(dt);
     } else {
       camaraMenu(dt);
     }
