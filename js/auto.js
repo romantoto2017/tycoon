@@ -720,6 +720,15 @@ const EXHIBICION = [[12, 27, 0.5], [30, 27, 0], [48, 27, -0.5], [12, 11.5, 0.6],
 const PUERTA = [17, 24]; // hueco de la vidriera para entrar
 const CERCA = 7.5; // a cuánto se puede comprar
 
+// Puerta de vidrio cerrada (con la manija) en el hueco de la vidriera, hasta que abre el local.
+function puertaCerrada(k, x0, z, x1) {
+  const malla = new THREE.Group();
+  malla.add(k.cajaDe(x0, 0.3, z - 0.08, x1, 9.5, z + 0.08, k.vidrio));
+  malla.add(k.cajaDe((x0 + x1) / 2 - 0.08, 0.3, z - 0.12, (x0 + x1) / 2 + 0.08, 9.5, z + 0.12, '#16171a'));
+  for (const dx of [-0.5, 0.5]) malla.add(k.cajaDe((x0 + x1) / 2 + dx - 0.06, 3.2, z - 0.3, (x0 + x1) / 2 + dx + 0.06, 5.2, z - 0.15, '#c9ccd0'));
+  return { malla, caja: new THREE.Box3(new THREE.Vector3(x0, 0, z - 0.3), new THREE.Vector3(x1, 9.5, z + 0.3)) };
+}
+
 export class Concesionario {
   constructor({ escena, colisiones, kit, estado, ui, guardar, progreso }) {
     this.escena = escena;
@@ -733,7 +742,7 @@ export class Concesionario {
     this.grupo = new THREE.Group();
     this.grupo.visible = false;
     escena.add(this.grupo);
-    this.choques = []; // se suman a los del mundo recién cuando abre
+    this.choques = [];
     this.armar(this.choques);
     // Los autos, ordenados del más barato al más caro (el último va en la plataforma).
     const corrido = EXHIBICION.length - Math.min(AUTOS.length, EXHIBICION.length);
@@ -756,6 +765,20 @@ export class Concesionario {
       return { def, x, z, soporte, etiqueta, cargado: false, gira: i + corrido === EXHIBICION.length - 1 };
     });
     this.plataforma = this.exhibidos.find((e) => e.gira);
+    // El local está desde el principio (se ve y es sólido), pero abre al 60%: hasta entonces la
+    // puerta está cerrada y arriba dice a qué % abre.
+    colisiones.push(...this.choques);
+    const [p0, p1] = PUERTA;
+    this.puerta = puertaCerrada(this.kit, LOCAL.x + p0, LOCAL.z, LOCAL.x + p1);
+    this.grupo.add(this.puerta.malla);
+    colisiones.push(this.puerta.caja);
+    this.aviso = crearEtiqueta([{ texto: `CERRADO · ABRE AL ${Math.round(AUTOS_DESDE * 100)}%`, tam: 60, color: '#ffd23f' }], 14);
+    this.aviso.sprite.position.set(LOCAL.x + (p0 + p1) / 2, 7, LOCAL.z - 5);
+    this.grupo.add(this.aviso.sprite);
+  }
+
+  cercaDeLaPuerta(jugador) {
+    return Math.hypot(jugador.pos.x - (LOCAL.x + (PUERTA[0] + PUERTA[1]) / 2), jugador.pos.z - LOCAL.z) < 9 && jugador.pos.y < 3;
   }
 
   lineas(def) {
@@ -869,12 +892,19 @@ export class Concesionario {
   }
 
   accion(jugador) {
+    if (!this.abierto) return this.cercaDeLaPuerta(jugador) ? `Vecibanda Motors cerrado: abre al ${Math.round(AUTOS_DESDE * 100)}%` : '';
     const e = this.cerca(jugador);
     if (!e || (this.estado.autos || []).includes(e.def.id)) return '';
     return `Comprar ${e.def.nombre} (E)`;
   }
 
   hacer(jugador) {
+    if (!this.abierto) {
+      if (!this.cercaDeLaPuerta(jugador)) return;
+      sfx.error();
+      this.ui.toast(`Vecibanda Motors abre cuando la mansión llegue al ${Math.round(AUTOS_DESDE * 100)}%`, 'error');
+      return;
+    }
     const e = this.cerca(jugador);
     if (!e || (this.estado.autos || []).includes(e.def.id)) return;
     if (!this.estado.compras.includes('galpon')) {
@@ -897,15 +927,20 @@ export class Concesionario {
   }
 
   actualizar(dt, jugador) {
-    // Antes del 60% no existe; al llegar, abre (y avisa si estabas jugando).
+    // Antes del 60% está cerrado; al llegar, abre la puerta (y avisa si estabas jugando).
     if (!this.abierto) {
-      if (this.progreso() < AUTOS_DESDE) { this.abierto = false; return; }
-      if (this.abierto === false) {
-        sfx.brillo();
-        this.ui.toast('¡Abrió Vecibanda Motors, a la salida de la ciudad! Y ya podés comprar el Galpón Vecibanda', 'plata');
+      if (this.progreso() < AUTOS_DESDE) this.abierto = false;
+      else {
+        if (this.abierto === false) {
+          sfx.brillo();
+          this.ui.toast('¡Abrió Vecibanda Motors, a la salida de la ciudad! Y ya podés comprar el Galpón Vecibanda', 'plata');
+        }
+        this.abierto = true;
+        this.grupo.remove(this.puerta.malla);
+        const i = this.colisiones.indexOf(this.puerta.caja);
+        if (i >= 0) this.colisiones.splice(i, 1);
+        this.aviso.sprite.visible = false;
       }
-      this.abierto = true;
-      this.colisiones.push(...this.choques);
     }
     const d = Math.hypot(jugador.pos.x - (CO.x0 + CO.x1) / 2, jugador.pos.z - (CO.z0 + CO.z1) / 2);
     // Solo se dibuja de cerca (está a 20 km de la mansión); los autos se cargan al acercarse.

@@ -3,6 +3,7 @@ import { AUTOS, AUTO_DEPORTIVO } from '../data/objetos.js';
 import { AUTODROMO as AD, AUTOPISTA as AU, AUTOS_DESDE } from './constantes.js';
 import { Auto, AutoComprado, specsAuto, pasoAuto } from './auto.js';
 import { formato } from './util.js';
+import { crearEtiqueta } from './texturas.js';
 import { sfx } from './sfx.js';
 
 // Autódromo Vecibanda Ring, a mitad de la autopista (abre con los autos, al 60%). Afuera, el
@@ -273,6 +274,12 @@ export class Autodromo {
     escena.add(this.grupo);
     this.choques = [];
     this.armar();
+    // El estadio está desde el principio (se ve y es sólido), pero abre con los autos: hasta
+    // entonces la puerta dice a qué % abre y no te deja entrar.
+    this.colisiones.push(...this.choques);
+    this.aviso = crearEtiqueta([{ texto: `CERRADO · ABRE AL ${Math.round(AUTOS_DESDE * 100)}%`, tam: 60, color: '#ffd23f' }], 28);
+    this.aviso.sprite.position.set(ENTRADA.x, 16, ENTRADA.z - 2);
+    this.grupo.add(this.aviso.sprite);
   }
 
   get datos() {
@@ -296,13 +303,18 @@ export class Autodromo {
 
   // ---------- Entrar ----------
   accion(jugador) {
-    if (!this.abierto || this.carrera || jugador.pos.y > 3) return '';
+    if (this.carrera || jugador.pos.y > 3) return '';
     if (Math.hypot(jugador.pos.x - ENTRADA.x, jugador.pos.z - ENTRADA.z) > 10) return '';
-    return 'Entrar al autódromo (E)';
+    return this.abierto ? 'Entrar al autódromo (E)' : `Autódromo cerrado: abre al ${Math.round(AUTOS_DESDE * 100)}%`;
   }
 
   hacer() {
-    if (!this.abierto || this.carrera) return;
+    if (this.carrera) return;
+    if (!this.abierto) {
+      sfx.error();
+      this.ui.toast(`El autódromo abre cuando la mansión llegue al ${Math.round(AUTOS_DESDE * 100)}%`, 'error');
+      return;
+    }
     const filas = this.autos().map(({ def, tuyo }) => {
       const obj = objetivosDe(def);
       const mejor = this.datos.mejores[def.id];
@@ -401,9 +413,15 @@ export class Autodromo {
   actualizar(dt, jugador) {
     this.ultimaPos = jugador.pos;
     if (!this.abierto) {
-      if (this.progreso() < AUTOS_DESDE) { this.abierto = false; return; }
-      this.abierto = true;
-      this.colisiones.push(...this.choques);
+      if (this.progreso() < AUTOS_DESDE) this.abierto = false;
+      else {
+        if (this.abierto === false) {
+          sfx.brillo();
+          this.ui.toast('¡Abrió el autódromo Vecibanda Ring!', 'plata');
+        }
+        this.abierto = true;
+        this.aviso.sprite.visible = false;
+      }
     }
     const lejos = Math.hypot(jugador.pos.x - AD.x, jugador.pos.z - (AD.z + 300));
     this.grupo.visible = lejos < 1600;
