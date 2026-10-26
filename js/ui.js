@@ -290,7 +290,9 @@ export function hudCarrera(d) {
   o.textContent = d.objetivo;
   o.style.color = d.colorObjetivo;
   $('carrera-vel').textContent = d.velocidad;
-  $('carrera-fuera').classList.toggle('oculto', !d.fuera);
+  const fuera = $('carrera-fuera');
+  fuera.textContent = d.fuera === 'anulada' ? '¡Fuera de los límites! Vuelta anulada' : '¡Por el pasto!';
+  fuera.classList.toggle('oculto', !d.fuera);
   mostrar('carrera', true);
 }
 

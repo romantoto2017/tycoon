@@ -6,16 +6,18 @@ import { formato } from './util.js';
 import { sfx } from './sfx.js';
 
 // Autódromo Vecibanda Ring, a mitad de la autopista (abre con los autos, al 60%). Afuera, el
-// edificio estilo Nürburgring: la caja celeste con la cáscara curva de chapa oscura encima y el
-// nombre en letras rojas. Adentro, el trazado del dibujo (data: TRAZADO), gradas llenas de huevos
-// que festejan los récords, un huevo banderillero y el semáforo de largada (rojo, amarillo, verde).
+// estadio estilo Allianz Arena: un óvalo enorme de almohadones romboidales (blanco de día, rojo de
+// noche), con el nombre y el sponsor (Sancor Seguros), estacionamientos y torres de luz. Adentro,
+// el trazado del dibujo (TRAZADO) con pianos, leca, paredes de publicidad que frenan, alambrado,
+// tribunas llenas de huevos que festejan los récords, un huevo banderillero y el semáforo.
 //
 // Jugabilidad: en la entrada, "Entrar al autódromo" abre la pantalla para elegir uno de tus autos
 // (con tus tiempos y las medallas). Largás detenido con el semáforo y son vueltas cronometradas.
 // Bronce, plata y oro salen de una simulación: un piloto automático da vueltas con la misma física
-// del juego (auto.js) siguiendo el medio de la pista y frenando a tiempo para cada curva. Oro es
-// igualar al piloto automático, plata es ir "normal" y bronce, tranquilo. Cada medalla paga una
-// vez por auto (mucha plata) y cada récord tuyo por debajo del bronce paga más cuanto más mejorás.
+// del juego (auto.js) siguiendo el medio de la pista y frenando justo para cada curva. Oro es ganarle
+// por un 3%, plata es ir apenas más lento y bronce, un 9% más lento. Pasarse de los límites de pista
+// (más allá del piano) anula la vuelta. Cada medalla paga una vez por auto (mucha plata) y cada
+// récord tuyo por debajo del bronce paga más cuanto más mejorás.
 
 // ---------- Trazado ----------
 // Puntos del dibujo de referencia (píxeles de la imagen de 556 × 556), en el sentido de marcha.
@@ -30,11 +32,13 @@ const TRAZADO = [
 const PASO = 3; // distancia entre puntos del medio de la pista
 const MEDIO = AD.ancho / 2;
 const PUERTAS = 10; // controles a lo largo de la vuelta (para que no se pueda cortar camino)
+const LIMITE = MEDIO + 7; // límites de pista: pasando el piano y la franja blanca, la vuelta no vale
+const PARED = MEDIO + 28; // las paredes de publicidad (y el alambrado): ahí el auto choca
 const GRILLA = 9; // puntos antes de la línea donde se larga
 export const MEDALLAS = [
-  { id: 'oro', nombre: 'Oro', factor: 1, premio: { base: 2e9, minutos: 30 }, color: '#ffd23f' },
-  { id: 'plata', nombre: 'Plata', factor: 1.08, premio: { base: 8e8, minutos: 15 }, color: '#cfd8dc' },
-  { id: 'bronce', nombre: 'Bronce', factor: 1.2, premio: { base: 3e8, minutos: 8 }, color: '#d18b47' },
+  { id: 'oro', nombre: 'Oro', factor: 0.97, premio: { base: 2e9, minutos: 30 }, color: '#ffd23f' },
+  { id: 'plata', nombre: 'Plata', factor: 1.03, premio: { base: 8e8, minutos: 15 }, color: '#cfd8dc' },
+  { id: 'bronce', nombre: 'Bronce', factor: 1.09, premio: { base: 3e8, minutos: 8 }, color: '#d18b47' },
 ];
 const RECORD = { base: 1e8, minutos: 2, tope: 15 }; // por cada segundo que mejorás tu récord
 
@@ -50,6 +54,49 @@ function haciaArriba(pos) {
     }
   }
   return pos;
+}
+
+// Tela de publicidad: paneles iguales de izquierda a derecha. Cada marca es [texto, fondo, letra]
+// o [logo, fondo] (logo: 'sancor' o 'sancor_blanco', en assets/especiales; se pinta al cargar).
+function pintarMarcas(marcas, w, h) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const ancho = w / marcas.length;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  marcas.forEach(([t, fondo, letra], m) => {
+    g.fillStyle = fondo;
+    g.fillRect(m * ancho, 0, ancho, h);
+    if (t.startsWith('sancor')) {
+      const img = new Image();
+      img.onload = () => {
+        const alto = h * 0.74;
+        const largo = Math.min(ancho * 0.86, (alto * img.width) / img.height);
+        const altoReal = (largo * img.height) / img.width;
+        g.drawImage(img, m * ancho + (ancho - largo) / 2, (h - altoReal) / 2, largo, altoReal);
+        tex.needsUpdate = true;
+      };
+      img.src = `assets/especiales/${t}.png`;
+      return;
+    }
+    g.fillStyle = letra;
+    g.font = `800 ${Math.min(h * 0.62, (ancho * 1.6) / t.length)}px Fredoka, Arial, sans-serif`;
+    g.fillText(t, m * ancho + ancho / 2, h / 2 + 2);
+  });
+  return tex;
+}
+
+// Lámina con el logo de Sancor (con su fondo), del tamaño pedido.
+function cartelSancor(ancho, alto, blanco = false) {
+  const tex = pintarMarcas([[blanco ? 'sancor_blanco' : 'sancor', blanco ? '#a6196e' : '#ffffff']], 512, Math.round((512 * alto) / ancho));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+  m.userData.noSolido = true;
+  return m;
 }
 
 const aMundo = ([px, py]) => new THREE.Vector3(AD.x + (px - 276) * AD.escala, 0, AD.z + (py - 155) * AD.escala);
@@ -124,7 +171,7 @@ class Cronometro {
       const proxima = Math.round(((this.puerta + 1) * n) / (PUERTAS + 1));
       if (this.puerta < PUERTAS && (proxima - antes + n) % n <= avance) this.puerta++;
     }
-    if (Math.abs(c.lateral) > MEDIO + 45) this.anulada = true; // por el pasto, lejos: cortó camino
+    if (Math.abs(c.lateral) > LIMITE) this.anulada = true; // se fue de los límites de pista
     const cruzo = antes > n * 0.85 && c.i < n * 0.15;
     if (!cruzo) return null;
     if (this.puerta < PUERTAS) { this.puerta = 0; return null; } // la largada (o una vuelta incompleta)
@@ -146,7 +193,7 @@ export function simular(def) {
   const g = puntos[n - GRILLA];
   const a = { pos: { x: g.x, z: g.z }, angulo: Math.atan2(g.tx, g.tz), vel: 0, direccion: 0, velMax: sp.v, specs: sp };
   const crono = new Cronometro();
-  const vCurva = puntos.map((p) => Math.min(sp.v, Math.sqrt((sp.lateral * 0.9) / Math.max(p.k, 1e-5))));
+  const vCurva = puntos.map((p) => Math.min(sp.v, Math.sqrt((sp.lateral * 0.97) / Math.max(p.k, 1e-5))));
   const dt = 1 / 60;
   const ejes = { x: 0, y: 0 };
   const vueltas = [];
@@ -155,10 +202,10 @@ export function simular(def) {
     const i = crono.i;
     // Velocidad para poder frenar a tiempo para lo que viene.
     let objetivo = vCurva[i];
-    const alcance = (a.vel * a.vel) / (2 * sp.freno * 0.8) + 20;
+    const alcance = (a.vel * a.vel) / (2 * sp.freno * 0.92) + 20;
     for (let d = PASO; d < alcance; d += PASO) {
       const j = (i + Math.round(d / PASO)) % n;
-      objetivo = Math.min(objetivo, Math.sqrt(vCurva[j] ** 2 + 2 * sp.freno * 0.8 * d));
+      objetivo = Math.min(objetivo, Math.sqrt(vCurva[j] ** 2 + 2 * sp.freno * 0.92 * d));
     }
     ejes.y = a.vel > objetivo ? -1 : a.vel < objetivo * 0.985 ? 1 : 0;
     // Volante: hacia un punto más adelante en el medio de la pista.
@@ -167,7 +214,7 @@ export function simular(def) {
     error = Math.atan2(Math.sin(error), Math.cos(error));
     ejes.x = Math.max(-1, Math.min(1, -error * 4));
     pasoAuto(a, ejes, dt);
-    if (Math.abs(crono.lateral || 0) > MEDIO) fuera += dt;
+    if (Math.abs(crono.lateral || 0) > LIMITE - 4) fuera += dt;
     const v = crono.paso(a.pos.x, a.pos.z, t);
     if (v) vueltas.push(v.tiempo);
   }
@@ -193,11 +240,17 @@ export const formatoTiempo = (t) => {
 };
 
 // ---------- Autódromo ----------
-const ENTRADA = (() => {
-  const p = aMundo([135, 155]);
-  return { x: p.x, z: AU.z + AU.medioAncho + 8 }; // la puerta, mirando a la autopista
-})();
-const EDIFICIO = { x0: ENTRADA.x - 110, x1: ENTRADA.x + 110, z0: AU.z + AU.medioAncho + 10, z1: AU.z + AU.medioAncho + 56, bajo: 12 };
+// El estadio (estilo Allianz Arena): un óvalo enorme entre la autopista y la pista, con la
+// entrada mirando a la autopista. a, b: medios ejes; alto: de la fachada (≈ 42 m).
+const ARENA = { x: aMundo([125, 155]).x, z: AU.z + AU.medioAncho + 12 + 110, a: 170, b: 110, alto: 105, exp: 2.4, base: 9 };
+// Borde del óvalo (superelipse: más lleno que una elipse) en el ángulo t, escalado por r.
+const bordeArena = (t, r = 1) => {
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  return [ARENA.x + ARENA.a * r * Math.sign(c) * Math.abs(c) ** (2 / ARENA.exp), ARENA.z + ARENA.b * r * Math.sign(s) * Math.abs(s) ** (2 / ARENA.exp)];
+};
+const enArena = (x, z, margen = 0) => Math.abs((x - ARENA.x) / (ARENA.a + margen)) ** ARENA.exp + Math.abs((z - ARENA.z) / (ARENA.b + margen)) ** ARENA.exp < 1;
+const ENTRADA = { x: ARENA.x, z: ARENA.z - ARENA.b * 0.92 - 4 }; // la puerta principal
 
 export class Autodromo {
   constructor({ escena, colisiones, kit, estado, ui, guardar, progreso, tycoon, flota }) {
@@ -302,7 +355,7 @@ export class Autodromo {
     this.agitar = 2.5; // el banderillero agita la bandera a cuadros
     if (!v.valida) {
       sfx.error();
-      this.ui.toast(`Vuelta anulada (cortaste camino): ${formatoTiempo(v.tiempo)}`, 'error');
+      this.ui.toast(`Vuelta anulada (te fuiste de los límites de pista): ${formatoTiempo(v.tiempo)}`, 'error');
       return;
     }
     if (c.mejorSesion == null || v.tiempo < c.mejorSesion) c.mejorSesion = v.tiempo;
@@ -355,6 +408,15 @@ export class Autodromo {
     this.grupo.visible = lejos < 1600;
     if (!this.grupo.visible) return;
     this.reloj += dt;
+    // De noche la fachada brilla en rojo (como el Allianz Arena) y se prenden las luces.
+    const noche = this.noche ? this.noche() : 0;
+    if (noche !== this.nocheAntes) {
+      this.nocheAntes = noche;
+      this.matFachada.emissiveIntensity = noche * 1.2;
+      this.matPuertas.color.set('#8a7a5a').lerp(new THREE.Color('#ffd88a'), noche);
+      this.matFocos.color.set('#d9dde0').lerp(new THREE.Color('#ffffff'), noche);
+      this.matLuces.color.set('#cfd6dc').lerp(new THREE.Color('#ff5a4a'), noche);
+    }
     this.animarPublico(dt);
     this.animarBandera(dt);
     const c = this.carrera;
@@ -378,6 +440,7 @@ export class Autodromo {
       const a = c.auto;
       const v = c.crono.paso(a.pos.x, a.pos.z, c.t);
       if (Math.abs(c.crono.lateral) > MEDIO + 2 && a.vel > 18) a.vel -= a.vel * 1.4 * dt;
+      this.chocarParedes(a, c.crono);
       if (v) this.terminarVuelta(v);
     }
     const mejor = this.datos.mejores[c.def.id];
@@ -387,8 +450,27 @@ export class Autodromo {
       ultima: c.ultima ? `${formatoTiempo(c.ultima.tiempo)}${c.ultima.valida ? '' : ' (anulada)'}` : '–',
       mejor: formatoTiempo(mejor), velocidad: Math.round((Math.abs(c.auto.vel) / 2.47) * 3.6),
       objetivo: sig ? `${sig.nombre}: ${formatoTiempo(c.objetivos[sig.id])}` : '¡Todas las medallas!', colorObjetivo: sig?.color || '#8dff6a',
-      fuera: Math.abs(c.crono.lateral || 0) > MEDIO + 2,
+      fuera: c.crono.anulada ? 'anulada' : Math.abs(c.crono.lateral || 0) > MEDIO + 2 ? 'pasto' : '',
     });
+  }
+
+  // Las paredes frenan: si el auto llega a la pared (donde la hay), queda contra ella y pierde
+  // casi toda la velocidad.
+  chocarParedes(a, crono) {
+    const lado = Math.sign(crono.lateral || 0);
+    if (!lado || !this.paredes?.[lado]?.[crono.i]) return;
+    const medio = (a.medio?.[0] || 2.1) + 0.3;
+    if (Math.abs(crono.lateral) < PARED - medio) return;
+    const p = PISTA.puntos[crono.i];
+    const l = lado * (PARED - medio);
+    a.pos.x = p.x - p.tz * l;
+    a.pos.z = p.z + p.tx * l;
+    if (Math.abs(a.vel) > 8) {
+      if (!this.golpe || this.reloj - this.golpe > 0.6) sfx.choque();
+      this.golpe = this.reloj;
+    }
+    a.vel *= 0.3;
+    a.colocar();
   }
 
   // ---------- Dibujo ----------
@@ -424,6 +506,7 @@ export class Autodromo {
     const g = this.grupo;
     const { puntos, n } = PISTA;
     const solido = (m) => { g.add(m); this.choques.push(new THREE.Box3().setFromObject(m)); return m; };
+    this.matFocos = new THREE.MeshBasicMaterial({ color: '#d9dde0' }); // focos y luces (brillan más de noche)
     // Pista al estilo de un circuito de F1: asfalto oscuro parejo, línea blanca en el borde,
     // pianos anchos y planos (rojo, blanco y azul) adentro y afuera de cada curva con una franja
     // blanca atrás, leca (arena) del lado de afuera de las curvas cerradas, postes rojos y blancos
@@ -494,28 +577,38 @@ export class Autodromo {
       }
     }
     // Paredes de publicidad alrededor (marcas de la Vecibanda), del lado de afuera de la leca.
-    const telaPared = k.imagenCanvas((c, w, h) => {
-      const marcas = [['VECIBANDA', '#0d2a6b', '#ffffff'], ['LA DOSIS', '#c62828', '#ffffff'], ['POWER CAMP', '#111111', '#ffd23f'], ['LO DE LOURDES', '#ffffff', '#c62828'], ['VECIBANDA MOTORS', '#1d1f22', '#ffffff']];
-      const ancho = w / marcas.length;
-      c.textAlign = 'center';
-      c.textBaseline = 'middle';
-      marcas.forEach(([t, fondo, letra], m) => {
-        c.fillStyle = fondo;
-        c.fillRect(m * ancho, 0, ancho, h);
-        c.fillStyle = letra;
-        c.font = `800 ${Math.min(h * 0.62, (ancho * 1.6) / t.length)}px Fredoka, Arial, sans-serif`;
-        c.fillText(t, m * ancho + ancho / 2, h / 2 + 2);
-      });
-    }, 1280, 64).material.map;
+    // La tela de las paredes: marcas de la Vecibanda y Sancor Seguros (el sponsor) dos veces.
+    const MARCAS = [['VECIBANDA', '#0d2a6b', '#ffffff'], ['sancor', '#ffffff'], ['LA DOSIS', '#c62828', '#ffffff'], ['POWER CAMP', '#111111', '#ffd23f'],
+      ['sancor_blanco', '#a6196e'], ['LO DE LOURDES', '#ffffff', '#c62828'], ['VECIBANDA MOTORS', '#1d1f22', '#ffffff']];
+    const telaPared = pintarMarcas(MARCAS, 1792, 64);
     telaPared.wrapS = THREE.RepeatWrapping;
     const matPared = new THREE.MeshLambertMaterial({ map: telaPared, side: THREE.DoubleSide });
-    const LARGO_CARTEL = 120; // unidades que ocupa la tela entera (cinco marcas)
+    const LARGO_CARTEL = 168; // unidades que ocupa la tela entera (siete marcas)
+    // El alambrado arriba de las paredes (malla con transparencia) y sus postes.
+    const malla = k.imagenCanvas((c, w, h) => {
+      c.clearRect(0, 0, w, h);
+      c.strokeStyle = 'rgba(70,74,80,0.9)';
+      c.lineWidth = 2;
+      for (let x = -h; x < w + h; x += 12) {
+        c.beginPath(); c.moveTo(x, 0); c.lineTo(x + h, h); c.stroke();
+        c.beginPath(); c.moveTo(x + h, 0); c.lineTo(x, h); c.stroke();
+      }
+      c.fillStyle = 'rgba(60,64,70,1)';
+      c.fillRect(0, 0, w, 3);
+    }, 64, 64).material.map;
+    malla.wrapS = malla.wrapT = THREE.RepeatWrapping;
+    const matMalla = new THREE.MeshBasicMaterial({ map: malla, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
+    const postes = [];
+    this.paredes = {};
     for (const lado of [1, -1]) {
       const pos = [];
       const uv = [];
       let s = 0;
-      const d = MEDIO + 28;
+      const d = PARED;
       const sirve = puntos.map((p, i) => { const [x, , z] = v(p, lado * d, 0); return lejosDeLaPista(x, z, d - 2, i); });
+      this.paredes[lado] = sirve; // para los choques (actualizar)
+      const posM = [];
+      const uvM = [];
       for (let i = 0; i < n; i++) {
         const a = puntos[i];
         const b = puntos[(i + 1) % n];
@@ -528,6 +621,11 @@ export class Autodromo {
           const u1 = (lado * -(s + largo)) / LARGO_CARTEL;
           pos.push(ax, 0, az, bx, 0, bz, bx, 2.2, bz, ax, 0, az, bx, 2.2, bz, ax, 2.2, az);
           uv.push(u0, 0, u1, 0, u1, 1, u0, 0, u1, 1, u0, 1);
+          const m0 = s / 6;
+          const m1 = (s + largo) / 6;
+          posM.push(ax, 2.2, az, bx, 2.2, bz, bx, 8.5, bz, ax, 2.2, az, bx, 8.5, bz, ax, 8.5, az);
+          uvM.push(m0, 0, m1, 0, m1, 1, m0, 0, m1, 1, m0, 1);
+          if (i % 8 === 0) postes.push([ax, az]);
         }
         s += largo;
       }
@@ -536,14 +634,23 @@ export class Autodromo {
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
       geo.computeVertexNormals();
       g.add(new THREE.Mesh(geo, matPared));
+      const geoM = new THREE.BufferGeometry();
+      geoM.setAttribute('position', new THREE.Float32BufferAttribute(posM, 3));
+      geoM.setAttribute('uv', new THREE.Float32BufferAttribute(uvM, 2));
+      g.add(new THREE.Mesh(geoM, matMalla));
     }
+    const mallaPostes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 8.8, 0.3), new THREE.MeshLambertMaterial({ color: '#4a4e55' }), postes.length);
+    const mp = new THREE.Matrix4();
+    postes.forEach(([x, z], i) => mallaPostes.setMatrixAt(i, mp.makeTranslation(x, 4.4, z)));
+    mallaPostes.frustumCulled = false;
+    g.add(mallaPostes);
     // Árboles atrás de las paredes.
     const arboles = [];
     for (let i = 0; i < n; i += 9) {
       for (const lado of [1, -1]) {
         const d = MEDIO + 48 + ((i * 7) % 23);
         const [x, , z] = v(puntos[i], lado * d, 0);
-        if (lejosDeLaPista(x, z, d - 6, i)) arboles.push([x, z, 0.9 + ((i * 13) % 7) / 10]);
+        if (lejosDeLaPista(x, z, d - 6, i) && !enArena(x, z, 12)) arboles.push([x, z, 0.9 + ((i * 13) % 7) / 10]);
       }
     }
     const tronco = new THREE.InstancedMesh(new THREE.BoxGeometry(1.2, 5, 1.2), new THREE.MeshLambertMaterial({ color: '#6d4a2c' }), arboles.length);
@@ -584,6 +691,12 @@ export class Autodromo {
     travesano.position.set(pa.x, 13.6, pa.z);
     travesano.rotation.y = Math.atan2(pa.tx, pa.tz);
     g.add(k.noSolido(travesano));
+    for (const vuelta of [0, Math.PI]) {
+      const banner = cartelSancor(AD.ancho, 2.6, vuelta > 0);
+      banner.position.set(pa.x, 15.6, pa.z);
+      banner.rotation.y = Math.atan2(pa.tx, pa.tz) + Math.PI + vuelta;
+      g.add(banner);
+    }
     const caja = new THREE.Group();
     caja.position.set(pa.x, 11.6, pa.z);
     caja.rotation.y = Math.atan2(pa.tx, pa.tz) + Math.PI; // mira a los que llegan
@@ -626,6 +739,7 @@ export class Autodromo {
       const finBaja = bandeja(0, 0, 8);
       gr.add(k.cajaDe(-largo / 2, 9.2, finBaja - 1, largo / 2, 11.2, finBaja + 0.6, '#1d1f22')); // pasillo con carteles
       gr.add(k.cartel('VECIBANDA RING · GRAN PREMIO', 40, 1.8, '#ffffff', '#1d1f22').translateY(10.2).translateZ(finBaja - 1.05).rotateY(Math.PI));
+      for (const x of [-48, 48]) gr.add(cartelSancor(26, 1.8).translateX(x).translateY(10.2).translateZ(finBaja - 1.06).rotateY(Math.PI));
       const finAlta = bandeja(finBaja + 0.6, 11.2, 7);
       gr.add(k.cajaDe(-largo / 2, 0, finAlta, largo / 2, 21, finAlta + 0.8, estructura));
       for (const x of [-largo / 2, -largo / 4, 0, largo / 4, largo / 2]) gr.add(k.cajaDe(x - 0.5, 0, finAlta, x + 0.5, 27, finAlta + 0.8, '#8d949b'));
@@ -636,6 +750,7 @@ export class Autodromo {
       techo.rotation.x = 0.12;
       gr.add(k.noSolido(techo));
       gr.add(k.cartel('VECIBANDA RING', 30, 3.2, '#ffffff', '#c62828').translateY(24).translateZ(-6.5).rotateY(Math.PI));
+      gr.add(k.noSolido(k.cajaDe(-largo / 2, 25.6, -6.2, largo / 2, 25.9, -5.6, this.matFocos))); // luces del techo
       g.add(gr);
       gr.updateMatrixWorld(true);
       // Choques en pedacitos (la grada está girada: una sola caja taparía la pista).
@@ -699,72 +814,198 @@ export class Autodromo {
     this.mallaOjos.frustumCulled = false;
     g.add(this.mallaHuevos, this.mallaOjos);
 
-    // ---------- Edificio estilo Nürburgring ----------
-    const E = EDIFICIO;
-    const largo = E.x1 - E.x0;
-    const fondo = E.z1 - E.z0;
-    const cx = (E.x0 + E.x1) / 2;
-    const cz = (E.z0 + E.z1) / 2;
-    const celeste = k.tex('estuco', '#b7c8de', 4);
-    solido(k.cajaDe(E.x0, 0, E.z0, E.x1, E.bajo, E.z1, celeste));
-    // La cáscara curva de chapa oscura, más ancha que la caja (sobresale adelante, como en la foto).
-    const radio = fondo / 2 + 4;
-    const geoCascara = new THREE.CylinderGeometry(radio, radio, largo + 6, 28, 1, true, 0, Math.PI);
-    geoCascara.rotateZ(Math.PI / 2); // acostada a lo largo, la mitad de arriba
-    const cascara = new THREE.Mesh(geoCascara, k.tex('chapa', '#40444b', 2.4));
-    cascara.scale.set(1, 0.62, 1);
-    cascara.position.set(cx, E.bajo - 0.2, cz);
-    g.add(k.noSolido(cascara));
-    for (const x of [E.x0 - 3, E.x1 + 3]) {
-      const tapa = new THREE.Mesh(new THREE.CircleGeometry(radio, 28, 0, Math.PI), new THREE.MeshLambertMaterial({ color: '#33363c', side: THREE.DoubleSide }));
-      tapa.rotation.y = Math.PI / 2;
-      tapa.scale.set(1, 0.62, 1);
-      tapa.position.set(x, E.bajo - 0.2, cz);
-      g.add(k.noSolido(tapa));
+    // ---------- El estadio, estilo Allianz Arena ----------
+    // La fachada: almohadones romboidales inflados (textura con brillo en el medio), sobre un óvalo
+    // que se ensancha hacia el medio y se curva hacia adentro arriba, hasta el techo. De día se ve
+    // blanco plateado; de noche brilla en rojo (emissive, lo sube actualizar con la noche).
+    const rombos = k.imagenCanvas((c, w, h) => {
+      c.fillStyle = '#7d858d';
+      c.fillRect(0, 0, w, h);
+      const rombo = (cx, cy) => {
+        const gr = c.createRadialGradient(cx, cy - h * 0.08, 2, cx, cy, w * 0.5);
+        gr.addColorStop(0, '#ffffff');
+        gr.addColorStop(0.55, '#e9edf0');
+        gr.addColorStop(1, '#b9c1c8');
+        c.fillStyle = gr;
+        c.beginPath();
+        c.moveTo(cx, cy - h / 2 + 3); c.lineTo(cx + w / 2 - 3, cy); c.lineTo(cx, cy + h / 2 - 3); c.lineTo(cx - w / 2 + 3, cy);
+        c.closePath();
+        c.fill();
+      };
+      rombo(w / 2, h / 2);
+      for (const [x, y] of [[0, 0], [w, 0], [0, h], [w, h]]) rombo(x, y);
+    }, 128, 128).material.map;
+    rombos.wrapS = rombos.wrapT = THREE.RepeatWrapping;
+    this.matFachada = new THREE.MeshLambertMaterial({ map: rombos, emissive: '#ff2a1f', emissiveMap: rombos, emissiveIntensity: 0 });
+    const A = ARENA;
+    // Perfil de la fachada: [altura (0 a 1), cuánto se abre (1 = el borde del óvalo)].
+    const PERFIL = [[0, 0.93], [0.12, 0.975], [0.3, 1], [0.55, 1.005], [0.75, 0.985], [0.87, 0.95], [0.95, 0.885], [1, 0.8]];
+    const SEG = 96;
+    const posF = [];
+    const uvF = [];
+    const idx = [];
+    PERFIL.forEach(([t, r], fila) => {
+      for (let j = 0; j <= SEG; j++) {
+        const [x, z] = bordeArena((j / SEG) * Math.PI * 2, r);
+        posF.push(x, A.base + t * (A.alto - A.base), z);
+        uvF.push((j / SEG) * 64, t * 9);
+      }
+      if (fila) {
+        for (let j = 0; j < SEG; j++) {
+          const a0 = (fila - 1) * (SEG + 1) + j;
+          const b0 = fila * (SEG + 1) + j;
+          idx.push(a0, b0, a0 + 1, a0 + 1, b0, b0 + 1);
+        }
+      }
+    });
+    const geoF = new THREE.BufferGeometry();
+    geoF.setAttribute('position', new THREE.Float32BufferAttribute(posF, 3));
+    geoF.setAttribute('uv', new THREE.Float32BufferAttribute(uvF, 2));
+    geoF.setIndex(idx);
+    geoF.computeVertexNormals();
+    const fachada = new THREE.Mesh(geoF, this.matFachada);
+    fachada.material.side = THREE.DoubleSide;
+    g.add(fachada);
+    // Techo: casi plano, blanco, cerrando arriba, con un anillo de luz en el borde.
+    const posT = [];
+    const anillos = [[0.8, 0], [0.62, 3], [0.38, 5], [0.001, 6]];
+    for (let r = 1; r < anillos.length; r++) {
+      for (let j = 0; j < SEG; j++) {
+        const t0 = (j / SEG) * Math.PI * 2;
+        const t1 = ((j + 1) / SEG) * Math.PI * 2;
+        const [ax, az] = bordeArena(t0, anillos[r - 1][0]);
+        const [bx, bz] = bordeArena(t1, anillos[r - 1][0]);
+        const [cx2, cz2] = bordeArena(t0, anillos[r][0]);
+        const [dx, dz] = bordeArena(t1, anillos[r][0]);
+        const y0 = A.alto + anillos[r - 1][1];
+        const y1 = A.alto + anillos[r][1];
+        posT.push(ax, y0, az, cx2, y1, cz2, bx, y0, bz, bx, y0, bz, cx2, y1, cz2, dx, y1, dz);
+      }
     }
-    // El nombre en letras rojas sobre la curva de adelante.
-    // El texto se achica hasta entrar entero en la lámina (antes se cortaba en las puntas) y la
-    // lámina va un poco separada de la curva, para que no se meta adentro de la chapa.
-    const letras = k.imagenCanvas((c, w, h) => {
+    const geoT = new THREE.BufferGeometry();
+    geoT.setAttribute('position', new THREE.Float32BufferAttribute(haciaArriba(posT), 3));
+    geoT.computeVertexNormals();
+    g.add(new THREE.Mesh(geoT, new THREE.MeshLambertMaterial({ color: '#e6eaee' })));
+    this.matLuces = new THREE.MeshBasicMaterial({ color: '#cfd6dc' });
+    const posL = [];
+    for (let j = 0; j < SEG; j++) {
+      const [ax, az] = bordeArena((j / SEG) * Math.PI * 2, 0.805);
+      const [bx, bz] = bordeArena(((j + 1) / SEG) * Math.PI * 2, 0.805);
+      posL.push(ax, A.alto - 0.2, az, bx, A.alto - 0.2, bz, bx, A.alto + 1.2, bz, ax, A.alto - 0.2, az, bx, A.alto + 1.2, bz, ax, A.alto + 1.2, az);
+    }
+    const geoL = new THREE.BufferGeometry();
+    geoL.setAttribute('position', new THREE.Float32BufferAttribute(posL, 3));
+    const anilloLuz = new THREE.Mesh(geoL, this.matLuces);
+    anilloLuz.material.side = THREE.DoubleSide;
+    g.add(anilloLuz);
+    // Base de vidrio oscuro con las entradas iluminadas alrededor.
+    const posB = [];
+    for (let j = 0; j < SEG; j++) {
+      const [ax, az] = bordeArena((j / SEG) * Math.PI * 2, 0.9);
+      const [bx, bz] = bordeArena(((j + 1) / SEG) * Math.PI * 2, 0.9);
+      posB.push(ax, 0, az, bx, 0, bz, bx, A.base + 0.5, bz, ax, 0, az, bx, A.base + 0.5, bz, ax, A.base + 0.5, az);
+    }
+    const geoB = new THREE.BufferGeometry();
+    geoB.setAttribute('position', new THREE.Float32BufferAttribute(posB, 3));
+    geoB.computeVertexNormals();
+    g.add(new THREE.Mesh(geoB, new THREE.MeshLambertMaterial({ color: '#1f2933', side: THREE.DoubleSide })));
+    this.matPuertas = new THREE.MeshBasicMaterial({ color: '#8a7a5a' });
+    const puertas = new THREE.InstancedMesh(new THREE.BoxGeometry(5, 5.5, 0.3), this.matPuertas, 28);
+    const mq = new THREE.Matrix4();
+    for (let j = 0; j < 28; j++) {
+      const t = (j / 28) * Math.PI * 2 + Math.PI / 28;
+      const [x, z] = bordeArena(t, 0.905);
+      const [x2, z2] = bordeArena(t + 0.01, 0.905);
+      mq.makeRotationY(Math.atan2(x2 - x, z2 - z) + Math.PI / 2).setPosition(x, 2.75, z);
+      puertas.setMatrixAt(j, mq);
+    }
+    puertas.frustumCulled = false;
+    g.add(puertas);
+    // Choques: el óvalo en tajadas (cajas a lo ancho).
+    for (let q = -6; q < 6; q++) {
+      const x0 = A.x + (q / 6) * A.a * 0.9;
+      const x1 = A.x + ((q + 1) / 6) * A.a * 0.9;
+      const xm = Math.max(Math.abs(x0 - A.x), Math.abs(x1 - A.x)) / (A.a * 0.9);
+      const f = (1 - Math.min(1, xm) ** A.exp) ** (1 / A.exp) * 0.9;
+      this.choques.push(new THREE.Box3(new THREE.Vector3(x0, 0, A.z - A.b * f), new THREE.Vector3(x1, A.alto, A.z + A.b * f)));
+    }
+    // El nombre en letras blancas grandes (como "Allianz Arena") y el logo de Sancor abajo.
+    const frente = A.z - A.b - 2.5;
+    const nombre = k.imagenCanvas((c, w, h) => {
       c.clearRect(0, 0, w, h);
-      let tam = 150;
-      c.font = `900 ${tam}px Fredoka, Arial, sans-serif`;
-      const ancho = c.measureText('vecibandaring').width;
-      if (ancho > w - 60) tam = Math.floor((tam * (w - 60)) / ancho);
-      c.font = `900 ${tam}px Fredoka, Arial, sans-serif`;
-      c.fillStyle = '#e3241b';
+      let tam = 140;
+      c.font = `800 ${tam}px Fredoka, Arial, sans-serif`;
+      const ancho = c.measureText('VECIBANDA RING').width;
+      if (ancho > w - 40) tam = Math.floor((tam * (w - 40)) / ancho);
+      c.font = `800 ${tam}px Fredoka, Arial, sans-serif`;
+      c.fillStyle = '#ffffff';
+      c.shadowColor = 'rgba(0,0,0,0.35)';
+      c.shadowBlur = 8;
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText('vecibandaring', w / 2, h / 2 + 8);
-    }, 1024, 200);
-    letras.material.transparent = true;
-    letras.material.depthWrite = false;
-    letras.scale.set(100, 19.5, 1);
-    const angLetras = 0.95;
-    letras.position.set(cx - 30, E.bajo + Math.sin(angLetras) * (radio * 0.62 + 2.4), cz - Math.cos(angLetras) * (radio + 2.4));
-    letras.rotation.order = 'YXZ'; // mirando a la autopista (−z), recostado sobre la curva
-    letras.rotation.set(-0.95, Math.PI, 0);
-    g.add(letras);
-    // Puertas, escaleras de metal y el cartel amarillo.
-    const fz = E.z0 - 0.05;
-    g.add(k.noSolido(k.cajaDe(ENTRADA.x - 4, 0, fz - 0.1, ENTRADA.x + 4, 7, fz, k.vidrio)));
-    g.add(k.noSolido(k.cajaDe(ENTRADA.x - 4.4, 7, fz - 0.2, ENTRADA.x + 4.4, 7.6, fz, '#2b2d31')));
-    const entrada = k.cartel('ENTRADA · VECIBANDA RING', 14, 1.6, '#ffffff', '#c62828');
-    entrada.position.set(ENTRADA.x, 8.8, fz - 0.15);
-    entrada.rotation.y = Math.PI;
-    g.add(entrada);
-    for (const dx of [-60, 55]) {
-      g.add(k.noSolido(k.cajaDe(cx + dx - 3, 0, fz - 0.1, cx + dx + 3, 6, fz, '#3d4f63')));
-      for (let s = 0; s < 8; s++) g.add(k.noSolido(k.cajaDe(cx + dx - 10 + s * 0.9, 0, fz - 3, cx + dx - 9.1 + s * 0.9, 0.75 * (s + 1), fz - 0.2, '#8d949b')));
-      g.add(k.noSolido(k.cajaDe(cx + dx - 10, 6, fz - 3.2, cx + dx - 2.8, 6.15, fz - 3, '#8d949b')));
+      c.fillText('VECIBANDA RING', w / 2, h / 2);
+    }, 1024, 160);
+    nombre.material = new THREE.MeshBasicMaterial({ map: nombre.material.map, transparent: true, depthWrite: false });
+    nombre.scale.set(150, 23, 1);
+    nombre.position.set(A.x, A.base + (A.alto - A.base) * 0.62, frente - 1.5);
+    nombre.rotation.y = Math.PI;
+    g.add(nombre);
+    const logo = new THREE.Mesh(new THREE.PlaneGeometry(64, 16), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
+    new THREE.TextureLoader().load('assets/especiales/sancor_blanco.png', (t) => { t.colorSpace = THREE.SRGBColorSpace; logo.material.map = t; logo.material.needsUpdate = true; });
+    logo.position.set(A.x, A.base + (A.alto - A.base) * 0.38, frente - 1);
+    logo.rotation.y = Math.PI;
+    g.add(logo);
+    // Entrada principal: marquesina, cartel y un tótem de Sancor en la plaza.
+    const fz = A.z - A.b * 0.9;
+    g.add(k.noSolido(k.cajaDe(ENTRADA.x - 16, 7.5, fz - 9, ENTRADA.x + 16, 8.3, fz, '#2b2f36')));
+    for (const dx of [-15, 15]) g.add(k.noSolido(k.cajaDe(ENTRADA.x + dx - 0.4, 0, fz - 8.8, ENTRADA.x + dx + 0.4, 7.5, fz - 8, '#2b2f36')));
+    const cartelEntrada = k.cartel('ENTRADA · VECIBANDA RING', 24, 2.4, '#ffffff', '#c62828');
+    cartelEntrada.position.set(ENTRADA.x, 9.6, fz - 8.6);
+    cartelEntrada.rotation.y = Math.PI;
+    g.add(cartelEntrada);
+    g.add(k.noSolido(k.cajaDe(ENTRADA.x - 6, 0, fz - 0.4, ENTRADA.x + 6, 6.5, fz, this.matPuertas)));
+    const totem = cartelSancor(12, 3.4, true);
+    totem.rotation.y = Math.PI;
+    totem.position.set(ENTRADA.x + 26, 7.6, fz - 16.4);
+    g.add(totem);
+    solido(k.cajaDe(ENTRADA.x + 25.5, 0, fz - 16.3, ENTRADA.x + 26.5, 5.9, fz - 15.7, '#2b2f36'));
+    // Plaza y estacionamientos (con sus líneas) a los costados, y torres de luz.
+    const plaza = AU.z + AU.medioAncho + 2;
+    g.add(k.noSolido(k.cajaDe(A.x - A.a - 10, 0, plaza, A.x + A.a + 10, 0.06, A.z - A.b * 0.6, k.tex('concreto', '#c9c6bf', 5))));
+    const lineas = k.imagenCanvas((c, w, h) => {
+      c.fillStyle = '#4b4e53';
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = '#f2f2f2';
+      for (let x = 0; x < w; x += w / 8) c.fillRect(x, 0, 3, h * 0.42);
+      for (let x = 0; x < w; x += w / 8) c.fillRect(x, h * 0.58, 3, h * 0.42);
+    }, 256, 128).material.map;
+    lineas.wrapS = lineas.wrapT = THREE.RepeatWrapping;
+    for (const lado of [-1, 1]) {
+      const largoX = 120;
+      const x0 = lado < 0 ? A.x - A.a - 12 - largoX : A.x + A.a + 12;
+      const fondoZ = A.b * 1.6;
+      const t = lineas.clone();
+      t.needsUpdate = true;
+      t.repeat.set(largoX / 40, fondoZ / 20);
+      const piso = new THREE.Mesh(new THREE.PlaneGeometry(largoX, fondoZ), new THREE.MeshLambertMaterial({ map: t }));
+      piso.rotation.x = -Math.PI / 2;
+      piso.position.set(x0 + largoX / 2, 0.06, plaza + fondoZ / 2);
+      g.add(piso);
     }
-    g.add(k.noSolido(k.cajaDe(ENTRADA.x + 14, 0, fz - 6.2, ENTRADA.x + 14.3, 6, fz - 5.9, '#8d949b')));
-    const amarillo = k.cartel('PISTA ▸', 3, 2.2, '#111111', '#ffc928');
-    amarillo.position.set(ENTRADA.x + 14.15, 6.4, fz - 6.3);
-    amarillo.rotation.y = Math.PI;
-    g.add(amarillo);
-    // Vereda de la entrada.
-    g.add(k.noSolido(k.cajaDe(E.x0 - 4, 0, AU.z + AU.medioAncho + 2, E.x1 + 4, 0.1, E.z0, k.tex('concreto', '#bdbab3', 4))));
+    const torre = (x, z, alto = 62) => {
+      solido(k.cajaDe(x - 0.7, 0, z - 0.7, x + 0.7, alto, z + 0.7, '#8d949b'));
+      g.add(k.noSolido(k.cajaDe(x - 4, alto, z - 0.6, x + 4, alto + 4, z + 0.6, '#3a3d42')));
+      for (let f = 0; f < 3; f++) for (let c = 0; c < 4; c++) g.add(k.noSolido(k.cajaDe(x - 3.4 + c * 1.8, alto + 0.5 + f * 1.2, z - 0.7, x - 2.4 + c * 1.8, alto + 1.3 + f * 1.2, z - 0.62, this.matFocos)));
+    };
+    for (const dx of [-1, 1]) for (const dz of [0.15, 0.95]) torre(A.x + dx * (A.a + 70), plaza + A.b * 1.6 * dz);
+    // Torres de luz también a lo largo de la pista (del lado de afuera, atrás del alambrado).
+    for (let i = 60; i < n; i += 170) {
+      const p = puntos[i];
+      for (const lado of [1, -1]) {
+        const [x, , z] = v(p, lado * (PARED + 14), 0);
+        if (lejosDeLaPista(x, z, PARED + 10, i) && !enArena(x, z, 10)) { torre(x, z, 48); break; }
+      }
+    }
   }
 
   // Ojitos de huevo (dos esferitas negras al frente).

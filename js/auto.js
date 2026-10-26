@@ -33,12 +33,17 @@ export function specsAuto(def) {
 }
 
 // Un paso de manejo (sin choques), igual para el jugador y para la simulación del autódromo.
-// a: { pos: {x, z}, angulo, vel, direccion, velMax, specs }; ejes: { x: doblar, y: acelerar }.
+// a: { pos: {x, z}, angulo, vel, direccion, velMax, specs }; ejes: { x: doblar, y: acelerar,
+// freno: el botón de saltar (frena a fondo, para adelante o para atrás) }.
 export function pasoAuto(a, ejes, dt) {
   const sp = a.specs;
   const tope = Math.min(a.velMax || sp.barrio, sp.v);
   const acel = ejes.y;
-  if (acel > 0 && a.vel >= 0) {
+  a.frenando = !!ejes.freno || (acel < 0 && a.vel > 0.3) || (acel > 0 && a.vel < -0.3);
+  if (ejes.freno) {
+    const f = sp.freno * 1.15 * dt;
+    a.vel = Math.abs(a.vel) <= f ? 0 : a.vel - Math.sign(a.vel) * f;
+  } else if (acel > 0 && a.vel >= 0) {
     if (a.vel < tope) a.vel = Math.min(tope, a.vel + sp.a0 * (1 - a.vel / sp.v) * acel * dt);
   } else if (acel < 0 && a.vel > 0.3) {
     a.vel = Math.max(0, a.vel + sp.freno * acel * dt); // frena
@@ -263,11 +268,13 @@ export class Auto {
     this.vel = 0;
     this.direccion = 0;
     this.specs = specsAuto(AUTO_DEPORTIVO);
+    this.alto = 3.6;
     this.grupo = new THREE.Group();
     this.ruedas = [];
     this.delanteras = [];
     this.armar();
     escena.add(this.grupo);
+    this.ponerLucesFreno();
     // Caja de choque para el jugador a pie (la cámara la ignora).
     this.caja = new THREE.Box3();
     this.caja.camara = false;
@@ -443,6 +450,21 @@ export class Auto {
     }
   }
 
+  // Luces de freno: dos rojas atrás y una arriba al medio; solo se ven (y brillan) al frenar.
+  ponerLucesFreno() {
+    if (!this.lucesFreno) {
+      const mat = new THREE.MeshBasicMaterial({ color: '#ff1a1a' });
+      this.lucesFreno = [0, 1, 2].map((i) => {
+        const l = new THREE.Mesh(new THREE.BoxGeometry(i < 2 ? 0.95 : 1.3, i < 2 ? 0.4 : 0.18, 0.12), mat);
+        l.visible = false;
+        this.grupo.add(l);
+        return l;
+      });
+    }
+    const [mx, mz] = this.medio || [2.1, 4.35];
+    this.lucesFreno.forEach((l, i) => l.position.set(i === 2 ? 0 : (i ? 1 : -1) * mx * 0.66, this.alto * (i === 2 ? 0.86 : 0.56), -mz - 0.04));
+  }
+
   colocar() {
     this.grupo.position.copy(this.pos);
     this.grupo.rotation.y = this.angulo;
@@ -462,6 +484,7 @@ export class Auto {
     const antesX = p.x;
     const antesZ = p.z;
     pasoAuto(this, ejes, dt);
+    if (this.lucesFreno) for (const l of this.lucesFreno) l.visible = this.frenando;
     let choque = false;
     for (const b of colisiones) {
       if (b === this.caja || b.max.y < 0.35 || b.min.y > 2.5) continue;
@@ -550,12 +573,14 @@ export function cargarAuto(def) {
       modelo.position.set(-centro.x, -caja.min.y * k, -centro.z);
       g.add(modelo);
       g.userData.medio = [(tam.x * k) / 2, (tam.z * k) / 2];
+      g.userData.alto = tam.y * k;
       return g;
     }));
   }
   return plantillas.get(def.id).then((g) => {
     const copia = g.clone();
     copia.userData.medio = g.userData.medio;
+    copia.userData.alto = g.userData.alto;
     return copia;
   });
 }
@@ -573,6 +598,8 @@ export class AutoComprado extends Auto {
     this.listo = cargarAuto(def).then((m) => {
       this.grupo.add(m);
       this.medio = m.userData.medio;
+      this.alto = m.userData.alto;
+      this.ponerLucesFreno();
       this.colocar();
     }).catch(() => {});
   }

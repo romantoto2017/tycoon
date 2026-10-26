@@ -207,6 +207,7 @@ async function iniciar() {
     jugador.sombra.visible = true;
   };
   autodromo.alCerrar = () => { controles.activo = modo === 'juego'; };
+  autodromo.noche = () => momento(hora()).noche; // la fachada del estadio brilla de noche
   // ---------- Dormir ----------
   // De noche, cerca de una cama comprada aparece "Dormir": fundido a negro y se despierta
   // a la mañana. La hora va aparte del tiempo jugado (estado.desfaseHora), así no cambian
@@ -903,7 +904,10 @@ async function iniciar() {
         UI.toast('¡Autopista! Acá el auto vuela: a fondo hasta la Ciudad Vecibanda', 'info');
       }
       // Con el semáforo en rojo o amarillo, el auto no se mueve.
-      vehiculo.actualizar(dt, autodromo.bloqueado ? { x: 0, y: 0 } : controles.ejes(ejes), choquesActuales);
+      // En el auto, el botón de saltar es el freno.
+      const mando = autodromo.bloqueado ? { x: 0, y: 0 } : controles.ejes(ejes);
+      mando.freno = !autodromo.bloqueado && controles.saltar;
+      vehiculo.actualizar(dt, mando, choquesActuales);
       jugador.pos.copy(vehiculo.pos);
     } else if (gym.entrenando) {
       // Entrenando en el gym: moverse lo saca de la máquina; saltar (o el botón) hace la repetición.
