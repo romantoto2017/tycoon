@@ -805,19 +805,140 @@ const banio1 = [
 
 // ---------- Piso 2 ----------
 
+// ---------- Cine ----------
+// Sala de cine de verdad: oscura, con cortinas que tapan el ventanal, techo de estrellitas,
+// la pantalla grande con su marco y el telón rojo a los costados, tres filas de butacas rojas
+// en un escalonado con luces en los escalones, el proyector atrás con su haz, la marquesina
+// "CINE VECIBANDA" arriba de la puerta y la máquina de pochoclos. Puerta en z = -6.6.
+function butaca(s, x, y0, z) {
+  s.b(x - 0.55, y0, z - 0.55, x + 0.45, y0 + 1.0, z + 0.55, '#7f0f16');
+  s.d(x - 0.5, y0 + 1.0, z - 0.5, x + 0.45, y0 + 1.15, z + 0.5, '#a3141f');
+  s.d(x - 0.78, y0 + 1.0, z - 0.52, x - 0.5, y0 + 2.75, z + 0.52, '#9b111e');
+  for (const dz of [-0.63, 0.63]) s.d(x - 0.75, y0, z + dz - 0.08, x + 0.5, y0 + 1.55, z + dz + 0.08, '#1d1d22');
+}
+
+function filaButacas(s, x, y0) {
+  // Corridas hacia +z: la primera fila queda a la entrada, y el paso de la puerta tiene que quedar libre.
+  for (const z of [-3.2, -1.9, -0.6, 1.2, 2.5, 3.8]) butaca(s, x, y0, z);
+}
+
 const cine = [
-  LUZ(0, 0, (k, s) => [-6, -2, 2, 6].forEach((z) => s.d(-8, 6.9, z - 0.3, 8, 7.1, z + 0.3, brillo(k, '#ffd54f')))),
-  M('alfombra', 'Alfombra', 3, 4.5, (k, s) => s.d(-8, 0, -6.6, 8, 0.06, 6.6, '#311b92')),
-  M('pantalla', 'Pantalla gigante', 6.4, 0, (k, s) => {
-    s.b(7.6, 1, -6, 7.95, 6.8, 6, '#000000');
-    s.d(7.55, 1.3, -5.7, 7.6, 6.5, 5.7, brillo(k, '#e3f2fd'));
+  LUZ(-6, 5.5, (k, s) => {
+    revestir(s, '#1a0d14', { lados: ['-x', '+x'], zPuerta: -1 });
+    // Techo de estrellitas.
+    const techo = lamina(k, (g, w, h) => {
+      g.fillStyle = '#0b0c1e';
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 160; i++) {
+        g.fillStyle = i % 7 ? '#fff6d8' : '#9fd8ff';
+        const r = 1 + ((i * 37) % 3);
+        g.fillRect((i * 173) % w, (i * 97) % h, r, r);
+      }
+    }, 512, 384, 17.4, 13.3);
+    techo.rotation.order = 'YXZ';
+    techo.rotation.x = Math.PI / 2;
+    s.plano(techo, 0, 9.55, 0, 0);
+    // Cortinas negras sobre el ventanal (así la sala queda oscura).
+    const cortina = lamina(k, (g, w, h) => {
+      for (let x = 0; x < w; x++) {
+        const v = 26 + 14 * Math.sin(x * 0.19);
+        g.fillStyle = `rgb(${v + 10},${v},${v + 4})`;
+        g.fillRect(x, 0, 1, h);
+      }
+    }, 256, 32, 17.4, 9.5, { mate: true });
+    s.plano(cortina, 0, 4.8, 6.6, Math.PI);
+    // Marquesina con lamparitas arriba de la puerta (del lado de adentro).
+    s.plano(lamina(k, (g, w, h) => {
+      g.fillStyle = '#2a0a12';
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ffd54f';
+      for (let x = 14; x < w; x += 28) { g.beginPath(); g.arc(x, 12, 7, 0, 7); g.arc(x, h - 12, 7, 0, 7); g.fill(); }
+      for (let y = 40; y < h - 30; y += 28) { g.beginPath(); g.arc(12, y, 7, 0, 7); g.arc(w - 12, y, 7, 0, 7); g.fill(); }
+      g.fillStyle = '#ff5252';
+      g.shadowColor = '#ff5252';
+      g.shadowBlur = 18;
+      g.font = '700 74px Fredoka, Arial, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('CINE VECIBANDA', w / 2, h / 2 + 4);
+    }, 768, 180, 6.4, 1.5), 0, 8.3, -6.62, 0);
   }),
-  M('tarima', 'Tarima', -2.4, 0, (k, s) => s.b(-4.2, 0, -6, -0.6, 0.5, 5, '#4a148c')),
-  M('butacas1', 'Butacas de adelante', 2.5, 0, (k, s) => [-2.4, 0.6, 3.6].forEach((z) => s.modelo('loungeChairRelax', 2.5, 0, z, Math.PI / 2, { ancho: 2.2, tela: '#b71c1c' }))),
-  M('butacas2', 'Butacas de atrás', -5.6, 5.4, (k, s) => [-2.4, 0.6, 3.6].forEach((z) => s.modelo('loungeChairRelax', -2.3, 0.5, z, Math.PI / 2, { ancho: 2.2, tela: '#b71c1c' }))),
-  M('pochoclos', 'Máquina de pochoclos', -7.1, -4.6, (k, s) => {
-    s.b(-7.8, 0, -6.6, -6.4, 3, -5.2, '#d32f2f');
-    s.d(-7.7, 3, -6.5, -6.5, 4.2, -5.3, '#fff9c4');
+  M('alfombra', 'Alfombra', 4.5, -4.5, (k, s) => {
+    s.d(-8.8, 0, -6.75, 8.8, 0.06, 6.75, '#3a0f1c');
+    // Pasillo marcado con luces en el piso hasta la pantalla.
+    for (let x = -6; x <= 6; x += 1.5) s.d(x - 0.2, 0.06, -5.3, x + 0.2, 0.09, -5.1, brillo(k, '#ffcf6b'));
+  }),
+  M('pantalla', 'Pantalla gigante', 6.4, 0, (k, s) => {
+    s.b(8.3, 1.2, -5.6, 8.75, 7.9, 5.6, '#0a0a0a');
+    s.plano(lamina(k, (g, w, h) => {
+      const cielo = g.createLinearGradient(0, 0, 0, h);
+      cielo.addColorStop(0, '#0d1b4c');
+      cielo.addColorStop(0.6, '#e2577a');
+      cielo.addColorStop(1, '#ffb347');
+      g.fillStyle = cielo;
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ffe9a8';
+      g.beginPath();
+      g.arc(w * 0.72, h * 0.62, h * 0.16, 0, Math.PI * 2);
+      g.fill();
+      // La mansión recortada a contraluz.
+      g.fillStyle = '#140d22';
+      g.fillRect(w * 0.18, h * 0.5, w * 0.5, h * 0.5);
+      g.fillRect(w * 0.3, h * 0.36, w * 0.26, h * 0.2);
+      g.fillRect(0, h * 0.86, w, h * 0.14);
+      g.fillStyle = '#ffd56b';
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) g.fillRect(w * (0.22 + i * 0.11), h * (0.56 + j * 0.1), w * 0.05, h * 0.05);
+      g.fillStyle = '#ffffff';
+      g.textAlign = 'center';
+      g.font = '700 54px Fredoka, Arial, sans-serif';
+      g.shadowColor = '#000';
+      g.shadowBlur = 12;
+      g.fillText('VECIBANDA', w / 2, h * 0.2);
+      g.font = '700 30px Fredoka, Arial, sans-serif';
+      g.fillText('L A   P E L Í C U L A', w / 2, h * 0.3);
+    }, 640, 360, 10.6, 6.2), 8.27, 4.55, 0, -Math.PI / 2);
+    // Telón rojo a los costados y arriba.
+    const telon = (ancho, alto) => lamina(k, (g, w, h) => {
+      for (let x = 0; x < w; x++) {
+        const v = 0.55 + 0.45 * Math.abs(Math.sin(x * 0.12));
+        g.fillStyle = `rgb(${Math.round(150 * v)},${Math.round(14 * v)},${Math.round(28 * v)})`;
+        g.fillRect(x, 0, 1, h);
+      }
+    }, 128, 16, ancho, alto, { mate: true });
+    for (const z of [-6.15, 6.15]) s.plano(telon(1.2, 9.3), 8.2, 4.7, z, -Math.PI / 2);
+    s.plano(telon(13.4, 1.4), 8.15, 8.75, 0, -Math.PI / 2);
+  }),
+  M('tarima', 'Escalonado', -3.4, 4.5, (k, s) => {
+    s.b(-3.2, 0, -4.6, 0.2, 0.7, 4.6, '#2b0a14');
+    s.b(-6.6, 0, -4.6, -3.2, 1.4, 4.6, '#2b0a14');
+    s.b(-8.7, 0, -4.6, -6.6, 2.1, 4.6, '#2b0a14');
+    // Luces en el borde de cada escalón.
+    for (const [x, y] of [[0.2, 0.7], [-3.2, 1.4], [-6.6, 2.1]]) s.d(x - 0.04, y - 0.12, -4.6, x + 0.02, y - 0.04, 4.6, brillo(k, '#ffcf6b'));
+  }),
+  M('butacas1', 'Butacas de adelante', 3.4, 4.8, (k, s) => filaButacas(s, 2.6, 0)),
+  M('butacas2', 'Butacas de atrás', -2, 5.4, (k, s) => {
+    filaButacas(s, -1.0, 0.7);
+    filaButacas(s, -4.6, 1.4);
+  }),
+  M('pochoclos', 'Máquina de pochoclos', -7.4, -4.6, (k, s) => {
+    s.b(-8.4, 0, -6.5, -6.6, 2.4, -5.0, '#c62828');
+    s.d(-8.42, 0.4, -5.0, -6.58, 0.6, -4.98, '#ffd54f');
+    s.d(-8.3, 2.4, -6.4, -6.7, 4.6, -5.1, k.vidrio);
+    for (let i = 0; i < 14; i++) s.esf(0.18, '#fff3c4', -8.1 + (i % 5) * 0.32, 2.55 + Math.floor(i / 5) * 0.22, -6.1 + ((i * 3) % 4) * 0.28);
+    s.d(-8.45, 4.6, -6.55, -6.55, 5.0, -4.95, '#c62828');
+    s.plano(neon(k, 'POCHOCLOS', 2.2, 0.55, '#ffd54f'), -7.5, 5.4, -4.95, 0);
+  }),
+  M('proyector', 'Proyector', -5, 5.6, (k, s) => {
+    const THREE = k.THREE;
+    s.d(-8.6, 8.6, -0.6, -7.2, 9.6, 0.6, '#1d1d22');
+    s.d(-7.25, 8.85, -0.25, -7.15, 9.25, 0.25, brillo(k, '#fff6d8'));
+    const haz = new THREE.Mesh(new THREE.ConeGeometry(3.2, 15.4, 16, 1, true).translate(0, -7.7, 0), new THREE.MeshBasicMaterial({ color: '#fff6d8', transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    // El cono apunta para -y: se acuesta hacia +z del grupo (que mira a la pantalla) y se
+    // inclina un poco para abajo, hasta el centro de la pantalla.
+    haz.rotation.x = -Math.PI / 2 + 0.28;
+    const g = new THREE.Group();
+    g.add(k.noSolido(haz));
+    s.plano(k.noSolido(g), -7.2, 9.05, 0, Math.PI / 2);
   }),
 ];
 
@@ -974,26 +1095,168 @@ function parlante(k, s, x, z) {
   s.cil(0.16, 0.08, '#9aa0a6', x, 3.0, z + 0.6, 10).rotation.x = Math.PI / 2;
 }
 
+// ---------- Biblioteca ----------
+// Biblioteca clásica: paredes verde inglés con boiserie de madera, estanterías de piso a techo
+// (con lomos de libros de colores) en toda la pared de adentro y a los costados y arriba de la
+// puerta, escalera corrediza, alfombra persa, mesa larga con lámparas verdes de banquero, dos
+// sillones de cuero junto al ventanal, globo terráqueo y plantas. Diseño de habitación de atrás
+// (puerta en z = +6.6, ventanal en z = -6.6); en la sala de adelante va reflejado.
+const LIBROS = ['#7b1f1f', '#1f4e3d', '#1d3557', '#5b3a24', '#e9dcc4', '#8a6d2f', '#3d2b56', '#a33b20', '#2f2f2f', '#6b8f71'];
+let lomos = null;
+function canvasLomos() {
+  if (lomos) return lomos;
+  lomos = [];
+  for (let v = 0; v < 3; v++) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 96;
+    const g = c.getContext('2d');
+    g.fillStyle = '#2b1a10';
+    g.fillRect(0, 0, 512, 96);
+    let x = 2;
+    let n = v * 7;
+    while (x < 510) {
+      const w = 9 + ((n * 13) % 10);
+      const h = 62 + ((n * 29) % 30);
+      g.fillStyle = LIBROS[(n * 7 + v) % LIBROS.length];
+      g.fillRect(x, 96 - h, w, h);
+      g.fillStyle = 'rgba(255,215,120,0.75)';
+      g.fillRect(x + 1, 96 - h + 8, w - 2, 2);
+      g.fillRect(x + 1, 96 - 14, w - 2, 2);
+      g.fillStyle = 'rgba(0,0,0,0.25)';
+      g.fillRect(x + w - 2, 96 - h, 2, h);
+      x += w + 1;
+      n++;
+      if (n % 11 === 0) x += 14; // hueco (un libro sacado)
+    }
+    lomos.push(c);
+  }
+  return lomos;
+}
+
+// Estantería empotrada a lo largo de una pieza: u de -ancho/2 a ancho/2, contra la pared (v = 0),
+// de y0 a y1 con estantes cada 1.55.
+function estanteriaAlta(k, P, ancho, y0, y1) {
+  const madera = '#4a2e1b';
+  const fondo = 1.0;
+  P.b(-ancho / 2, y0, 0, ancho / 2, y0 + 0.5, fondo, madera);
+  P.d(-ancho / 2, y1 - 0.25, 0, ancho / 2, y1, fondo + 0.15, madera);
+  const tramos = Math.max(1, Math.round(ancho / 2.6));
+  for (let i = 0; i <= tramos; i++) {
+    const u = -ancho / 2 + (i * ancho) / tramos;
+    P.d(u - 0.08, y0, 0, u + 0.08, y1, fondo, madera);
+  }
+  const canvases = canvasLomos();
+  let fila = 0;
+  for (let y = y0 + 0.5; y + 1.4 < y1; y += 1.55, fila++) {
+    P.d(-ancho / 2, y - 0.08, 0, ancho / 2, y, fondo, madera);
+    for (let i = 0; i < tramos; i++) {
+      const a = -ancho / 2 + (i * ancho) / tramos + 0.08;
+      const b = -ancho / 2 + ((i + 1) * ancho) / tramos - 0.08;
+      const c = canvases[(fila + i) % canvases.length];
+      const libros = lamina(k, (g, w, h) => g.drawImage(c, 0, 0, w, h), 256, 48, b - a, 1.3, { mate: true });
+      P.plano(libros, (a + b) / 2, y + 0.65, fondo - 0.25, 0);
+    }
+  }
+}
+
 const biblioteca = [
-  LUZ(0, 0),
-  M('alfombra', 'Alfombra', -1.5, 3, (k, s) => alfombra(s, -6, -4, 3, 4, '#8d6e63')),
-  M('estante1', 'Biblioteca', -6, -5.3, (k, s) => estanteria(k, pieza(s, -6, -6.1, '+z'), 4.4)),
-  M('estante2', 'Otra biblioteca', 6, -5.3, (k, s) => estanteria(k, pieza(s, 6, -6.1, '+z'), 4.4)),
-  M('mesa', 'Mesa de lectura', -1.5, 0, (k, s) => {
-    const mesa = pieza(s, -1.5, 0, '+z');
-    mesa.modelo('table', 0, 0, { ancho: 4.4, fondo: 2.4, alto: 2.1 });
-    mesa.modelo('books', -0.8, 0, { y: 2.1, solido: false, escala: 1.4 });
-    mesa.modelo('lampRoundTable', 1.4, -0.4, { y: 2.1, solido: false });
-    s.esf(0.7, '#42a5f5', -3.3, 2.8, -0.4);
+  LUZ(-3.8, 3.2, (k, s) => {
+    revestir(s, '#1f3a2c', { lados: ['-x', '+x'], zPuerta: 1, zocalo: '#4a2e1b', altoZocalo: 3 });
+    for (const x of [-8.7, 8.65]) s.d(x, 9.15, -6.6, x + 0.05, 9.6, 6.6, '#4a2e1b');
   }),
-  M('sillas', 'Sillas', -4.6, 2.8, (k, s) => {
-    const mesa = pieza(s, -1.5, 0, '+z');
-    mesa.modelo('chairCushion', 0, 1.9, { rot: Math.PI, tela: '#7b4a35' });
-    mesa.modelo('chairCushion', 0, -1.9, { tela: '#7b4a35' });
+  M('alfombra', 'Alfombra persa', 1.5, 2.6, (k, s) => {
+    const a = lamina(k, (g, w, h) => {
+      g.fillStyle = '#7a1f22';
+      g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#d9b46a';
+      g.lineWidth = 10;
+      g.strokeRect(14, 14, w - 28, h - 28);
+      g.strokeStyle = '#1d3557';
+      g.lineWidth = 16;
+      g.strokeRect(36, 36, w - 72, h - 72);
+      g.fillStyle = '#d9b46a';
+      g.beginPath();
+      g.ellipse(w / 2, h / 2, w * 0.2, h * 0.22, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#1d3557';
+      g.beginPath();
+      g.ellipse(w / 2, h / 2, w * 0.12, h * 0.13, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = 'rgba(217,180,106,0.6)';
+      for (let i = 0; i < 4; i++) {
+        g.beginPath();
+        g.arc(i % 2 ? w - 90 : 90, i < 2 ? 90 : h - 90, 26, 0, Math.PI * 2);
+        g.fill();
+      }
+    }, 512, 384, 9, 6.6, { mate: true });
+    a.rotation.order = 'YXZ';
+    a.rotation.x = -Math.PI / 2;
+    s.plano(a, 0.8, 0.07, -0.3, 0);
   }),
-  M('sillon', 'Sillón de lectura', 6.2, 3, (k, s) => sofa(k, pieza(s, 6.4, 3, '-x'), 2.8, '#7b4a35')),
-  M('lampara', 'Lámpara de pie', 7.4, 5.6, (k, s) => lamparaPie(k, P0(s), 7.6, 5.5)),
-  M('planta', 'Planta', -6.8, 4.8, (k, s) => planta(k, P0(s), -7.8, 5.6)),
+  M('estante1', 'Biblioteca de pared', -6.4, 2.2, (k, s) => {
+    estanteriaAlta(k, pieza(s, -8.75, 0, '+x'), 13.2, 0, 9.1);
+  }),
+  M('estante2', 'Estantes de la puerta', -5.6, 4.2, (k, s) => {
+    estanteriaAlta(k, pieza(s, -5.95, 6.75, '-z'), 4.9, 0, 9.1);
+    estanteriaAlta(k, pieza(s, 5.95, 6.75, '-z'), 4.9, 0, 9.1);
+    estanteriaAlta(k, pieza(s, 0, 6.75, '-z'), 7, 7.15, 9.1);
+  }),
+  M('mesa', 'Mesa de lectura', 0.7, 3.6, (k, s) => {
+    // Mesa larga de madera con dos lámparas verdes de banquero y libros abiertos.
+    s.b(-1.2, 2.0, -2.6, 2.6, 2.2, 2.6, '#5b3a24');
+    for (const [x, z] of [[-1, -2.4], [2.4, -2.4], [-1, 2.4], [2.4, 2.4]]) s.b(x - 0.12, 0, z - 0.12, x + 0.12, 2.0, z + 0.12, '#4a2e1b');
+    for (const z of [-1.3, 1.3]) {
+      s.cil(0.22, 0.1, '#b8892f', 0.7, 2.2, z, 12);
+      s.d(0.66, 2.3, z - 0.03, 0.74, 2.9, z + 0.03, '#b8892f');
+      s.d(0.35, 2.9, z - 0.55, 1.05, 3.15, z + 0.55, '#1b6b3a');
+      s.d(0.45, 2.86, z - 0.45, 0.95, 2.9, z + 0.45, brillo(k, '#fff3c4'));
+    }
+    s.d(0.2, 2.2, -0.5, 1.3, 2.27, 0.5, '#f4ecd8');
+    s.d(0.74, 2.2, -0.5, 0.78, 2.29, 0.5, '#8a6d2f');
+    s.d(-0.6, 2.2, 1.6, 0.0, 2.6, 2.2, '#1d3557');
+  }),
+  M('sillas', 'Sillas', 5.4, 1.6, (k, s) => {
+    for (const z of [-1.6, 1.6]) {
+      s.modelo('chairCushion', -2.4, 0, z, Math.PI / 2, { tela: '#5b2a22' });
+      s.modelo('chairCushion', 3.8, 0, z, -Math.PI / 2, { tela: '#5b2a22' });
+    }
+  }),
+  M('sillon', 'Sillones de cuero', 4.4, -3.4, (k, s) => {
+    // Dos sillones chesterfield junto al ventanal, mirando hacia la sala.
+    for (const x of [3.2, 6.6]) {
+      const P = pieza(s, x, -6.1, '+z');
+      P.b(-0.95, 0, 0, 0.95, 1.1, 1.7, '#6b3a22');
+      P.b(-0.95, 1.1, 0, 0.95, 2.9, 0.4, '#6b3a22');
+      for (const u of [-0.95, 0.7]) P.b(u, 1.1, 0.3, u + 0.25, 1.9, 1.7, '#6b3a22');
+      P.d(-0.7, 1.1, 0.4, 0.7, 1.35, 1.6, '#7d4528');
+      for (let i = 0; i < 3; i++) P.d(-0.6 + i * 0.6, 2.1, 0.41, -0.55 + i * 0.6, 2.15, 0.43, '#3d2012');
+    }
+  }),
+  M('lampara', 'Lámpara y mesita', 4.9, -2.6, (k, s) => {
+    s.cil(0.6, 0.08, '#4a2e1b', 4.9, 1.6, -5.4, 16);
+    s.cil(0.1, 1.6, '#4a2e1b', 4.9, 0, -5.4, 8);
+    s.d(4.6, 1.68, -5.6, 5.2, 1.88, -5.2, '#7b1f1f');
+    lamparaPie(k, P0(s), 8.0, -5.6);
+  }),
+  M('planta', 'Globo y plantas', -1.6, -4.2, (k, s) => {
+    // Globo terráqueo en su pie, y dos plantas.
+    s.cil(0.45, 0.1, '#4a2e1b', -2.2, 0, -5.2, 12);
+    s.cil(0.08, 1.6, '#b8892f', -2.2, 0.1, -5.2, 8);
+    const globo = s.esf(0.7, '#2f6fa8', -2.2, 2.4, -5.2);
+    globo.userData.girar = 0.25;
+    s.esf(0.36, '#5e9b4c', -2.0, 2.65, -4.85);
+    s.esf(0.3, '#5e9b4c', -2.65, 2.25, -5.0);
+    planta(k, P0(s), -7.6, -5.6, 3.4);
+    planta(k, P0(s), 7.8, 5.4, 2.6);
+  }),
+  M('escalera', 'Escalera corrediza', -5.6, -2.2, (k, s) => {
+    // Riel de bronce a lo largo de la biblioteca y la escalera apoyada.
+    s.d(-7.6, 7.6, -6.4, -7.5, 7.7, 6.4, '#b8892f');
+    const P = pieza(s, -8.75, -2.2, '+x');
+    for (const u of [-0.55, 0.55]) P.d(u - 0.07, 0, 1.15, u + 0.07, 7.9, 1.3, '#6b4226');
+    for (let y = 0.6; y < 7.6; y += 0.7) P.d(-0.55, y, 1.17, 0.55, y + 0.08, 1.27, '#6b4226');
+  }),
 ];
 
 // Suite (piso 2) y Suite VIP (piso 3): cama grande, mesas de luz, tele, sillón, ropero.
@@ -1027,7 +1290,7 @@ const dormitorio1 = suite('#3f5873', '#c9b8a0', 4.4, false);
 // casi toda ventanal. Los carteles van en las paredes de los costados o arriba de la puerta.
 
 // Lámina que brilla sola (no le afecta la luz): pantallas, neones, piso LED. dibujar(g, w, h).
-function lamina(k, dibujar, pw, ph, ancho, alto, { transparente = false, aditivo = false } = {}) {
+function lamina(k, dibujar, pw, ph, ancho, alto, { transparente = false, aditivo = false, mate = false } = {}) {
   const THREE = k.THREE;
   const c = document.createElement('canvas');
   c.width = pw;
@@ -1036,7 +1299,8 @@ function lamina(k, dibujar, pw, ph, ancho, alto, { transparente = false, aditivo
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   dibujar(c.getContext('2d'), pw, ph, () => { tex.needsUpdate = true; });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({
+  // mate: le afecta la luz (libros, cortinas); si no, brilla sola (pantallas, neones).
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), mate ? new THREE.MeshLambertMaterial({ map: tex }) : new THREE.MeshBasicMaterial({
     map: tex, transparent: transparente || aditivo, depthWrite: !(transparente || aditivo),
     blending: aditivo ? THREE.AdditiveBlending : THREE.NormalBlending,
   }));

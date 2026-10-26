@@ -102,6 +102,11 @@ Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (
 Cada mueble se compra por separado, como en un tycoon: al entrar a una habitación aparece un botón en el piso donde va el próximo mueble (primero la luz, después la cama, el ropero, la alfombra...). Se compran de a uno y en orden. La lista de muebles de cada habitación, con su nombre y dónde aparece el botón, está en `js/muebles.js`. Si cambiás muebles, volvé a correr el balance (abajo) para recalcular los precios.
 
 
+### Cine y biblioteca (segundo piso)
+
+- **Cine:** sala oscura con cortinas que tapan el ventanal y techo de estrellitas, pantalla grande con "VECIBANDA: LA PELÍCULA" y telón rojo, tres filas de butacas rojas en escalonado con luces en los escalones, proyector con su haz, marquesina "CINE VECIBANDA" con lamparitas arriba de la puerta y máquina de pochoclos.
+- **Biblioteca:** paredes verde inglés con boiserie, estanterías de piso a techo en toda la pared de adentro y alrededor de la puerta (con lomos de libros de colores), escalera corrediza, alfombra persa, mesa larga con lámparas verdes de banquero, sillones de cuero junto al ventanal, globo terráqueo y plantas.
+
 ### Tercer piso (rediseñado)
 
 Salas de noche, con neones (`js/muebles.js`, "Piso 3"). Los carteles van en las paredes de los costados o arriba de la puerta (antes algunos tapaban la puerta).

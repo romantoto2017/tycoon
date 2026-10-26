@@ -19,19 +19,23 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #7ec8ff;
+  /* Por si igual queda un hueco un instante: oscuro, no celeste. */
+  background: #101318;
   font-family: var(--fuente);
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* El canvas ocupa el 100% de la pantalla (siendo fixed, 100% es la pantalla real), no
+   100vh/100dvh: el celu a veces tarda en actualizar esas medidas al entrar a pantalla completa
+   o al esconder la barra del navegador, y asomaba el fondo celeste abajo. (Con alto "auto" no
+   sirve: un canvas toma su tamaño propio.) */
 #juego {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  width: 100%;
+  height: 100%;
   display: block;
   touch-action: none;
   outline: none;
