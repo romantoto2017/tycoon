@@ -216,12 +216,13 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
   const abajoBrazo = mangasLargas ? (mangaAbajo || remera) : matPiel;
   const brazoI = extremidad(cuerpo, -xBrazo, 4 - CADERA, arribaBrazo, abajoBrazo, 0.8, grosorBrazo, mangaLarga);
   const brazoD = extremidad(cuerpo, xBrazo, 4 - CADERA, arribaBrazo, abajoBrazo, 0.8, grosorBrazo, mangaLarga);
-  cuerpo.add(bloque(anchoTorso, 2, fondoTorso, torso || p.remera, 0, 3 - CADERA, 0));
+  const torsoMalla = bloque(anchoTorso, 2, fondoTorso, torso || p.remera, 0, 3 - CADERA, 0);
+  cuerpo.add(torsoMalla);
   if (gordura > 0.05) {
     const fondoPanza = 0.45 * gordura;
     cuerpo.add(bloque(anchoPanza, segun(0.9, 1.4), fondoPanza, panzaFrente || p.remera, 0, 2.75 - CADERA, fondoTorso / 2 + fondoPanza / 2 - 0.025));
   }
-  if (musculo > 0.05) {
+  if (musculo > 0.05 && !p.detallar) {
     // Hombros (van con el brazo) y pectorales marcados.
     for (const brazo of [brazoI, brazoD]) {
       brazo.add(bloque(grosorBrazo + 0.3 * musculo, 0.8, grosorBrazo + 0.3 * musculo, (mangaLarga ? mangaLarga.arriba(brazo.position.x) : arribaBrazo), 0, -0.3, 0));
@@ -328,6 +329,10 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     cuerpo.add(caja(1.42, 2.4, 0.3, colorPelo, 0, yc - 0.55, -0.72));
     for (const lado of [-1, 1]) cuerpo.add(caja(0.22, 1.9, 1.1, colorPelo, lado * 0.72, yc - 0.45, -0.15));
   }
+
+  // Cuerpo hecho a mano (el profe del gym, gimnasio.js): recibe las piezas y las medidas, y
+  // cambia o agrega lo que quiera (sus texturas y materiales van a extras, para liberarlos).
+  if (p.detallar) p.detallar({ cuerpo, cabeza, brazoI, brazoD, torso: torsoMalla, anchoTorso, fondoTorso, grosorBrazo, xBrazo, matPiel, extras });
 
   let fase = 0;
   let balanceo = 0;

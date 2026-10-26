@@ -68,6 +68,7 @@ export const GYM_ESTACIONES = {
   dominadas: { x: -434.5, z: 22 }, // barra de dominadas del rack de la pared derecha
   pecdec: { x: -463, z: 15.5 }, // torre contra la pared del fondo: el asiento mira a +z
   jalon: { x: -451, z: 15.5 }, // torre alta contra el fondo: se sienta mirando a la torre
+  pecdec2: { x: -445, z: 15.5 }, // el otro pec dec: siempre lo ocupa El Shileno con el celu
 };
 // Montaña del pelado: colina grande atrás de la mansión (para el lado del garage), con el
 // pelado y la camiseta de La Dosis en la cima. r: radio de la base, alto: de la cima.

@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { crearPersonaje } from './personaje.js';
-import { cargarCabeza, crearEtiqueta } from './texturas.js';
+import { cargarCabeza, crearEtiqueta, cargarImagen, texturaDeCanvas } from './texturas.js';
+import { vestido } from './vestir.js';
 import { GYM as G, GYM_KELVIN as KV, GYM_ESTACIONES as EST } from './constantes.js';
 import { PISO_GYM as F, PALETA_GYM as P, texturaAtlas, cilindroAtlas, orientar, celdaDisco, mancuernaGeo } from './gym.js';
-import { mat } from './util.js';
+import { mat, GEO_CAJA } from './util.js';
 import { sfx } from './sfx.js';
 
 // Gimnasio Power Camp: Kelvin atiende en el mostrador (cada vez que entrás te dice "¿Todo
@@ -250,7 +251,7 @@ export class Gimnasio {
     escena.add(this.barraJalon, this.cable);
     this.ponerCable();
     // Brazos del pec dec (pivote arriba del hombro, con el rodillo vertical en la punta).
-    this.brazosPec = [-1, 1].map((s) => {
+    const brazoPec = (s) => {
       const g = new THREE.Group();
       const brazo = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.18, 0.18), mat('#24262a'));
       brazo.position.set(0.52, 0.25, 0);
@@ -260,8 +261,20 @@ export class Gimnasio {
       g.userData.lado = s;
       escena.add(g);
       return g;
-    });
+    };
+    this.brazosPec = [-1, 1].map(brazoPec);
     this.reposarPec();
+    // El otro pec dec (el del Shileno): los brazos quietos, abiertos, y su pila de placas.
+    for (const s of [-1, 1]) {
+      const g = brazoPec(s);
+      g.position.set(EST.pecdec2.x + s * 1.5, 4.15, ZT + 1.5 + 0.55);
+      g.rotation.y = s > 0 ? 0 : Math.PI;
+    }
+    const pila2 = crearPila(EST.pecdec2.x + 1.35, ZT);
+    pila2.mover(0, 0);
+    escena.add(pila2.grupo);
+    this.shileno = null;
+    this.profe = null;
     this.pilaPec = crearPila(EST.pecdec.x + 1.35, ZT);
     this.pilaJalon = crearPila(EST.jalon.x + 1.35, ZT);
     escena.add(this.pilaPec.grupo, this.pilaJalon.grupo);
@@ -287,6 +300,16 @@ export class Gimnasio {
     k.grupo.add(this.globo.sprite);
     this.escena.add(k.grupo);
     this.kelvin = k;
+    // El Shileno (siempre en su pec dec) y el profe.
+    const sh = crearPersonaje(SHILENO, await cargarCabeza(SHILENO));
+    const etiqueta = crearEtiqueta([{ texto: SHILENO.nombre, tam: 60, color: '#e9e9e9' }], 4);
+    etiqueta.sprite.position.y = 6.4;
+    sh.grupo.add(etiqueta.sprite);
+    this.shileno = enContenedor(this.escena, sh);
+    sentarShileno(this.shileno);
+    const profe = new Profe(this);
+    await profe.crear(this.escena);
+    this.profe = profe;
   }
 
   hablar(texto, segundos = 3.5) {
@@ -336,6 +359,7 @@ export class Gimnasio {
     const ej = EJERCICIOS[id];
     // Siempre arranca con el peso más liviano.
     const peso = ej.pesos[0];
+    this.profe?.liberar(id); // si el profe la estaba usando, te la deja
     this.alEntrar?.();
     // fatiga: cuánto de la serie ya gastó (0 descansado, 1 al fallo). serie: reps seguidas.
     this.entrenando = { id, peso, reps: 0, serie: 0, fatiga: 0, quieto: 0, rep: null, modelo: null, accesorios: [] };
@@ -517,6 +541,7 @@ export class Gimnasio {
     e.fatiga = Math.min(1, e.fatiga + e.costo);
     sfx.pesa();
     if (lucha) this.ui.toast('¡Vamos! Subió', 'ok');
+    this.profe?.alRep(e.id, jugador);
     if (jugador.personaje?.id === 'bauti' && jugador.estado) {
       const antes = fisico(jugador.personaje, jugador.estado);
       // Las reps pesadas y las peleadas al fallo valen más.
@@ -688,6 +713,8 @@ export class Gimnasio {
       return;
     }
     const k = this.kelvin;
+    // El profe anda solo por el gym (si estás lejos, ni se calcula).
+    if (Math.hypot(jugador.pos.x - (G.x0 + G.x1) / 2, jugador.pos.z - (G.z0 + G.z1) / 2) < 160) this.profe?.actualizar(dt, jugador);
     // Cada vez que entrás: "¿Todo bien bro?" y te ofrece la mano.
     const adentro = jugando && this.dentro(jugador.pos);
     if (adentro && !this.estabaAdentro) {
@@ -765,4 +792,642 @@ export function moverChoque(c, modelos) {
     if (hombro.distanceTo(c.punto) > 2.6 && f > 0.5) brazoI.codo.rotation.x *= 0.2; // de lejos estira el brazo entero
   }
   return fin;
+}
+
+// ======================= El Shileno y El profe que no es profe =======================
+// El Shileno: SIEMPRE sentado en el segundo pec dec (el de la derecha) mirando el celu. No se
+// mueve ni habla. El profe que no es profe: enorme, con el jogging Jordan y las TN de la tienda
+// y una musculosa finita que le deja ver todos los músculos y los tatuajes (sacados de sus fotos
+// con herramientas/gym_nuevos.py). Anda por el gym: a veces hace una máquina, a veces se mira
+// en el espejo sacando bíceps y, de vez en cuando, si estás entrenando, viene a corregirte.
+export const SHILENO = {
+  id: 'shileno', nombre: 'El Shileno', foto: 'shileno.jpeg', pelo: '#2b211b', peinado: 'ondulado',
+  remera: '#111216', pantalon: '#121316', remeraFotos: { frente: 'ropa/shileno_frente.jpg', tela: 'ropa/shileno_tela.jpg' },
+};
+export const PROFE = {
+  id: 'profe', nombre: 'El profe que no es profe', foto: 'profe.jpeg', piel: '#d9a287', pelo: '#1d1714', peinado: 'rapado',
+  remera: '#34373c', pantalon: '#151419', musculo: 1.05,
+};
+const ROPA_PROFE = { piernas: 'joggingjordan', pies: 'niketn' };
+const TATUAJES = ['pecho', 'estrellas', 'antebrazo'];
+const MUSCULOSA = '#34373c';
+const CORRECCIONES = {
+  curl: ['Bro, no balancees el cuerpo: los codos quietos, pegados al torso', 'Bro, bajá hasta estirar el brazo entero. Media rep no cuenta', 'Bro, subí controlado y apretá arriba un segundo'],
+  banca: ['Bro, juntá las escápulas y sacá pecho antes de bajar', 'Bro, la barra baja hasta el pecho, no hasta la mitad', 'Bro, los pies firmes en el piso y no rebotes la barra en el pecho'],
+  dominadas: ['Bro, subí hasta pasar la pera por arriba de la barra', 'Bro, nada de patear: bajá lento hasta estirar los brazos', 'Bro, tirá con la espalda, no con los brazos'],
+  pecdec: ['Bro, cerrá apretando el pecho, no tires con los brazos', 'Bro, la espalda pegada al respaldo y los codos a la altura de los hombros', 'Bro, volvé lento, que el peso no te abra los brazos'],
+  jalon: ['Bro, la barra va al pecho, nunca atrás de la nuca', 'Bro, sacá pecho y llevá los codos para abajo y atrás', 'Bro, no te tires para atrás: el torso casi quieto'],
+};
+
+// ---------- El cuerpo del profe ----------
+// Todo de bloques (como el resto), pero con cada músculo aparte: pectorales, trapecios,
+// dorsales que abren la espalda en V, hombros, bíceps, tríceps (cabeza larga y lateral),
+// antebrazos y el cuello. La piel lleva el relieve pintado (luces y sombras de cada músculo) y
+// arriba los tatuajes; la musculosa es una tira finita adelante y la espalda de nadador atrás.
+const SOMBRA = (a) => `rgba(80,36,18,${a * 0.8})`;
+const LUZ = (a) => `rgba(255,238,224,${a})`;
+const TONOS = [0.92, 0.92, 1.04, 0.78, 1, 0.9]; // +x, -x, arriba, abajo, frente, atrás
+
+function lienzo(w, h, piel, dibujar) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = piel;
+  g.fillRect(0, 0, w, h);
+  dibujar?.(g, w, h);
+  return c;
+}
+
+// Bulto: el centro más claro y los bordes más oscuros, así de lejos se ve redondeado.
+function relieve(g, w, h, f = 1, cx = 0.5, cy = 0.42) {
+  const r = g.createRadialGradient(w * cx, h * cy, Math.min(w, h) * 0.04, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
+  r.addColorStop(0, LUZ(0.24 * f));
+  r.addColorStop(0.5, LUZ(0));
+  r.addColorStop(1, SOMBRA(0.5 * f));
+  g.fillStyle = r;
+  g.fillRect(0, 0, w, h);
+}
+
+// Líneas (en proporción del lienzo), con un poco de desenfoque para que parezcan sombras.
+function trazos(g, w, h, lista, color, ancho, desenfoque = 0) {
+  g.save();
+  if (desenfoque) g.filter = `blur(${desenfoque}px)`;
+  g.strokeStyle = color;
+  g.lineWidth = ancho;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  for (const puntos of lista) {
+    g.beginPath();
+    puntos.forEach(([x, y], i) => (i ? g.lineTo(x * w, y * h) : g.moveTo(x * w, y * h)));
+    g.stroke();
+  }
+  g.restore();
+}
+
+function mancha(g, w, h, [x, y, rx, ry], color, desenfoque = 4) {
+  g.save();
+  g.filter = `blur(${desenfoque}px)`;
+  g.fillStyle = color;
+  g.beginPath();
+  g.ellipse(x * w, y * h, rx * w, ry * h, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
+
+// Un pedazo del tatuaje (sx0..sy1 en proporción de la imagen) en un rectángulo del lienzo.
+function tatuar(g, w, h, img, [x, y, an, al], [sx0, sy0, sx1, sy1] = [0, 0, 1, 1], espejo = false) {
+  if (!img) return;
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  g.save();
+  g.globalAlpha = 0.92;
+  if (espejo) {
+    g.translate(w * (x * 2 + an), 0);
+    g.scale(-1, 1);
+  }
+  g.drawImage(img, sx0 * iw, sy0 * ih, (sx1 - sx0) * iw, (sy1 - sy0) * ih, x * w, y * h, an * w, al * h);
+  g.restore();
+}
+
+// Tribal polinesio del hombro derecho (como el de las fotos): arcos con "dientes de tiburón"
+// en el hombro, bandas en el brazo y la punta que entra en el pecho.
+const TINTA = 'rgba(28,34,48,0.88)';
+function dientes(g, x0, x1, y0, y1, n, invertir = false) {
+  const paso = (x1 - x0) / n;
+  for (let i = 0; i < n; i++) {
+    g.beginPath();
+    g.moveTo(x0 + i * paso, invertir ? y0 : y1);
+    g.lineTo(x0 + (i + 0.5) * paso, invertir ? y1 : y0);
+    g.lineTo(x0 + (i + 1) * paso, invertir ? y0 : y1);
+    g.closePath();
+    g.fill();
+  }
+}
+function tribal(g, w, h, parte) {
+  g.save();
+  g.fillStyle = TINTA;
+  g.strokeStyle = TINTA;
+  if (parte === 'hombro') {
+    // Sol de arcos con dientes alrededor, y abajo una fila de puntas de lanza.
+    g.lineWidth = w * 0.05;
+    for (const r of [0.2, 0.34]) { g.beginPath(); g.arc(w * 0.5, 0, w * r, 0, Math.PI); g.stroke(); }
+    for (let i = 0; i < 12; i++) {
+      const a0 = (i / 12) * Math.PI;
+      const a1 = ((i + 1) / 12) * Math.PI;
+      const am = (a0 + a1) / 2;
+      g.beginPath();
+      g.moveTo(w * 0.5 + Math.cos(a0) * w * 0.42, Math.sin(a0) * w * 0.42);
+      g.lineTo(w * 0.5 + Math.cos(am) * w * 0.6, Math.sin(am) * w * 0.6);
+      g.lineTo(w * 0.5 + Math.cos(a1) * w * 0.42, Math.sin(a1) * w * 0.42);
+      g.closePath();
+      g.fill();
+    }
+    g.fillRect(0, h * 0.7, w, h * 0.05);
+    dientes(g, 0, w, h * 0.78, h * 0.98, 7);
+  } else if (parte === 'brazo') {
+    g.fillRect(0, 0, w, h * 0.05);
+    dientes(g, 0, w, h * 0.07, h * 0.24, 6, true);
+    g.fillRect(0, h * 0.27, w, h * 0.04);
+    // Puntas de lanza.
+    for (let i = 0; i < 5; i++) {
+      const x = w * (0.1 + i * 0.2);
+      g.beginPath();
+      g.moveTo(x - w * 0.08, h * 0.48);
+      g.lineTo(x, h * 0.34);
+      g.lineTo(x + w * 0.08, h * 0.48);
+      g.lineTo(x, h * 0.42);
+      g.closePath();
+      g.fill();
+    }
+    // Olas y otra fila de dientes, que termina antes del codo.
+    g.lineWidth = h * 0.045;
+    g.beginPath();
+    for (let x = 0; x <= w; x += 2) g.lineTo(x, h * (0.6 + 0.05 * Math.sin((x / w) * Math.PI * 4)));
+    g.stroke();
+    g.fillRect(0, h * 0.7, w, h * 0.04);
+    dientes(g, 0, w, h * 0.76, h * 0.9, 6);
+  } else {
+    // Pecho: arcos que salen del hombro (esquina de arriba de afuera) con dientes.
+    const cx = parte === 'pechoIzq' ? 0 : w;
+    g.lineWidth = w * 0.045;
+    for (const r of [0.3, 0.52]) { g.beginPath(); g.arc(cx, 0, w * r, 0, Math.PI); g.stroke(); }
+    for (let i = 0; i < 10; i++) {
+      const a0 = (i / 10) * Math.PI;
+      const a1 = ((i + 1) / 10) * Math.PI;
+      const am = (a0 + a1) / 2;
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a0) * w * 0.34, Math.sin(a0) * w * 0.34);
+      g.lineTo(cx + Math.cos(am) * w * 0.48, Math.sin(am) * w * 0.48);
+      g.lineTo(cx + Math.cos(a1) * w * 0.34, Math.sin(a1) * w * 0.34);
+      g.closePath();
+      g.fill();
+    }
+  }
+  g.restore();
+}
+
+function cuerpoProfe(tatus) {
+  return ({ cuerpo, brazoI, brazoD, torso, anchoTorso: A, fondoTorso: D, grosorBrazo, matPiel, extras }) => {
+    const G = grosorBrazo * 0.9; // los brazos, un poco más finos que el muñeco base (y más pegados)
+    const piel = `#${matPiel.color.clone().multiplyScalar(1 / 0.87).getHexString()}`; // como la cara
+    const cache = new Map();
+    const material = (c, i) => {
+      const k = `${i}`;
+      if (!cache.has(c)) cache.set(c, {});
+      const porTono = cache.get(c);
+      if (!porTono[k]) {
+        const t = texturaDeCanvas(c);
+        const m = new THREE.MeshBasicMaterial({ map: t, color: new THREE.Color(TONOS[i], TONOS[i], TONOS[i]) });
+        extras.push(t, m);
+        porTono[k] = m;
+      }
+      return porTono[k];
+    };
+    const liso = lienzo(32, 32, piel, (g, w, h) => relieve(g, w, h, 0.7));
+    // caras: { frente, atras, ext, int, arriba, abajo } (lienzos); ext/int: lado de afuera/adentro.
+    const pieza = (padre, [w, h, d], [x, y, z], caras = {}, lado = 1, rot = null, geo = GEO_CAJA) => {
+      const c = (n) => caras[n] || caras.todo || liso;
+      const px = lado > 0 ? c('ext') : c('int');
+      const nx = lado > 0 ? c('int') : c('ext');
+      const lista = [px, nx, c('arriba'), c('abajo'), c('frente'), c('atras')].map(material);
+      const m = new THREE.Mesh(geo, lista);
+      m.scale.set(w, h, d);
+      m.position.set(x, y, z);
+      if (rot) m.rotation.set(...rot);
+      padre.add(m);
+      return m;
+    };
+
+    // ---- Lo de antes (bloques lisos) se esconde ----
+    torso.visible = false;
+    for (const b of [brazoI, brazoD]) {
+      for (const h of b.children) if (h.isMesh) h.visible = false;
+      for (const h of b.codo.children) if (h.isMesh) h.visible = false;
+    }
+
+    // ---- Torso en V (ancho de hombros, angosto de cintura) ----
+    const ahusado = GEO_CAJA.clone();
+    const pos = ahusado.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const t = pos.getY(i) + 0.5;
+      pos.setX(i, pos.getX(i) * (0.72 + 0.28 * t));
+      pos.setZ(i, pos.getZ(i) * (0.84 + 0.16 * t));
+    }
+    extras.push(ahusado);
+    const frente = lienzo(192, 128, piel, (g, w, h) => {
+      relieve(g, w, h, 0.6, 0.5, 0.6);
+      // Abdominales: tres filas de dos a cada lado de la línea del medio.
+      for (const fila of [0, 1, 2]) {
+        for (const lado of [-1, 1]) {
+          const cx = 0.5 + lado * 0.1;
+          const cy = 0.5 + fila * 0.15;
+          mancha(g, w, h, [cx, cy, 0.045, 0.06], LUZ(0.3), 3);
+          trazos(g, w, h, [[[cx - 0.05, cy + 0.07], [cx + 0.05, cy + 0.07]], [[cx + lado * 0.05, cy - 0.07], [cx + lado * 0.05, cy + 0.07]]], SOMBRA(0.45), 2.5, 1.2);
+        }
+      }
+      trazos(g, w, h, [[[0.5, 0.36], [0.5, 1]]], SOMBRA(0.5), 3, 1.5);
+      // Serratos (los dedos al costado de las costillas) y oblicuos.
+      for (const lado of [-1, 1]) {
+        const x0 = 0.5 + lado * 0.24;
+        trazos(g, w, h, [0, 1, 2, 3].map((i) => [[x0, 0.3 + i * 0.07], [x0 + lado * 0.1, 0.27 + i * 0.07]]), SOMBRA(0.4), 2, 1);
+        trazos(g, w, h, [[[0.5 + lado * 0.2, 0.62], [0.5 + lado * 0.15, 0.85], [0.5 + lado * 0.04, 1]]], SOMBRA(0.45), 3, 1.5);
+      }
+      // Sombra de los pectorales arriba.
+      g.fillStyle = SOMBRA(0.35);
+      g.fillRect(0, 0, w, h * 0.3);
+      // Las tres estrellas del costado izquierdo de la panza.
+      tatuar(g, w, h, tatus.estrellas, [0.7, 0.46, 0.2, 0.32]);
+      // La musculosa: una tira finita en el medio (con el logo) y los breteles arriba.
+      g.fillStyle = MUSCULOSA;
+      g.fillRect(w * 0.455, h * 0.42, w * 0.09, h * 0.58);
+      g.fillRect(w * 0.445, 0, w * 0.03, h * 0.45);
+      g.fillRect(w * 0.525, 0, w * 0.03, h * 0.45);
+      g.fillStyle = '#e9e9e9';
+      for (let i = 0; i < 3; i++) g.fillRect(w * (0.49 + i * 0.012), h * (0.52 - i * 0.012), w * 0.007, h * (0.03 + i * 0.012));
+    });
+    const espalda = lienzo(192, 128, piel, (g, w, h) => {
+      relieve(g, w, h, 0.6, 0.5, 0.35);
+      // Dorsales (de la axila a la cintura), redondo mayor, romboides, la columna y los lumbares.
+      for (const lado of [-1, 1]) {
+        trazos(g, w, h, [[[0.5 + lado * 0.44, 0.12], [0.5 + lado * 0.36, 0.45], [0.5 + lado * 0.16, 0.86]]], SOMBRA(0.5), 4, 2);
+        mancha(g, w, h, [0.5 + lado * 0.3, 0.35, 0.14, 0.2], LUZ(0.22), 6);
+        trazos(g, w, h, [[[0.5 + lado * 0.1, 0.08], [0.5 + lado * 0.27, 0.22], [0.5 + lado * 0.4, 0.2]]], SOMBRA(0.4), 3, 1.5);
+        trazos(g, w, h, [[[0.5 + lado * 0.07, 0.2], [0.5 + lado * 0.17, 0.42]]], SOMBRA(0.35), 2.5, 1.5);
+        mancha(g, w, h, [0.5 + lado * 0.06, 0.78, 0.04, 0.2], LUZ(0.28), 3);
+      }
+      trazos(g, w, h, [[[0.5, 0.18], [0.5, 1]]], SOMBRA(0.55), 3.5, 1.5);
+      // Espalda de nadador: los breteles se juntan en el medio y bajan a la tira de abajo.
+      g.fillStyle = MUSCULOSA;
+      for (const lado of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(w * (0.5 + lado * 0.2), 0);
+        g.lineTo(w * (0.5 + lado * 0.15), 0);
+        g.lineTo(w * (0.5 + lado * 0.02), h * 0.42);
+        g.lineTo(w * (0.5 + lado * 0.07), h * 0.42);
+        g.closePath();
+        g.fill();
+      }
+      g.fillRect(w * 0.45, h * 0.4, w * 0.1, h * 0.2);
+      g.fillRect(w * 0.4, h * 0.58, w * 0.2, h * 0.42);
+    });
+    const costado = lienzo(64, 128, piel, (g, w, h) => {
+      relieve(g, w, h, 0.6);
+      trazos(g, w, h, [0, 1, 2, 3].map((i) => [[0.15, 0.3 + i * 0.08], [0.85, 0.24 + i * 0.08]]), SOMBRA(0.35), 2, 1);
+    });
+    pieza(cuerpo, [A, 2, D], [0, 1, 0], { frente, atras: espalda, ext: costado, int: costado }, 1, null, ahusado);
+
+    // ---- Pectorales: grandes, con la sombra de abajo y las fibras hacia la axila ----
+    for (const lado of [-1, 1]) {
+      const pec = lienzo(128, 96, piel, (g, w, h) => {
+        relieve(g, w, h, 0.9, lado > 0 ? 0.55 : 0.45, 0.4);
+        const adentro = lado > 0 ? 0 : 1; // el lado del esternón (en la textura)
+        const afuera = 1 - adentro;
+        trazos(g, w, h, [0, 1, 2, 3, 4].map((i) => [[adentro + (afuera - adentro) * 0.08, 0.22 + i * 0.14], [afuera - (afuera - adentro) * 0.08, 0.12 + i * 0.06]]), SOMBRA(0.18), 2, 1);
+        mancha(g, w, h, [0.5, 1.02, 0.6, 0.2], SOMBRA(0.6), 4);
+        mancha(g, w, h, [adentro, 0.5, 0.06, 0.6], SOMBRA(0.4), 3);
+        if (lado > 0) tatuar(g, w, h, tatus.pecho, [0.08, 0.16, 0.86, 0.5]);
+        else tribal(g, w, h, 'pecho'); // la punta del tribal del hombro derecho
+        // Bretel de la musculosa por el borde de adentro.
+        g.fillStyle = MUSCULOSA;
+        g.fillRect(w * (adentro ? 0.84 : 0.02), 0, w * 0.14, h);
+      });
+      pieza(cuerpo, [A * 0.46, 0.8, 0.36], [lado * A * 0.235, 1.5, D / 2 + 0.12], { frente: pec }, lado, [-0.06, lado * 0.12, 0]);
+    }
+
+    // ---- Trapecios, cuello y dorsales ----
+    const trap = lienzo(64, 48, piel, (g, w, h) => relieve(g, w, h, 0.8, 0.5, 0.3));
+    for (const lado of [-1, 1]) {
+      pieza(cuerpo, [A * 0.32, 0.46, D * 0.72], [lado * A * 0.2, 2.02, -0.08], { todo: trap }, lado, [0, 0, -lado * 0.42]);
+      const dorsal = lienzo(48, 128, piel, (g, w, h) => {
+        relieve(g, w, h, 0.8, 0.5, 0.3);
+        trazos(g, w, h, [[[0.2, 0.1], [0.8, 0.9]], [[0.5, 0.05], [0.9, 0.6]]], SOMBRA(0.3), 2, 1.5);
+      });
+      pieza(cuerpo, [0.42, 1.2, D * 0.76], [lado * A * 0.46, 1.25, -0.1], { todo: dorsal }, lado, [0, 0, lado * 0.22]);
+    }
+    pieza(cuerpo, [0.85, 0.36, 0.8], [0, 2.02, -0.02], { todo: liso });
+
+    // ---- Brazos ----
+    // Del lado derecho (brazoI, en -x): el tribal del hombro y el brazo. Del izquierdo (brazoD):
+    // la manga del antebrazo. Reloj en la muñeca derecha y la pulsera negra en la izquierda.
+    for (const [b, lado] of [[brazoI, -1], [brazoD, 1]]) {
+      const conTribal = lado < 0;
+      b.position.x -= lado * 0.08; // pegado al torso
+      const manga = lado > 0 ? tatus.antebrazo : null;
+      const deltoide = (cara) => lienzo(96, 96, piel, (g, w, h) => {
+        relieve(g, w, h, 1, 0.5, 0.35);
+        // Las tres cabezas del hombro: fibras en abanico que bajan a una punta.
+        trazos(g, w, h, [0.2, 0.35, 0.5, 0.65, 0.8].map((x) => [[x, 0.05], [0.5 + (x - 0.5) * 0.4, 0.95]]), SOMBRA(0.18), 2, 1);
+        if (cara === 'ext') trazos(g, w, h, [[[0.3, 0.1], [0.42, 0.9]], [[0.7, 0.1], [0.58, 0.9]]], SOMBRA(0.35), 2.5, 1.5);
+        mancha(g, w, h, [0.5, 1.05, 0.5, 0.15], SOMBRA(0.5), 3);
+        if (conTribal && cara !== 'int' && cara !== 'arriba') tribal(g, w, h, 'hombro');
+      });
+      const brazo = (cara) => lienzo(96, 96, piel, (g, w, h) => {
+        relieve(g, w, h, 0.9);
+        if (cara === 'atras') trazos(g, w, h, [[[0.25, 0.2], [0.5, 0.75], [0.75, 0.2]]], SOMBRA(0.5), 3, 1.5); // la herradura del tríceps
+        if (cara === 'frente') trazos(g, w, h, [[[0.62, 0.1], [0.55, 0.45], [0.6, 0.9]]], 'rgba(70,90,120,0.35)', 2.5, 0.8); // vena
+        if (conTribal && cara !== 'int' && cara !== 'arriba') tribal(g, w, h, 'brazo');
+      });
+      const caras = (f) => ({ frente: f('frente'), atras: f('atras'), ext: f('ext'), int: f('int'), arriba: f('arriba') });
+      pieza(b, [G * 1.18, 0.8, G * 1.15], [lado * 0.06, -0.22, 0], caras(deltoide), lado);
+      pieza(b, [G * 0.9, 0.86, G * 0.9], [0, -0.62, 0], caras(brazo), lado);
+      // Bíceps (con el pico) y tríceps (cabeza larga atrás y la lateral de afuera).
+      const biceps = lienzo(64, 64, piel, (g, w, h) => {
+        relieve(g, w, h, 1.1, 0.5, 0.35);
+        trazos(g, w, h, [[[0.55, 0.05], [0.5, 0.5], [0.58, 0.95]]], 'rgba(70,90,120,0.4)', 2.5, 0.8);
+      });
+      pieza(b, [G * 0.7, 0.6, 0.36], [0, -0.64, G * 0.45 + 0.12], { todo: biceps, frente: biceps }, lado);
+      pieza(b, [G * 0.48, 0.34, 0.2], [0, -0.6, G * 0.45 + 0.34], { todo: biceps }, lado);
+      const triceps = lienzo(64, 64, piel, (g, w, h) => {
+        relieve(g, w, h, 1.1, 0.5, 0.3);
+        trazos(g, w, h, [[[0.2, 0.3], [0.5, 0.85], [0.8, 0.3]]], SOMBRA(0.45), 2.5, 1.2);
+      });
+      pieza(b, [G * 0.76, 0.64, 0.3], [0, -0.52, -(G * 0.45 + 0.1)], { todo: triceps }, lado);
+      pieza(b, [0.26, 0.56, G * 0.62], [lado * (G * 0.45 + 0.08), -0.56, -0.14], { todo: triceps }, lado);
+      // Antebrazo: ancho arriba (con el braquiorradial) y más fino en la muñeca; abajo la mano.
+      const antebrazo = (parte) => (cara) => lienzo(96, 96, piel, (g, w, h) => {
+        relieve(g, w, h, 0.85);
+        if (cara === 'frente') trazos(g, w, h, [[[0.35, 0], [0.45, 0.5], [0.4, 1]]], 'rgba(70,90,120,0.35)', 2, 0.8);
+        trazos(g, w, h, [[[0.25, 0], [0.35, 1]], [[0.72, 0], [0.62, 1]]], SOMBRA(0.2), 2, 1.2);
+        tatuar(g, w, h, manga, [0, 0, 1, 1], parte ? [0, 0.55, 1, 1] : [0, 0, 1, 0.55], cara === 'int');
+      });
+      pieza(b.codo, [G * 0.96, 0.5, G * 0.88], [0, -0.25, 0], caras(antebrazo(0)), lado);
+      pieza(b.codo, [0.32, 0.46, 0.36], [lado * G * 0.32, -0.24, G * 0.34], { todo: liso }, lado);
+      pieza(b.codo, [G * 0.74, 0.36, G * 0.68], [0, -0.66, 0], caras(antebrazo(1)), lado);
+      const mano = new THREE.Mesh(GEO_CAJA, matPiel);
+      mano.scale.set(G * 0.62, 0.3, G * 0.55);
+      mano.position.y = -0.98;
+      b.codo.add(mano);
+      const reloj = new THREE.Mesh(GEO_CAJA, mat('#121315'));
+      reloj.scale.set(G * 0.78, lado < 0 ? 0.16 : 0.07, G * 0.72);
+      reloj.position.y = -0.84;
+      b.codo.add(reloj);
+      if (lado < 0) {
+        const pantalla = new THREE.Mesh(GEO_CAJA, mat('#c9ccd0'));
+        pantalla.scale.set(0.05, 0.13, 0.28);
+        pantalla.position.set(-G * 0.39 - 0.02, -0.84, 0);
+        b.codo.add(pantalla);
+      }
+    }
+  };
+}
+
+// Algo que se pone en una máquina con posar() (el profe): el muñeco va adentro de un contenedor.
+function enContenedor(escena, modelo) {
+  const contenedor = new THREE.Group();
+  contenedor.add(modelo.grupo);
+  escena.add(contenedor);
+  return { modelo, contenedor, pos: new THREE.Vector3(), vel: new THREE.Vector3(), angulo: 0, sombra: new THREE.Object3D() };
+}
+
+// Pasillos del gym por donde camina el profe (así no atraviesa las máquinas): uno a lo largo del
+// fondo, delante de las torres, y otro que baja hasta el mostrador.
+const PASILLO_Z = G.z0 + 8.5;
+const PASILLO_X = G.x0 + 27;
+const pasilloMasCerca = (x, z) => {
+  const a = [THREE.MathUtils.clamp(x, G.x0 + 8, G.x1 - 6), PASILLO_Z];
+  const b = [PASILLO_X, THREE.MathUtils.clamp(z, PASILLO_Z, G.z1 - 12)];
+  return Math.hypot(a[0] - x, a[1] - z) < Math.hypot(b[0] - x, b[1] - z) ? a : b;
+};
+function camino(desde, hasta) {
+  const a = pasilloMasCerca(...desde);
+  const b = pasilloMasCerca(...hasta);
+  const lista = [a];
+  // Si cambian de pasillo, pasa por la esquina.
+  if (a[1] === PASILLO_Z && b[0] === PASILLO_X && b[1] !== PASILLO_Z) lista.push([PASILLO_X, PASILLO_Z]);
+  else if (a[0] === PASILLO_X && a[1] !== PASILLO_Z && b[1] === PASILLO_Z) lista.push([PASILLO_X, PASILLO_Z]);
+  lista.push(b, hasta);
+  return lista;
+}
+const ESPEJO = { x: G.x0 + 6, z: G.z0 + 25 }; // donde se para a mirarse (y sacar bíceps)
+
+class Profe {
+  constructor(gym) {
+    this.gym = gym;
+    this.cosa = null; // lo de enContenedor
+    this.accion = null; // { tipo: 'maquina' | 'espejo' | 'corregir', ... }
+    this.ruta = [];
+    this.proxima = 25; // segundos hasta que pueda venir a corregirte
+    this.estacion = null;
+  }
+
+  async crear(escena) {
+    const tatus = Object.fromEntries(await Promise.all(TATUAJES.map(async (t) => [t, await cargarImagen(`assets/ropa/profe_tatu_${t}.png`)])));
+    const [cabeza, ropa] = await Promise.all([cargarCabeza(PROFE), vestido(ROPA_PROFE)]);
+    const m = crearPersonaje({ ...PROFE, detallar: cuerpoProfe(tatus) }, cabeza, ropa);
+    const nombre = crearEtiqueta([{ texto: PROFE.nombre, tam: 56, color: '#ffd54f' }], 6);
+    nombre.sprite.position.y = 6.9;
+    m.grupo.add(nombre.sprite);
+    this.globo = crearEtiqueta([{ texto: ' ', tam: 50, color: '#ffffff' }], 8);
+    this.globo.sprite.position.y = 8.5;
+    this.globo.sprite.visible = false;
+    m.grupo.add(this.globo.sprite);
+    this.cosa = enContenedor(escena, m);
+    this.ponerEn(PASILLO_X, G.z1 - 14);
+    this.siguiente();
+  }
+
+  ponerEn(x, z) {
+    this.cosa.pos.set(x, F, z);
+    this.cosa.contenedor.position.set(x, F, z);
+  }
+
+  hablar(texto, segundos = 5) {
+    this.globo.actualizar([{ texto, tam: 50, color: '#ffffff' }]);
+    this.globo.sprite.visible = true;
+    this.tiempoGlobo = segundos;
+    this.gym.ui.toast(`${PROFE.nombre}: "${texto}"`, 'info');
+  }
+
+  // Elige qué hacer: una máquina libre (casi siempre) o mirarse al espejo.
+  siguiente() {
+    const usada = this.gym.entrenando?.id;
+    const libres = Object.keys(ENTRADAS).filter((id) => id !== usada && id !== this.ultima);
+    if (Math.random() < 0.72 && libres.length) {
+      const id = libres[Math.floor(Math.random() * libres.length)];
+      this.ultima = id;
+      this.ir(ENTRADAS[id], { tipo: 'maquina', id, reps: 8 + Math.floor(Math.random() * 5), rep: 0, t: 0 });
+    } else {
+      this.ir([ESPEJO.x, ESPEJO.z], { tipo: 'espejo', t: 0, dur: 7 + Math.random() * 6 });
+    }
+  }
+
+  ir(destino, accion) {
+    this.soltar();
+    const { brazoI, brazoD } = this.cosa.modelo.partes;
+    for (const b of [brazoI, brazoD]) { b.rotation.set(0, 0, 0); b.codo.rotation.set(0, 0, 0); }
+    const p = this.cosa.pos;
+    this.ruta = camino([p.x, p.z], destino);
+    this.accion = { ...accion, enCamino: true };
+  }
+
+  // Deja la máquina en la que estaba (y la deja como estaba).
+  soltar() {
+    const id = this.estacion;
+    if (!id) return;
+    this.estacion = null;
+    const g = this.gym;
+    for (const a of this.mancuernas || []) a.parent?.remove(a);
+    this.mancuernas = null;
+    soltarPose(this.cosa.modelo);
+    if (id === 'banca') g.barraBanca.position.copy(g.reposoBanca);
+    if (id === 'jalon') { g.barraJalon.position.copy(g.reposoJalon); g.ponerCable(); g.pilaJalon.mover(0, 0); }
+    if (id === 'pecdec') { g.reposarPec(); g.pilaPec.mover(0, 0); }
+    const [x, z] = ENTRADAS[id];
+    this.ponerEn(x, z);
+  }
+
+  // El jugador quiere la máquina que está usando: se la deja.
+  liberar(id) {
+    if (this.estacion === id || (this.accion?.tipo === 'maquina' && this.accion.id === id)) this.siguiente();
+  }
+
+  // Terminó una rep el jugador: a veces viene a corregirle la técnica.
+  alRep(id, jugador) {
+    if (this.proxima > 0 || this.accion?.tipo === 'corregir' || Math.random() > 0.3) return;
+    const [x, z] = ENTRADAS[id];
+    // Se para entre la máquina y el medio del gym, mirándote.
+    const dx = PASILLO_X - x;
+    const dz = (G.z0 + G.z1) / 2 - z;
+    const d = Math.hypot(dx, dz) || 1;
+    const lista = CORRECCIONES[id];
+    this.ir([x + (dx / d) * 3.2, z + (dz / d) * 3.2], { tipo: 'corregir', id, t: 0, texto: lista[Math.floor(Math.random() * lista.length)], jugador });
+    this.proxima = 80 + Math.random() * 80;
+  }
+
+  actualizar(dt, jugador) {
+    const c = this.cosa;
+    if (!c) return;
+    const m = c.modelo;
+    if (this.proxima > 0) this.proxima -= dt;
+    if (this.tiempoGlobo > 0) {
+      this.tiempoGlobo -= dt;
+      if (this.tiempoGlobo <= 0) this.globo.sprite.visible = false;
+    }
+    const a = this.accion;
+    if (a.enCamino) {
+      // Caminando de punto en punto.
+      const [px, pz] = this.ruta[0];
+      const dx = px - c.pos.x;
+      const dz = pz - c.pos.z;
+      const largo = Math.hypot(dx, dz);
+      const paso = 6.5 * dt;
+      if (largo <= paso) {
+        c.pos.x = px;
+        c.pos.z = pz;
+        this.ruta.shift();
+        if (!this.ruta.length) this.llegar();
+      } else {
+        c.pos.x += (dx / largo) * paso;
+        c.pos.z += (dz / largo) * paso;
+        this.mirarA(Math.atan2(dx, dz), dt);
+      }
+      c.contenedor.position.copy(c.pos);
+      m.animar(dt, 6.5, true);
+      return;
+    }
+    if (a.tipo === 'maquina') {
+      if (this.gym.entrenando?.id === a.id) { this.siguiente(); return; }
+      a.t += dt / 1.9;
+      if (a.t >= 1) {
+        a.t = 0;
+        a.rep++;
+        if (a.rep >= a.reps) { this.siguiente(); return; }
+      }
+      this.gym.posar(a.id, c, curva(a.t), 70);
+    } else if (a.tipo === 'espejo') {
+      // Doble bíceps mirándose al espejo (la pared de la izquierda).
+      a.t += dt;
+      this.mirarA(-Math.PI / 2, dt);
+      m.animar(dt, 0, true);
+      const apriete = 0.15 * Math.sin(a.t * 2.5);
+      for (const [b, sd] of [[m.partes.brazoD, 1], [m.partes.brazoI, -1]]) {
+        const S = b.position;
+        const E = new THREE.Vector3(S.x + sd * LARGO_BRAZO, S.y + 0.1, S.z + 0.2);
+        const H = E.clone().add(new THREE.Vector3(-sd * (0.25 + apriete), LARGO_ANTEBRAZO * 0.95, 0.1));
+        brazoPorPuntos(b, E, H, new THREE.Vector3(0, 1, 0));
+      }
+      if (a.t > a.dur) {
+        for (const b of [m.partes.brazoD, m.partes.brazoI]) { b.rotation.set(0, 0, 0); b.codo.rotation.set(0, 0, 0); }
+        this.siguiente();
+      }
+    } else if (a.tipo === 'corregir') {
+      a.t += dt;
+      const j = a.jugador.pos;
+      this.mirarA(Math.atan2(j.x - c.pos.x, j.z - c.pos.z), dt);
+      m.animar(dt, 0, true);
+      // Te señala mientras te explica.
+      if (a.t < 4) {
+        m.grupo.updateMatrixWorld(true);
+        brazoA(m.partes.brazoD, m.partes.cuerpo.worldToLocal(new THREE.Vector3(j.x, F + 3.6, j.z)), new THREE.Vector3(1, -1, 0));
+      } else {
+        m.partes.brazoD.rotation.set(0, 0, 0);
+        m.partes.brazoD.codo.rotation.set(0, 0, 0);
+      }
+      if (a.t > 6) this.siguiente();
+    }
+  }
+
+  mirarA(objetivo, dt) {
+    const c = this.cosa;
+    let d = objetivo - c.contenedor.rotation.y;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    c.contenedor.rotation.y += d * Math.min(1, dt * 6);
+    c.angulo = c.contenedor.rotation.y;
+  }
+
+  llegar() {
+    const a = this.accion;
+    a.enCamino = false;
+    if (a.tipo === 'maquina') {
+      if (this.gym.entrenando?.id === a.id) { this.siguiente(); return; }
+      this.estacion = a.id;
+      if (a.id === 'curl') {
+        // Mancuernas de 20 en cada mano.
+        this.mancuernas = [this.cosa.modelo.partes.brazoI, this.cosa.modelo.partes.brazoD].map((b) => {
+          const mc = crearMancuerna(20);
+          mc.position.set(0, -LARGO_ANTEBRAZO, 0);
+          b.codo.add(mc);
+          return mc;
+        });
+      }
+    } else if (a.tipo === 'corregir') {
+      // Si ya dejaste de entrenar, no te dice nada.
+      if (this.gym.entrenando?.id === a.id) this.hablar(a.texto, 6);
+      else this.siguiente();
+    }
+  }
+}
+
+// El Shileno en el segundo pec dec: sentado, con el celu en la mano y la cabeza gacha mirándolo.
+function sentarShileno(cosa) {
+  const m = cosa.modelo;
+  const { cuerpo, cabeza, brazoI, brazoD, fondoTorso } = m.partes;
+  const x = EST.pecdec2.x;
+  const z = ZT + 1.5 + fondoTorso / 2 + 0.05;
+  cosa.contenedor.position.set(x, F + 1.5 + 0.45 - 2, z);
+  piernas(m, -1.5, 1.5, 0.12);
+  cabeza.rotation.x = 0.4;
+  const zc = fondoTorso / 2 + 0.68;
+  // Con una mano levanta el celu a la altura de la cara; la otra, apoyada en la pierna.
+  brazoA(brazoD, new THREE.Vector3(0.36, 1.86, zc + 0.45), new THREE.Vector3(0.7, -1, -0.3));
+  brazoA(brazoI, new THREE.Vector3(-0.75, 0.3, 1.25), new THREE.Vector3(-1, 0, -0.4));
+  // El celu: funda azul (como el de la foto) y la pantalla prendida mirando a la cara.
+  const pantalla = document.createElement('canvas');
+  pantalla.width = 48;
+  pantalla.height = 96;
+  const g = pantalla.getContext('2d');
+  g.fillStyle = '#f4f6f8';
+  g.fillRect(0, 0, 48, 96);
+  for (let i = 0; i < 3; i++) {
+    g.fillStyle = ['#e1306c', '#3b82f6', '#f59e0b'][i];
+    g.fillRect(4, 8 + i * 30, 40, 20);
+    g.fillStyle = '#9aa3ad';
+    g.fillRect(4, 30 + i * 30, 26, 3);
+  }
+  const funda = mat('#24467a');
+  const celu = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.95, 0.08), [funda, funda, funda, funda, funda, new THREE.MeshBasicMaterial({ map: texturaDeCanvas(pantalla) })]);
+  celu.position.set(0.3, 2.22, zc + 0.5);
+  celu.rotation.x = 0.3;
+  cuerpo.add(celu);
 }

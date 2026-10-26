@@ -349,6 +349,11 @@ export function mostrador(k, g) {
   logo.position.set(xp - 0.02, 4.6, KV.z);
   logo.rotation.y = -Math.PI / 2;
   g.add(logo);
+  // El cuadro del gym, en la pared de la derecha, a la altura del mostrador (sin cartel, como todos).
+  const cuadro = k.pintura('cuadrogym.jpeg', 4.4, { carpeta: 'cuadros', marco: '#141414' });
+  cuadro.position.set(G.x1 - T - 0.08, 5.6, KV.z);
+  cuadro.rotation.y = -Math.PI / 2;
+  g.add(cuadro);
 }
 
 // ---------- Espejo y stand de mancuernas ----------
@@ -485,9 +490,9 @@ export function maquinas(k, g) {
     g.add(placa);
     return zt;
   };
-  for (const x of [G.x0 + 5, G.x0 + 11, EST.pecdec.x, G.x0 + 23, EST.jalon.x, G.x0 + 35, G.x0 + 41]) {
+  for (const x of [G.x0 + 5, G.x0 + 11, EST.pecdec.x, G.x0 + 23, EST.jalon.x, EST.pecdec2.x, G.x0 + 41]) {
     torre(x, x === EST.jalon.x ? 9.2 : 6.4);
-    if (x !== EST.pecdec.x && x !== EST.jalon.x) {
+    if (x !== EST.pecdec.x && x !== EST.pecdec2.x && x !== EST.jalon.x) {
       // Máquina de piernas/brazos genérica: asiento, respaldo y palanca con el rodillo.
       g.add(k.cajaDe(x - 0.6, F + 1.2, zt + 1.2, x + 0.6, F + 1.55, zt + 2.6, P.negro));
       g.add(k.noSolido(k.cajaDe(x - 0.6, F + 1.55, zt + 0.75, x + 0.6, F + 4.2, zt + 1.05, P.negro)));
@@ -501,11 +506,12 @@ export function maquinas(k, g) {
       g.add(k.noSolido(k.cilindro(0.12, 0.12, 0.2, '#e0a526', x + 0.95, F + 2.2, zt + 2.1, 8)));
     }
   }
-  // Pec dec: asiento y respaldo. Jalón: asiento y apoyo de rodillas.
-  const pd = EST.pecdec.x;
-  g.add(k.cajaDe(pd - 0.75, F + 1.15, zt + 1.6, pd + 0.75, F + 1.5, zt + 3.1, P.negro));
-  g.add(k.noSolido(k.cajaDe(pd - 0.2, F, zt + 2.0, pd + 0.2, F + 1.15, zt + 2.7, P.gris)));
-  g.add(k.cajaDe(pd - 0.75, F + 1.5, zt + 1.15, pd + 0.75, F + 5.6, zt + 1.5, P.negro));
+  // Los dos pec dec (el segundo es el del Shileno): asiento y respaldo. Jalón: asiento y apoyo de rodillas.
+  for (const pd of [EST.pecdec.x, EST.pecdec2.x]) {
+    g.add(k.cajaDe(pd - 0.75, F + 1.15, zt + 1.6, pd + 0.75, F + 1.5, zt + 3.1, P.negro));
+    g.add(k.noSolido(k.cajaDe(pd - 0.2, F, zt + 2.0, pd + 0.2, F + 1.15, zt + 2.7, P.gris)));
+    g.add(k.cajaDe(pd - 0.75, F + 1.5, zt + 1.15, pd + 0.75, F + 5.6, zt + 1.5, P.negro));
+  }
   const ja = EST.jalon.x;
   g.add(k.cajaDe(ja - 0.75, F + 1.15, zt + 3.0, ja + 0.75, F + 1.5, zt + 4.4, P.negro));
   g.add(k.noSolido(k.cajaDe(ja - 0.2, F, zt + 3.4, ja + 0.2, F + 1.15, zt + 4.0, P.gris)));
