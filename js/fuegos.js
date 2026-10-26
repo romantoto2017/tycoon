@@ -14,6 +14,7 @@ export class Fuegos {
     this.base = [];
     this.siguiente = 0;
     this.activo = false;
+    this.restante = 0; // segundos de show que quedan
     this.espera = 0;
     for (let i = 0; i < MAX; i++) this.pos[i * 3 + 1] = -999;
     const geo = new THREE.BufferGeometry();
@@ -43,7 +44,14 @@ export class Fuegos {
     }
   }
 
+  // Show de `segundos` (después se apaga solo; las últimas chispas terminan de caer).
+  lanzar(segundos) {
+    this.activo = true;
+    this.restante = segundos;
+  }
+
   actualizar(dt) {
+    if (this.activo && (this.restante -= dt) <= 0) this.activo = false;
     if (this.activo) {
       this.espera -= dt;
       if (this.espera <= 0) {

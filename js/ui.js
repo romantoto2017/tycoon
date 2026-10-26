@@ -234,7 +234,7 @@ export function abrirMisiones(lista, alCerrar) {
     li.innerHTML = `
       <div class="mision-cara"><img alt="" src="${m.cara || ''}"><span>${m.nombre}</span></div>
       <div class="mision-info">
-        <h3>${m.titulo}</h3>
+        <h3>${m.titulo} <span class="mision-premio${m.hecha ? ' cobrado' : ''}">${m.hecha ? 'Cobraste' : 'Premio'} $${formato(m.premioPlata || 0)}</span></h3>
         <p>${m.texto}</p>
         <div class="mision-barra" role="progressbar" aria-valuenow="${Math.round(m.avance * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.round(m.avance * 100)}%"></i></div>
         ${m.detalle || (!m.hecha && !m.tuya) ? `<small>${m.detalle}${!m.hecha && !m.tuya ? `${m.detalle ? ' · ' : ''}Solo con ${m.nombre}` : ''}</small>` : ''}

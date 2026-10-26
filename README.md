@@ -78,6 +78,8 @@ Solo Bauti cambia de cuerpo: cada repetición le suma puntos (`estado.bautiGym`)
 
 ## Misiones
 
+**Premios:** cada misión da plata al cumplirla: lo que más convenga entre un monto fijo según el % al que se desbloquea (unos 10 minutos de lo que se gana en ese momento de la partida) y unos minutos de lo que estás ganando cuando la cumplís, según lo difícil que es, con un tope para que dejarla para el final no rompa la partida. Ponerse trabado (Bauti, lejos la más difícil): 5 M o 20 minutos de ingreso, hasta 3.000 M. Rescatar al Cusi: 20 M o 6 minutos, hasta 600 M. Empilchado: 1.500 M o 3 minutos, hasta 6.000 M. El panel muestra el premio de cada una (y "Cobraste" cuando ya está). Las misiones cumplidas antes de que hubiera premios se cobran una vez al cargar (`estado.premios`).
+
 La sección de misiones aparece cuando la mansión llega al 15% (`MISIONES_DESDE`); antes no está el botón. Con el botón de la lista (al lado de la configuración, o la tecla M) se abre el panel de misiones. Las que piden un progreso mayor (`desde`, como la del Cusi al 50%) se ven grises con un "?" de piedra, sin decir cuánto falta, hasta que se llega; ahí avisa "Nueva misión desbloqueada". En el panel cada una es de un personaje, muestra su avance y se tilda cuando se cumple (`js/misiones.js`, guardadas en `estado.misiones`).
 
 - **Ponerse trabado (Bauti):** entrenar en el Power Camp hasta adelgazar y quedar musculoso del todo.
@@ -96,6 +98,14 @@ Cada minuto de juego hay un 0,5% de chance de que caiga la Mazza (está enamorad
 ## Moneda
 
 Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (en el HUD y en los bloques).
+
+## Helicóptero, terraza y bóveda
+
+- **Helicóptero** (`js/helicoptero.js`): cuando comprás el helipuerto, el helicóptero se puede manejar. Al lado aparece "Volar el helicóptero (E)". Adelante/atrás avanza, izquierda/derecha gira, y manteniendo saltar (Espacio o el botón) sube; si soltás, baja despacito hasta apoyarse (en el piso, un techo o la terraza). Solo te bajás cuando está apoyado. Choca con paredes y edificios, la cámara va más lejos y el aparato se inclina al avanzar y girar.
+- **Piscina infinita:** ahora va del pabellón hasta el helipuerto y llega al borde de atrás de la terraza; el agua queda al ras del vidrio y se derrama por afuera a una canaleta. Tiene escalones, luces abajo del agua y un deck de madera adelante.
+- **Jacuzzi y reposeras:** deck de madera, jacuzzi redondo de piedra con asiento, luz abajo del agua y burbujas (se puede meter uno), escalones, toallas y champagne; tres reposeras con almohadón a rayas y respaldo reclinado, mesitas con jugo, sombrilla grande cuadrada y macetas redondas.
+- **Bóveda de oro** (garage): cámara de acero con la puerta redonda gigante abierta (volante, pernos, bisagra), estantes llenos de lingotes, pilas de monedas, una montaña de oro y bolsas de plata con luz dorada adentro, el teclado de la clave, el cartel "BÓVEDA VECIBANDA" y afuera una tarima con la pirámide de lingotes.
+- **Fuegos artificiales** del final: 20 segundos al terminar la mansión, y nada más (ya no arrancan al cargar la partida).
 
 ## Muebles
 

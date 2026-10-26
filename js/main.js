@@ -120,6 +120,8 @@ async function iniciar() {
   let modo = 'menu';
   // ---------- Auto ----------
   let conduciendo = false;
+  let vehiculo = null; // el que estás manejando: tycoon.auto o tycoon.heli
+  let avisoHeli = false;
   const ejes = { x: 0, y: 0 };
   const tmpBajada = new THREE.Vector3();
   const btnManejar = document.getElementById('btn-manejar');
@@ -128,19 +130,37 @@ async function iniciar() {
     const a = tycoon.auto;
     return a && jugador.pos.y < 2 && Math.hypot(jugador.pos.x - a.pos.x, jugador.pos.z - a.pos.z) < 6;
   };
+  const cercaDelHeli = () => {
+    const h = tycoon.heli;
+    return h && Math.abs(jugador.pos.y - h.pos.y) < 2.5 && Math.hypot(jugador.pos.x - h.pos.x, jugador.pos.z - h.pos.z) < 7.5;
+  };
+  const enHeli = () => conduciendo && vehiculo === tycoon.heli;
   const subirOBajar = () => {
-    const a = tycoon.auto;
-    if (!a) return;
     if (conduciendo) {
+      const v = vehiculo;
+      // Del helicóptero solo te bajás apoyado.
+      if (v === tycoon.heli && !v.apoyado) return;
+      if (v === tycoon.heli) v.prendido = false;
       conduciendo = false;
-      jugador.pos.copy(a.puntoBajada(tmpBajada));
+      vehiculo = null;
+      jugador.pos.copy(v.puntoBajada(tmpBajada));
       jugador.vel.set(0, 0, 0);
-    } else if (cercaDelAuto()) {
+    } else {
+      const v = cercaDelAuto() ? tycoon.auto : cercaDelHeli() ? tycoon.heli : null;
+      if (!v) return;
       sacarArma(false);
       sacarLechuga(false);
       conduciendo = true;
-      a.vel = 0;
-      controles.yaw = a.angulo + Math.PI;
+      vehiculo = v;
+      if (v === tycoon.auto) v.vel = 0;
+      else {
+        v.prendido = true;
+        if (!avisoHeli) {
+          avisoHeli = true;
+          UI.toast('Mantené saltar para subir; si soltás, baja despacito', 'info');
+        }
+      }
+      controles.yaw = v.angulo + Math.PI;
     }
     jugador.conduciendo = conduciendo;
     jugador.contenedor.visible = !conduciendo;
@@ -746,7 +766,7 @@ async function iniciar() {
   const camaraJuego = (dt) => {
     if (conduciendo) {
       // La cámara se acomoda sola detrás del auto.
-      let d = tycoon.auto.angulo + Math.PI - controles.yaw;
+      let d = vehiculo.angulo + Math.PI - controles.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       controles.yaw += d * Math.min(1, dt * 3);
     }
@@ -767,7 +787,9 @@ async function iniciar() {
       camara.position.copy(cabeza);
       camara.lookAt(cabeza.x - dir.x, cabeza.y - dir.y, cabeza.z - dir.z);
     } else {
-      const libre = distanciaLibre(cabeza, dir, controles.dist);
+      // En el helicóptero la cámara va más lejos (se ve todo el aparato y el paisaje).
+      const lejos = enHeli() ? Math.max(controles.dist, 26) : controles.dist;
+      const libre = distanciaLibre(cabeza, dir, lejos);
       // Acercarse al toque si hay una pared; alejarse suave.
       distActual = libre < distActual ? libre : distActual + (libre - distActual) * Math.min(1, dt * 5);
       deseada.copy(cabeza).addScaledVector(dir, distActual);
@@ -808,8 +830,11 @@ async function iniciar() {
     const real = reloj.getDelta();
     const dt = Math.min(real, 0.05);
 
-    choquesActuales = ciudad.choquesCerca(jugador.pos, tycoon.auto?.caja) || colisiones;
-    if (conduciendo) {
+    choquesActuales = ciudad.choquesCerca(jugador.pos, tycoon.auto?.caja, tycoon.heli?.caja) || colisiones;
+    if (enHeli()) {
+      tycoon.heli.actualizar(dt, controles.ejes(ejes), controles.saltar, choquesActuales, mundo.altura);
+      jugador.pos.copy(tycoon.heli.pos);
+    } else if (conduciendo) {
       tycoon.auto.terreno = mundo.altura;
       // En la autopista el auto va mucho más rápido (la ciudad queda a 20 km).
       const enAutopista = ciudad.enAutopista(tycoon.auto.pos);
@@ -836,7 +861,10 @@ async function iniciar() {
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, choquesActuales, tycoon.agua)) sfx.salto();
     }
-    const texto = modo !== 'juego' || gym.entrenando ? '' : conduciendo ? 'Bajar del auto (E)' : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+    if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
+    const texto = modo !== 'juego' || gym.entrenando ? ''
+      : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : 'Bajar del auto (E)')
+      : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;

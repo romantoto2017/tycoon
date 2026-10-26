@@ -2051,26 +2051,122 @@ export { LUGARES };
 
 // ---------- Terraza ----------
 
+// Jacuzzi en la terraza (y lo que va con él): deck de madera, jacuzzi redondo de piedra con
+// burbujas y luz abajo del agua, escalones, toallas y el balde con champagne; tres reposeras
+// de verdad (estructura blanca, almohadón a rayas y respaldo reclinado) con mesitas, una
+// sombrilla grande y macetas con plantas en las esquinas de la terraza.
+let rayasReposera = null;
 export function jacuzzi(k, g) {
+  const THREE = k.THREE;
   const y = nivel(4);
   const add = (x0, y0, z0, x1, y1, z1, c, solido = true) => {
     const m = k.cajaDe(x0, y + y0, z0, x1, y + y1, z1, c);
     if (!solido) k.noSolido(m);
     g.add(m);
+    return m;
   };
-  add(-26, 0, -12, -16, 1.2, -11.5, '#eceff1');
-  add(-26, 0, -4.5, -16, 1.2, -4, '#eceff1');
-  add(-26, 0, -11.5, -25.5, 1.2, -4.5, '#eceff1');
-  add(-16.5, 0, -11.5, -16, 1.2, -4.5, '#eceff1');
-  add(-25.5, 0.9, -11.5, -16.5, 1.05, -4.5, k.agua, false);
-  [-24, -20, -16].forEach((x) => {
-    add(x, 0, -24, x + 2, 0.6, -20, '#ffffff');
-    add(x, 0.6, -24, x + 2, 1.6, -23.4, '#ffffff');
+  // Deck de madera con tablas.
+  add(-27.6, 0, -13.6, -14.4, 0.25, -2.6, '#a0714f');
+  for (let x = -27.3; x < -14.5; x += 0.75) add(x, 0.25, -13.6, x + 0.04, 0.26, -2.6, '#7e5538', false);
+  // Jacuzzi redondo: piedra clara, borde, agua con burbujas y luz.
+  const cx = -21;
+  const cz = -8.1;
+  // Hueco (paredes de afuera y de adentro, borde y fondo) para que se vea el agua y meterse.
+  const piedra = k.material('#e8e4dc');
+  for (const [r0, r1, lado] of [[3.4, 3.5, THREE.FrontSide], [3.0, 3.0, THREE.BackSide]]) {
+    const m = new THREE.MeshLambertMaterial({ color: '#e8e4dc', side: lado });
+    const pared = k.noSolido(new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, 1.15, 28, 1, true), m));
+    pared.position.set(cx, y + 0.25 + 0.575, cz);
+    g.add(pared);
+  }
+  g.add(k.noSolido(k.cilindro(3.0, 3.0, 0.05, piedra, cx, y + 0.27, cz, 28)));
+  // Asiento corrido adentro.
+  const asiento = k.noSolido(new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.35, 6, 28), k.material('#dcd6cb')));
+  asiento.rotation.x = Math.PI / 2;
+  asiento.position.set(cx, y + 0.6, cz);
+  g.add(asiento);
+  const borde = k.noSolido(new THREE.Mesh(new THREE.TorusGeometry(3.15, 0.22, 8, 32), k.material('#f5f2ec')));
+  borde.rotation.x = Math.PI / 2;
+  borde.position.set(cx, y + 1.42, cz);
+  g.add(borde);
+  g.add(k.noSolido(k.cilindro(1.2, 1.2, 0.04, k.brillo('#55e3ff'), cx, y + 0.31, cz, 20)));
+  const agua = k.noSolido(k.cilindro(3.0, 3.0, 1.0, k.agua, cx, y + 0.8, cz, 28));
+  g.add(agua);
+  const burbuja = new THREE.SphereGeometry(0.09, 6, 4);
+  const blanca = new THREE.MeshBasicMaterial({ color: '#f2fdff', transparent: true, opacity: 0.85 });
+  for (let i = 0; i < 70; i++) {
+    const a = i * 2.39996;
+    const r = 2.8 * Math.sqrt((i + 0.5) / 70);
+    const b = k.noSolido(new THREE.Mesh(burbuja, blanca));
+    b.position.set(cx + Math.cos(a) * r, y + 1.33, cz + Math.sin(a) * r);
+    b.scale.setScalar(0.6 + ((i * 7) % 5) * 0.2);
+    g.add(b);
+  }
+  // Escalones de madera para subir.
+  add(cx - 1.2, 0.25, cz + 3.3, cx + 1.2, 0.65, cz + 4.1, '#8a5d3f');
+  add(cx - 1.2, 0.25, cz + 3.3, cx + 1.2, 1.0, cz + 3.7, '#8a5d3f');
+  // Toallas enrolladas y el balde con champagne.
+  ['#ffffff', '#5ec5e8', '#ffffff'].forEach((c, i) => {
+    const t = k.cilindro(0.28, 0.28, 1.4, c, -26.4, y + 0.53 + i * 0.56, -12.6, 10);
+    t.rotation.x = Math.PI / 2;
+    g.add(t);
   });
-  add(-12.2, 0, -22.2, -11.8, 4.5, -21.8, '#9e9e9e');
-  g.add(k.cono(2.6, 1.2, '#263238', -12, y + 5, -22, 8));
+  g.add(k.cilindro(0.3, 0.22, 0.5, '#cfd4d8', -16.0, y + 0.5, -12.8, 10));
+  g.add(k.noSolido(k.cilindro(0.08, 0.08, 0.8, '#1b5e20', -16.0, y + 0.75, -12.8, 6)));
+
+  // ---- Reposeras con mesitas y la sombrilla ----
+  rayasReposera ??= (() => {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 64;
+    const gg = c.getContext('2d');
+    for (let i = 0; i < 8; i++) {
+      gg.fillStyle = i % 2 ? '#ffffff' : '#1f4e79';
+      gg.fillRect(i * 8, 0, 8, 64);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshLambertMaterial({ map: t });
+  })();
+  const reposera = (x, z) => {
+    // Mirando hacia +z (adelante), con el respaldo atrás.
+    const blanco = '#f4f4f2';
+    for (const dx of [-0.75, 0.75]) {
+      add(x + dx - 0.06, 0.25, z - 2.6, x + dx + 0.06, 0.95, z - 2.48, blanco);
+      add(x + dx - 0.06, 0.25, z + 1.9, x + dx + 0.06, 0.95, z + 2.02, blanco);
+      add(x + dx - 0.06, 0.9, z - 2.6, x + dx + 0.06, 1.0, z + 2.0, blanco, false);
+    }
+    const asiento = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 3.2), rayasReposera);
+    asiento.position.set(x, y + 1.1, z + 0.4);
+    g.add(asiento);
+    const respaldo = k.noSolido(new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 1.9), rayasReposera));
+    respaldo.position.set(x, y + 1.65, z - 1.95);
+    respaldo.rotation.x = -0.75;
+    g.add(respaldo);
+    const almohada = k.noSolido(k.caja(1.2, 0.25, 0.5, '#ffffff', x, y + 2.15, z - 2.45));
+    almohada.rotation.x = -0.75;
+    g.add(almohada);
+  };
+  for (const x of [-24.5, -21, -17.5]) reposera(x, -21.5);
+  // Mesitas con un vaso de jugo entre reposera y reposera.
+  for (const x of [-22.75, -19.25]) {
+    g.add(k.cilindro(0.45, 0.45, 0.08, '#f4f4f2', x, y + 1.0, -22.4, 14));
+    g.add(k.cilindro(0.07, 0.07, 1.0, '#f4f4f2', x, y + 0.5, -22.4, 6));
+    g.add(k.noSolido(k.cilindro(0.12, 0.1, 0.4, '#ff9800', x, y + 1.24, -22.4, 8)));
+  }
+  // Sombrilla grande cuadrada: mástil, varillas y la tela con el volado.
+  add(-13.1, 0, -23.1, -12.9, 5.4, -22.9, '#cfcfcf', false);
+  add(-13.8, 0, -23.8, -12.2, 0.3, -22.2, '#9e9e9e');
+  const tela = k.noSolido(k.cono(4.2, 1.4, '#f3e6c8', -13, y + 5.9, -23, 4));
+  tela.rotation.y = Math.PI / 4;
+  g.add(tela);
+  for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) add(-13 + dx * 2.95 - (dz ? 2.95 : 0.03), 5.05, -23 + dz * 2.95 - (dx ? 2.95 : 0.03), -13 + dx * 2.95 + (dz ? 2.95 : 0.03), 5.4, -23 + dz * 2.95 + (dx ? 2.95 : 0.03), '#d9c39a', false);
+  // Macetas redondas con plantas en las esquinas.
   [[-42, -32], [-42, -3], [40.8, -3], [40.8, -32], [20, -32], [20, -3]].forEach(([x, z]) => {
-    add(x, 0, z, x + 1.2, 1, z + 1.2, '#455a64');
-    add(x - 0.2, 1, z - 0.2, x + 1.4, 2.8, z + 1.4, '#2e7d32', false);
+    if (x === 20 && z === -32) return; // ahí ahora llega la piscina infinita
+    g.add(k.cilindro(0.75, 0.6, 1.2, '#455a64', x + 0.6, y + 0.6, z + 0.6, 12));
+    for (const [dx, dy, dz, r] of [[0, 1.9, 0, 0.95], [0.45, 1.6, 0.3, 0.6], [-0.4, 1.7, -0.3, 0.65], [0.1, 2.5, -0.1, 0.55]]) {
+      g.add(k.noSolido(k.esfera(r, '#2e7d32', x + 0.6 + dx, y + dy, z + 0.6 + dz)));
+    }
   });
 }

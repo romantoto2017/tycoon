@@ -360,51 +360,175 @@ export function trex(k, g) {
   g.add(placa);
 }
 
-// Bóveda con lingotes en el garage.
+// Bóveda de oro en el garage: una cámara de acero con la puerta redonda gigante abierta (con
+// el volante, los pernos y la bisagra), estantes llenos de lingotes, pilas de monedas y bolsas
+// de plata adentro, luz dorada, y afuera una tarima con una pirámide de lingotes y el cartel.
+let oroBoveda = null;
 export function boveda(k, gg) {
+  const THREE = k.THREE;
   // Dibujada para un garage que empezaba en (49, 2): se corre con el garage.
   const g = k.grupo();
   g.position.set(G.x0 - 49, 0, G.z0 - 2);
   gg.add(g);
+  oroBoveda ??= new THREE.MeshPhongMaterial({ color: '#e3a91f', specular: '#fff2b0', shininess: 90, emissive: '#3a2600' });
+  const oro = oroBoveda;
   const acero = '#7d868c';
-  g.add(k.cajaDe(50, 0, 2.6, 54.2, 4.6, 6.4, acero));
-  const puerta = k.cilindro(1.5, 1.5, 0.3, '#aab3b9', 52.1, 2.3, 6.55, 16);
-  puerta.rotation.x = Math.PI / 2;
-  g.add(puerta);
-  for (const a of [0, Math.PI / 2]) {
-    const rayo = k.noSolido(k.caja(1.8, 0.14, 0.14, '#5d6469', 52.1, 2.3, 6.75));
-    rayo.rotation.z = a + Math.PI / 4;
-    g.add(rayo);
+  const aceroOscuro = '#4f575d';
+  // Lingote (trapecio) de 0.9 x 0.32 x 0.45, apoyado en y = 0.
+  const lingote = () => {
+    const s = new THREE.Shape([new THREE.Vector2(-0.225, 0), new THREE.Vector2(0.225, 0), new THREE.Vector2(0.16, 0.32), new THREE.Vector2(-0.16, 0.32)]);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: 0.9, bevelEnabled: false });
+    geo.translate(0, 0, -0.45);
+    return geo;
+  };
+  const lingotes = [];
+  const ponerLingote = (x, y, z, rotY = 0) => lingotes.push(lingote().rotateY(rotY).translate(x, y, z));
+  const monedas = [];
+  const pilaMonedas = (x, y, z, n) => {
+    for (let i = 0; i < n; i++) monedas.push(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 12).translate(x + (i % 3) * 0.02, y + 0.03 + i * 0.065, z));
+  };
+
+  // ---- Cámara de acero (x 49.6..55.6, z 2.5..9.5), abierta hacia el garage (+x) ----
+  g.add(k.cajaDe(49.6, 0, 9.1, 55.6, 6, 9.5, acero));
+  g.add(k.cajaDe(55.2, 0, 2.5, 55.6, 6, 4.6, acero));
+  g.add(k.cajaDe(55.2, 0, 7.4, 55.6, 6, 9.5, acero));
+  g.add(k.cajaDe(55.2, 4.2, 4.6, 55.6, 6, 7.4, acero));
+  g.add(k.cajaDe(49.6, 6, 2.5, 55.6, 6.3, 9.5, aceroOscuro));
+  g.add(k.noSolido(k.cajaDe(49.6, 0.1, 2.5, 55.2, 0.14, 9.1, '#3a3f44')));
+  // Marco redondo de la puerta (aro grueso alrededor del hueco).
+  const aro = k.noSolido(new THREE.Mesh(new THREE.TorusGeometry(1.95, 0.28, 8, 28), k.material('#aab3b9')));
+  aro.position.set(55.75, 2.3, 6);
+  aro.rotation.y = Math.PI / 2;
+  g.add(aro);
+  // Luz dorada adentro.
+  g.add(k.noSolido(k.cajaDe(50.2, 5.8, 3.0, 54.8, 5.95, 8.6, k.brillo('#fff1c4'))));
+  // La puerta redonda, abierta 90° (bisagra en el lado de +z del hueco).
+  const puerta = k.grupo();
+  puerta.position.set(55.75, 2.3, 8.0);
+  const disco = new THREE.Mesh(new THREE.CylinderGeometry(1.85, 1.85, 0.55, 28), k.material('#b8c1c7'));
+  disco.rotation.x = Math.PI / 2;
+  disco.position.x = 1.95;
+  puerta.add(disco);
+  const anillo = k.noSolido(new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.08, 6, 24), k.material('#6b747a')));
+  anillo.position.set(1.95, 0, -0.3);
+  puerta.add(anillo);
+  // Volante con rayos y los pernos alrededor del borde.
+  const volante = k.noSolido(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.07, 6, 18), k.material('#d0d6da')));
+  volante.position.set(1.95, 0, -0.45);
+  puerta.add(volante);
+  for (let i = 0; i < 3; i++) {
+    const rayo = k.noSolido(k.caja(1.3, 0.1, 0.1, '#d0d6da', 1.95, 0, -0.45));
+    rayo.rotation.z = (i * Math.PI) / 3;
+    puerta.add(rayo);
   }
-  g.add(k.cajaDe(50.3, 0, 9.5, 54.7, 0.4, 14.5, '#8d6e4f'));
-  const oro = k.brillo('#f2c230');
-  for (let capa = 0; capa < 4; capa++) {
-    for (let i = 0; i < 4 - capa; i++) {
-      for (let j = 0; j < 5 - capa; j++) {
-        const x = 50.7 + capa * 0.45 + i * 0.9;
-        const z = 9.9 + capa * 0.5 + j * 0.9;
-        g.add(k.cajaDe(x, 0.4 + capa * 0.4, z, x + 0.8, 0.8 + capa * 0.4, z + 0.42, oro));
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const perno = k.noSolido(new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.5, 8), k.material('#8d969c')));
+    perno.rotation.x = Math.PI / 2;
+    perno.position.set(1.95 + Math.cos(a) * 1.68, Math.sin(a) * 1.68, -0.1);
+    puerta.add(perno);
+  }
+  puerta.add(k.caja(0.5, 1.6, 0.6, aceroOscuro, 0.1, 0, 0));
+  g.add(puerta);
+  // Teclado de la clave al costado del hueco.
+  g.add(k.noSolido(k.cajaDe(55.6, 2.6, 3.4, 55.7, 3.4, 4.0, '#24282c')));
+  g.add(k.noSolido(k.cajaDe(55.7, 3.15, 3.5, 55.72, 3.3, 3.9, k.brillo('#3ee07a'))));
+  // Cartel arriba del hueco.
+  const cartel = k.cartel('BÓVEDA VECIBANDA', 4.4, 0.8, '#ffd23f', '#24282c');
+  cartel.position.set(55.7, 5.1, 6);
+  cartel.rotation.y = Math.PI / 2;
+  g.add(cartel);
+
+  // ---- Adentro: estantes con lingotes, monedas y bolsas ----
+  for (const [x0, x1, z0, z1] of [[50, 54.9, 2.6, 3.5], [49.7, 50.6, 3.6, 8.9]]) {
+    for (const y of [0, 1.5, 3.0]) {
+      g.add(k.cajaDe(x0, y + 1.2, z0, x1, y + 1.32, z1, aceroOscuro));
+      if (z1 - z0 < 1) for (let x = x0 + 0.5; x < x1 - 0.3; x += 0.55) { ponerLingote(x, y + 1.32, (z0 + z1) / 2, Math.PI / 2); ponerLingote(x + 0.05, y + 1.64, (z0 + z1) / 2, Math.PI / 2); }
+      else for (let z = z0 + 0.5; z < z1 - 0.3; z += 0.55) { ponerLingote((x0 + x1) / 2, y + 1.32, z); ponerLingote((x0 + x1) / 2, y + 1.64, z + 0.05); }
+    }
+    for (const x of [x0, x1 - 0.1]) g.add(k.noSolido(k.cajaDe(x, 0, z0, x + 0.1, 4.5, z1, aceroOscuro)));
+  }
+  pilaMonedas(52.4, 0.14, 5.4, 14);
+  pilaMonedas(52.9, 0.14, 5.9, 10);
+  pilaMonedas(52.1, 0.14, 6.2, 18);
+  // Montaña de monedas en el medio y bolsas con el signo $.
+  const monte = new THREE.Mesh(new THREE.ConeGeometry(1.2, 0.9, 16), oro);
+  monte.position.set(53.2, 0.55, 7.6);
+  g.add(monte);
+  for (const [x, z] of [[51.4, 7.9], [54.3, 4.0], [51.2, 4.6]]) {
+    const bolsa = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8), k.material('#c9b08a'));
+    bolsa.scale.y = 1.1;
+    bolsa.position.set(x, 0.6, z);
+    g.add(bolsa);
+    g.add(k.noSolido(k.cilindro(0.18, 0.28, 0.35, '#a8916b', x, 1.25, z, 8)));
+    const signo = k.cartel('$', 0.45, 0.45, '#2e7d32', '#c9b08a');
+    signo.position.set(x + 0.5, 0.7, z);
+    signo.rotation.y = Math.PI / 2;
+    g.add(signo);
+  }
+
+  // Los de adentro, en una sola malla que no choca (los estantes ya chocan).
+  g.add(k.noSolido(new THREE.Mesh(k.unir(lingotes.splice(0)), oro)));
+
+  // ---- Afuera: tarima con la pirámide de lingotes ----
+  g.add(k.cajaDe(50.2, 0, 10.2, 54.8, 0.4, 14.5, '#8d6e4f'));
+  for (let capa = 0; capa < 5; capa++) {
+    for (let i = 0; i < 4 - Math.floor(capa / 2); i++) {
+      for (let j = 0; j < 8 - capa; j++) {
+        const x = 50.8 + (capa % 2) * 0.25 + i * 1.0;
+        const z = 10.7 + capa * 0.25 + j * 0.5;
+        if (x > 54.3) continue;
+        ponerLingote(x, 0.4 + capa * 0.33, z + 0.22, capa % 2 ? 0 : 0);
       }
     }
   }
+  pilaMonedas(54.4, 0.4, 14.1, 12);
+  g.add(new THREE.Mesh(k.unir(lingotes), oro));
+  g.add(k.noSolido(new THREE.Mesh(k.unir(monedas), oro)));
 }
 
-// Piscina infinita en la terraza (con un lado de vidrio).
+// Piscina infinita en la terraza: va del pabellón hasta el helipuerto y llega al borde de
+// atrás de la terraza; el agua queda al ras del vidrio de ese borde y se derrama por afuera a
+// una canaleta (desde adentro parece que el agua sigue hasta el horizonte). Escalones para
+// subir, luces abajo del agua y un deck de madera adelante.
 export function piscinaInfinita(k, g) {
   const y = nivel(4);
   const borde = k.tex('baldosa', '#eceae5', 1.5);
-  g.add(k.cajaDe(9, y, -27, 9.4, y + 2.4, -7, borde));
-  g.add(k.cajaDe(9.4, y, -27, 19.5, y + 2.4, -26.6, borde));
-  g.add(k.cajaDe(9.4, y, -7.4, 19.5, y + 2.4, -7, borde));
-  g.add(k.cajaDe(19.1, y, -26.6, 19.5, y + 2.2, -7.4, k.vidrio));
-  g.add(k.noSolido(k.cajaDe(19.1, y + 2.2, -26.6, 19.5, y + 2.3, -7.4, '#24282c')));
-  g.add(k.noSolido(k.cajaDe(9.4, y, -26.6, 19.1, y + 0.1, -7.4, k.tex('baldosa', '#3fb4e8', 1.2))));
-  g.add(k.noSolido(k.cajaDe(9.4, y + 0.1, -26.5, 19.1, y + 2.2, -7.5, k.agua)));
-  g.add(k.cajaDe(7.6, y, -20, 8.3, y + 0.8, -14, borde));
-  g.add(k.cajaDe(8.3, y, -20, 9, y + 1.6, -14, borde));
+  const X0 = 7.6;
+  const X1 = 22.4;
+  const Z0 = -33.8; // el vidrio del borde de la terraza
+  const Z1 = -6.8;
+  const ALTO = 1.6;
+  const AGUA = 1.42; // al ras del vidrio (1.3) + la baranda
+  // Paredes de los costados y de adelante (la de atrás es el vidrio de la terraza).
+  g.add(k.cajaDe(X0, y, Z0, X0 + 0.4, y + ALTO, Z1, borde));
+  g.add(k.cajaDe(X1 - 0.4, y, Z0, X1, y + ALTO, Z1, borde));
+  g.add(k.cajaDe(X0, y, Z1 - 0.4, X1, y + ALTO, Z1, borde));
+  g.add(k.noSolido(k.cajaDe(X0 - 0.1, y + ALTO, Z1 - 0.5, X1 + 0.1, y + ALTO + 0.08, Z1 + 0.1, '#f7f5f0')));
+  for (const x of [X0 - 0.1, X1 - 0.5]) g.add(k.noSolido(k.cajaDe(x, y + ALTO, Z0, x + 0.6, y + ALTO + 0.08, Z1, '#f7f5f0')));
+  // Fondo celeste, el agua y las luces de adentro.
+  g.add(k.noSolido(k.cajaDe(X0 + 0.4, y, Z0, X1 - 0.4, y + 0.1, Z1 - 0.4, k.tex('baldosa', '#3fb4e8', 1.2))));
+  g.add(k.noSolido(k.cajaDe(X0 + 0.4, y + 0.1, Z0 + 0.2, X1 - 0.4, y + AGUA, Z1 - 0.4, k.agua)));
+  for (let z = Z0 + 4; z < Z1 - 2; z += 6) {
+    for (const x of [X0 + 0.42, X1 - 0.44]) g.add(k.noSolido(k.cajaDe(x, y + 0.6, z, x + 0.02, y + 0.85, z + 0.6, k.brillo('#b9f3ff'))));
+  }
+  // Derrame por afuera del borde: lámina de agua cayendo y la canaleta en el alero.
+  const cae = k.cascada(X1 - X0 - 0.8, 1.2);
+  cae.position.set((X0 + X1) / 2, y + 0.86, Z0 - 0.32);
+  cae.rotation.y = Math.PI;
+  g.add(cae);
+  g.add(k.cajaDe(X0, y, -36.3, X1, y + 0.35, -34.15, borde));
+  g.add(k.noSolido(k.cajaDe(X0 + 0.2, y + 0.35, -36.1, X1 - 0.2, y + 0.38, -34.35, k.agua)));
+  // Escalones para subir (del lado del pabellón).
+  g.add(k.cajaDe(6.25, y, -20, 6.9, y + 0.55, -14, borde));
+  g.add(k.cajaDe(6.9, y, -20, X0, y + 1.1, -14, borde));
+  g.add(k.noSolido(k.cajaDe(X0 + 0.4, y + 0.1, -19.5, X0 + 1.4, y + 0.9, -14.5, borde)));
+  // Deck de madera adelante, con dos reposeras mirando al agua.
+  g.add(k.noSolido(k.cajaDe(X0, y, Z1 + 0.1, X1, y + 0.12, Z1 + 3.2, '#a0714f')));
+  for (let x = X0 + 0.5; x < X1; x += 0.8) g.add(k.noSolido(k.cajaDe(x, y + 0.12, Z1 + 0.1, x + 0.04, y + 0.13, Z1 + 3.2, '#7e5538')));
 }
 
-// Helipuerto con helicóptero (las aspas giran).
+// Helipuerto (el helicóptero lo pone tycoon.js, porque se puede manejar).
 export function helicoptero(k, g) {
   const y = nivel(4);
   const cx = 32;
@@ -416,25 +540,5 @@ export function helicoptero(k, g) {
   blanco(cx - 2.5, cz - 3, cx - 1.5, cz + 3);
   blanco(cx + 1.5, cz - 3, cx + 2.5, cz + 3);
   blanco(cx - 1.5, cz - 0.5, cx + 1.5, cz + 0.5);
-  // Helicóptero.
-  const hy = y + 0.15;
-  g.add(k.cajaDe(cx - 2, hy + 1.2, cz - 3, cx + 2, hy + 4, cz + 3, '#f4f4f2'));
-  g.add(k.cajaDe(cx - 1.7, hy + 1.6, cz + 3, cx + 1.7, hy + 3.8, cz + 4.4, '#1d2833'));
-  g.add(k.noSolido(k.cajaDe(cx - 2.02, hy + 2.2, cz - 3, cx + 2.02, hy + 2.6, cz + 3, '#d32f2f')));
-  g.add(k.cajaDe(cx - 0.5, hy + 2.6, cz - 10, cx + 0.5, hy + 3.4, cz - 3, '#f4f4f2'));
-  g.add(k.noSolido(k.cajaDe(cx - 0.2, hy + 3.4, cz - 10, cx + 0.2, hy + 5.2, cz - 8.6, '#d32f2f')));
-  g.add(k.noSolido(k.cajaDe(cx + 0.5, hy + 3.2, cz - 9.8, cx + 0.6, hy + 4.8, cz - 9.6, '#24282c')));
-  for (const s of [-1, 1]) {
-    g.add(k.cajaDe(cx + s * 2.2 - 0.15, hy, cz - 3.5, cx + s * 2.2 + 0.15, hy + 0.25, cz + 3.5, '#24282c'));
-    g.add(k.noSolido(k.cajaDe(cx + s * 1.9 - 0.1, hy + 0.25, cz - 2, cx + s * 1.9 + 0.1, hy + 1.2, cz - 1.8, '#24282c')));
-    g.add(k.noSolido(k.cajaDe(cx + s * 1.9 - 0.1, hy + 0.25, cz + 1.8, cx + s * 1.9 + 0.1, hy + 1.2, cz + 2, '#24282c')));
-  }
-  g.add(k.cilindro(0.25, 0.25, 0.8, '#24282c', cx, hy + 4.4, cz, 8));
-  const rotor = k.grupo();
-  rotor.position.set(cx, hy + 4.85, cz);
-  rotor.add(k.caja(15, 0.1, 0.6, '#2b2f33', 0, 0, 0));
-  rotor.add(k.caja(0.6, 0.1, 15, '#2b2f33', 0, 0, 0));
-  rotor.userData.girar = 5;
-  rotor.userData.dinamico = true;
-  g.add(rotor);
+  // El helicóptero es aparte (helicoptero.js): se maneja.
 }

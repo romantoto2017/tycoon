@@ -8,6 +8,7 @@ import { caja, mat, matTex, formato, GEO_CAJA } from './util.js';
 import { Lote } from './lote.js';
 import { Fuegos } from './fuegos.js';
 import { Auto } from './auto.js';
+import { Helicoptero } from './helicoptero.js';
 import { crearAK } from './arma.js';
 import { crearModelo, medidaModelo } from './modelos.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -385,9 +386,15 @@ export class Tycoon {
       this.auto = new Auto(this.escena, (GARAGE.x0 + GARAGE.x1) / 2, (GARAGE.z0 + GARAGE.z1) / 2 - 1, 0);
       this.colisiones.push(this.auto.caja);
     }
+    // El helicóptero del helipuerto se puede manejar (main.js): parado en el centro del helipuerto.
+    if (item.id === 'lujo_helicoptero' && !this.heli) {
+      this.heli = new Helicoptero(this.escena, 32, nivel(4) + 0.15, -20, 0);
+      this.colisiones.push(this.heli.caja);
+    }
     if (item.id === 'ascensor') this.ascensor = true;
     if ((this.ascensor && PISOS_ASCENSOR.includes(item.id)) || item.id === 'ascensor') this.actualizarAscensor();
-    if (item.final) this.fuegos.activo = true;
+    // Fuegos artificiales al terminar la mansión: 20 segundos, solo al comprarlo (no al cargar).
+    if (item.final && animar) this.fuegos.lanzar(20);
   }
 
   intentarComprar(boton) {

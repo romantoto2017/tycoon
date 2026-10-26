@@ -783,7 +783,9 @@ html, body {
 .mision-cara { flex: none; width: 64px; text-align: center; font-size: 12px; font-weight: 700; color: #555; }
 .mision-cara img { display: block; width: 64px; height: 64px; border-radius: 12px; border: 3px solid #1b1d20; object-fit: cover; background: #ccc; }
 .mision-info { flex: 1; min-width: 0; }
-.mision-info h3 { margin: 0 0 2px; font-size: 19px; }
+.mision-info h3 { margin: 0 0 2px; font-size: 19px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.mision-premio { font-size: 13px; font-weight: 700; color: #7a4d00; background: #ffe7a3; border: 2px solid #f2b51e; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.mision-premio.cobrado { color: #1d6b2a; background: #d9f7de; border-color: #3ccf4e; }
 .mision-info p { margin: 0 0 6px; font-size: 14px; color: #444; line-height: 1.3; }
 .mision-info small { font-size: 13px; color: #666; }
 .mision-barra { height: 10px; border-radius: 5px; background: #dfe3e8; overflow: hidden; margin-bottom: 4px; }

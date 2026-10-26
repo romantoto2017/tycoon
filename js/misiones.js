@@ -4,6 +4,7 @@ import { cargarCabeza, crearEtiqueta } from './texturas.js';
 import { MANSION, CUSI_ESCONDIDO as CU, nivel } from './constantes.js';
 import { BAUTI_GYM } from './gimnasio.js';
 import { sfx } from './sfx.js';
+import { formato } from './util.js';
 
 // Misiones. Cada una es de un personaje y se cumple una sola vez (queda guardada en
 // estado.misiones). El panel de misiones del HUD las muestra con su avance.
@@ -25,17 +26,22 @@ const CASA_CUSI = { x: -4.5, z: -4, angulo: 0.4 }; // en el hall de planta baja,
 // La sección de misiones aparece cuando la mansión llega a este progreso. Una misión con
 // `desde` se ve gris (un "?" de piedra, sin decir cuánto falta) hasta llegar a ese progreso.
 export const MISIONES_DESDE = 0.15;
+// Premio de cada misión: lo que más convenga entre `base` (fijo, según el % al que se
+// desbloquea: más o menos 10 minutos de lo que se gana en ese momento de la partida) y
+// `minutos` de lo que estás ganando cuando la cumplís (según lo difícil que es). La de Bauti
+// es lejos la más difícil (horas de gym): la que más minutos paga. `tope`: para que dejarla para
+// el final no rompa la partida.
 export const MISIONES = [
   {
-    id: 'trabado', personaje: 'bauti', titulo: 'Ponerse trabado',
+    id: 'trabado', personaje: 'bauti', titulo: 'Ponerse trabado', premio: { base: 5e6, minutos: 20, tope: 3e9 },
     texto: 'Entrená en el Power Camp hasta adelgazar y quedar musculoso del todo.',
   },
   {
-    id: 'cusi', personaje: 'juanma', titulo: 'Rescatar al Cusi', desde: 0.5,
+    id: 'cusi', personaje: 'juanma', titulo: 'Rescatar al Cusi', desde: 0.5, premio: { base: 2e7, minutos: 6, tope: 6e8 },
     texto: 'El Cusi se perdió. Encontralo y llevalo de vuelta a casa.',
   },
   // De cualquier personaje (personaje: null). Sin pistas: solo el texto.
-  { id: 'empilchado', personaje: null, titulo: 'Empilchado', texto: 'Comprate 5 pilchas ricas' },
+  { id: 'empilchado', personaje: null, titulo: 'Empilchado', texto: 'Comprate 5 pilchas ricas', premio: { base: 1.5e9, minutos: 3, tope: 6e9 } },
 ];
 export const PILCHAS = 5;
 
@@ -68,11 +74,32 @@ export class Misiones {
     return this.estado[id] === true || this.estado[id] === 'rescatado';
   }
 
+  premio(id) {
+    const p = MISIONES.find((m) => m.id === id)?.premio;
+    if (!p) return 0;
+    const n = Math.min(p.tope, Math.max(p.base, this.tycoon.ingresoPorSegundo * 60 * p.minutos));
+    const e = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1);
+    return Math.round(n / e) * e; // redondo (dos cifras)
+  }
+
+  // Cobra el premio de la misión (una sola vez; las cumplidas antes de que hubiera premios
+  // también se cobran, al cargar).
+  cobrar(id) {
+    const e = this.tycoon.estado;
+    e.premios ??= {};
+    if (e.premios[id]) return 0;
+    const plata = this.premio(id);
+    e.premios[id] = plata;
+    e.plata += plata;
+    return plata;
+  }
+
   completar(id, mensaje) {
     if (id === 'cusi') this.estado.cusi = 'rescatado';
     else this.estado[id] = true;
     sfx.final();
-    this.ui.toast(`¡Misión cumplida! ${mensaje}`, 'plata');
+    const plata = this.cobrar(id);
+    this.ui.toast(`¡Misión cumplida! ${mensaje} (+$${formato(plata)})`, 'plata');
     this.ui.puntoMisiones?.(true);
     this.tycoon.guardar?.();
   }
@@ -97,7 +124,8 @@ export class Misiones {
         else { avance = 0; detalle = 'Jugá con Juanma para empezarla'; }
       }
       const bloqueada = progreso < (m.desde || 0);
-      return { ...m, hecha: this.hecha(m.id), bloqueada, avance, detalle, tuya: !m.personaje || jugador.personaje?.id === m.personaje };
+      const cobrado = this.tycoon.estado.premios?.[m.id];
+      return { ...m, premioPlata: cobrado || this.premio(m.id), hecha: this.hecha(m.id), bloqueada, avance, detalle, tuya: !m.personaje || jugador.personaje?.id === m.personaje };
     });
   }
 
@@ -195,6 +223,13 @@ export class Misiones {
   actualizar(dt, jugador, jugando) {
     if (!jugador.personaje) return;
     const e = this.estado;
+    if (!this.premiosViejos && jugando) {
+      // Partidas con misiones cumplidas de antes de los premios: se cobran una vez.
+      this.premiosViejos = true;
+      let total = 0;
+      for (const m of MISIONES) if (this.hecha(m.id)) total += this.cobrar(m.id);
+      if (total) this.ui.toast(`Premio por las misiones que ya cumpliste: +$${formato(total)}`, 'plata');
+    }
     // Al pasar el 15% aparece la sección; al pasar el % de una misión, se desbloquea.
     const progreso = this.tycoon.progreso;
     const abiertas = this.abiertas;
