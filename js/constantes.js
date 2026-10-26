@@ -31,6 +31,12 @@ export const PISCINA = { x0: -12, x1: 12, z0: -62, z1: -44, alto: 2.4 };
 export const CANCHA = { x0: 28, x1: 60, z0: -84, z1: -46 };
 export const GARAGE = { x0: 47, x1: 70.5, z0: -12, z1: 20, alto: 9 };
 
+// Galpón Vecibanda: otro terreno pegado a la mansión, del lado del garage. La boca (con el
+// portón corredizo abierto) mira a la calle; ahí se guardan los autos del concesionario.
+export const GALPON = { x0: 82, x1: 126, z0: -46, z1: 14, alto: 11, cumbrera: 16, boca: [88, 122] };
+// Lugares para estacionar en el galpón (centro de cada auto, con la trompa hacia la boca).
+export const GALPON_LUGARES = [0, 1, 2, 3, 4, 5].map((i) => ({ x: GALPON.x0 + 4.5 + i * 7, z: -20 }));
+
 // Ascensor: una plataforma por piso, en el fondo del núcleo.
 export const ASCENSOR = { x: -6, z: -31 };
 
@@ -75,5 +81,8 @@ export const CUSI_ESCONDIDO = { x: 94.5, z: -124.5 };
 export const CIUDAD = { x: -20000, z: CALLE_Z };
 // La autopista va desde donde termina la calle del barrio hasta la entrada de la ciudad.
 export const AUTOPISTA = { x0: CIUDAD.x + 340, x1: -640, z: CALLE_Z, medioAncho: 12 };
+// Concesionario Vecibanda Motors: a la salida de la ciudad, al costado de la autopista (del
+// lado de las casas), con la vidriera mirando a la autopista (-z).
+export const CONCESIONARIO = { x0: CIUDAD.x + 384, x1: CIUDAD.x + 444, z0: CALLE_Z + 26, z1: CALLE_Z + 64, alto: 13 };
 // Hasta dónde se puede ir caminando o en auto: el barrio, la autopista y la ciudad.
 export const LIMITE_MAPA = { x0: CIUDAD.x - 480, x1: 520, z0: -520, z1: 520 };

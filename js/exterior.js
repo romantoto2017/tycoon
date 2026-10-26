@@ -1,5 +1,5 @@
 // Piezas del terreno alrededor de la mansión (coordenadas del mundo, piso en y = 0).
-import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G, PARRILLA as PA } from './constantes.js';
+import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G, PARRILLA as PA, GALPON as GA, GALPON_LUGARES, CALLE_Z } from './constantes.js';
 
 // Cascadas de la entrada: el agua sale de un canal de piedra que se apoya en dos pilares,
 // cae separada del muro (se ve el muro atrás) y llega a una pileta con espuma.
@@ -370,6 +370,100 @@ export function garage(k, g) {
   g.add(cartel);
 }
 
+// Galpón Vecibanda (como un galpón de campo): chapa acanalada clara sobre un zócalo de
+// hormigón, bordes y parantes verdes, techo a dos aguas, el portón corredizo corrido a un
+// costado y la boca abierta hacia la calle. Adentro, pórticos de hierro, chapas traslúcidas
+// arriba en los costados, luces y los lugares marcados para los autos.
+export function galpon(k, g) {
+  const { x0, x1, z0, z1, alto: A, cumbrera: C2, boca: [b0, b1] } = GA;
+  const cx = (x0 + x1) / 2;
+  const { THREE } = k;
+  const chapa = k.tex('chapa', '#eef0f2', 3.2);
+  const chapaTecho = k.tex('chapa', '#d9dde1', 3.2);
+  const hormigon = k.tex('concreto', '#b9b6ae', 3);
+  const verde = '#2e7d32';
+  const hierro = '#3b4046';
+  const e = 0.4; // espesor de las paredes
+  const ZOC = 1.4; // alto del zócalo de hormigón
+  // Piso y camino de hormigón hasta la calle.
+  g.add(k.noSolido(k.cajaDe(x0, 0, z0, x1, 0.1, z1, k.tex('concreto', '#a3a7ab', 5))));
+  g.add(k.noSolido(k.cajaDe(b0, 0, z1, b1, 0.08, CALLE_Z - 8, k.tex('concreto', '#cfcbc3', 4))));
+  // Pared con zócalo: hormigón abajo y chapa arriba.
+  const pared = (ax, az, bx, bz, y1 = A) => {
+    g.add(k.cajaDe(ax, 0, az, bx, ZOC, bz, hormigon));
+    g.add(k.cajaDe(ax, ZOC, az, bx, y1, bz, chapa));
+  };
+  pared(x0, z0, x0 + e, z1); // costados
+  pared(x1 - e, z0, x1, z1);
+  pared(x0 + e, z0, x1 - e, z0 + e); // fondo
+  pared(x0 + e, z1 - e, b0, z1); // frente, a los dos lados de la boca
+  pared(b1, z1 - e, x1 - e, z1);
+  g.add(k.cajaDe(b0, 9.4, z1 - e, b1, A, z1, chapa)); // arriba de la boca
+  // Hastiales (los triángulos de arriba, adelante y atrás).
+  const triangulo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(x0, A, 0), new THREE.Vector3(x1, A, 0), new THREE.Vector3(cx, C2, 0),
+  ]);
+  triangulo.computeVertexNormals();
+  const matHastial = new THREE.MeshLambertMaterial({ color: '#dfe2e5', side: THREE.DoubleSide });
+  for (const z of [z0, z1]) {
+    const t = new THREE.Mesh(triangulo, matHastial);
+    t.position.z = z;
+    g.add(k.noSolido(t));
+  }
+  // Techo a dos aguas, con un poco de alero, y la cumbrera.
+  const medio = (x1 - x0) / 2;
+  const largo = Math.hypot(medio, C2 - A) + 0.8;
+  const angulo = Math.atan2(C2 - A, medio);
+  for (const lado of [-1, 1]) {
+    const techo = k.cajaDe(-largo / 2, 0, z0 - 0.8, largo / 2, 0.25, z1 + 0.8, chapaTecho);
+    techo.position.set(cx + lado * (medio / 2), (A + C2) / 2 + 0.12, (z0 + z1) / 2);
+    techo.rotation.z = -lado * angulo;
+    g.add(k.noSolido(techo));
+  }
+  g.add(k.noSolido(k.cajaDe(cx - 0.5, C2, z0 - 0.8, cx + 0.5, C2 + 0.35, z1 + 0.8, '#b7bcc1')));
+  // Bordes y parantes verdes (esquinas, boca y abajo de los aleros).
+  for (const [x, z] of [[x0, z1], [x1, z1], [x0, z0], [x1, z0]]) {
+    g.add(k.noSolido(k.cajaDe(x - 0.3, 0, z - 0.3, x + 0.3, A, z + 0.3, verde)));
+  }
+  for (const x of [b0, b1]) g.add(k.noSolido(k.cajaDe(x - 0.25, 0, z1 - 0.5, x + 0.25, 9.4, z1 + 0.1, verde)));
+  g.add(k.noSolido(k.cajaDe(b0, 9.2, z1 - 0.5, b1, 9.5, z1 + 0.1, verde)));
+  for (const x of [x0 - 0.05, x1 + 0.05]) g.add(k.noSolido(k.cajaDe(x - 0.1, A - 0.25, z0, x + 0.1, A, z1, verde)));
+  // Portón corredizo: corrido hacia la izquierda, sobre su riel, adelante de la pared.
+  g.add(k.cajaDe(b0 - 15, 0, z1 + 0.2, b0 + 1, 9.2, z1 + 0.6, chapa));
+  g.add(k.noSolido(k.cajaDe(b0 - 15.3, 0, z1 + 0.15, b0 + 1.3, 0.35, z1 + 0.65, verde)));
+  g.add(k.noSolido(k.cajaDe(b0 - 15.3, 9.2, z1 + 0.15, b0 + 1.3, 9.5, z1 + 0.65, verde)));
+  g.add(k.noSolido(k.cajaDe(b0 - 16, 9.5, z1 + 0.2, b0 + 2, 9.7, z1 + 0.5, hierro))); // riel
+  // Bolsitas de arena rojas que traban el portón (como en la foto).
+  for (const x of [b0 - 13.5, b0 - 10.5, b1 + 1.6]) g.add(k.noSolido(k.cajaDe(x - 0.45, 0, z1 + 0.7, x + 0.45, 0.55, z1 + 1.4, '#d32f2f')));
+  // Adentro: pórticos de hierro cada 10 (columnas contra las paredes y cabriadas inclinadas).
+  for (let z = z0 + 5; z < z1 - 2; z += 10) {
+    for (const lado of [-1, 1]) {
+      const x = lado < 0 ? x0 + e : x1 - e - 0.5;
+      g.add(k.cajaDe(x, 0, z - 0.25, x + 0.5, A, z + 0.25, hierro));
+      const viga = k.cajaDe(-largo / 2, -0.6, -0.15, largo / 2, 0, 0.15, hierro);
+      viga.position.set(cx + lado * (medio / 2), (A + C2) / 2 - 0.2, z);
+      viga.rotation.z = -lado * angulo;
+      g.add(k.noSolido(viga));
+    }
+    g.add(k.noSolido(k.cajaDe(x0 + 3, A - 0.6, z - 0.2, x1 - 3, A - 0.45, z + 0.2, hierro))); // tensor
+    g.add(k.noSolido(k.cajaDe(cx - 8, A - 0.9, z - 0.25, cx + 8, A - 0.7, z + 0.25, k.brillo('#f4f8ff'))));
+  }
+  // Chapas traslúcidas arriba en los costados (dejan pasar la luz).
+  for (let z = z0 + 10; z < z1 - 4; z += 10) {
+    for (const x of [x0 - 0.03, x1 + 0.03]) g.add(k.noSolido(k.cajaDe(x - 0.04, A - 3.2, z - 1.4, x + 0.04, A - 0.8, z + 1.4, k.brillo('#e8eef2'))));
+  }
+  // Lugares para los autos: líneas amarillas y un tope en el fondo.
+  const pasoL = GALPON_LUGARES[1].x - GALPON_LUGARES[0].x;
+  for (let i = 0; i <= GALPON_LUGARES.length; i++) {
+    const x = GALPON_LUGARES[0].x - pasoL / 2 + i * pasoL;
+    g.add(k.noSolido(k.cajaDe(x - 0.15, 0.1, -30, x + 0.15, 0.13, -9, '#f2c230')));
+  }
+  for (const l of GALPON_LUGARES) g.add(k.noSolido(k.cajaDe(l.x - 1.6, 0.1, -31.5, l.x + 1.6, 0.4, -30.8, '#f2c230')));
+  // Cartel arriba de la boca.
+  const cartel = k.cartel('GALPÓN VECIBANDA', 13, 2, '#ffffff', verde);
+  cartel.position.set(cx, A + 1.6, z1 + 0.05);
+  g.add(cartel);
+}
 
 // Gradas de cemento con asientos de colores, techo y un marcador.
 export function gradas(k, g) {

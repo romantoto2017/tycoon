@@ -3,7 +3,7 @@ import { mat } from './util.js';
 import { LIMITE_MAPA } from './constantes.js';
 
 const RADIO = 2.3;
-const VEL_MAX = 34;
+export const VEL_MAX = 34;
 const VEL_ATRAS = -10;
 
 // "Auto Deportivo" (en el juego se llama así para trollear): en realidad es un BYD F0
@@ -391,8 +391,9 @@ export class Auto {
     this.grupo.rotation.y = this.angulo;
     const c = Math.abs(Math.cos(this.angulo));
     const s = Math.abs(Math.sin(this.angulo));
-    const hx = c * 2.1 + s * 4.35;
-    const hz = s * 2.1 + c * 4.35;
+    const [mx, mz] = this.medio || [2.1, 4.35]; // medio ancho y medio largo
+    const hx = c * mx + s * mz;
+    const hz = s * mx + c * mz;
     this.caja.min.set(this.pos.x - hx, 0, this.pos.z - hz);
     this.caja.max.set(this.pos.x + hx, 3.6, this.pos.z + hz);
   }

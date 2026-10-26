@@ -164,6 +164,25 @@ La ciudad (`js/ciudad.js`) está armada como una de verdad: una cuadrícula de 8
 
 Hay unas 50 personas caminando (más en el centro); las que quedan lejos no se dibujan ni se mueven.
 
+## Galpón Vecibanda y Vecibanda Motors (autos)
+
+- **Galpón Vecibanda** (`galpon` en `js/progresion.js`, armado en `js/exterior.js`): otro terreno pegado a la mansión, del lado del garage (`GALPON` en `js/constantes.js`). Como un galpón de campo: chapa acanalada clara (textura `chapa`), zócalo de hormigón, bordes verdes, techo a dos aguas, el portón corredizo corrido a un costado y un camino de hormigón hasta la calle. Su botón aparece después del Auto Deportivo; cuesta 20B fijo y es opcional (no hace falta para el cartel final ni cuenta para las 3 horas).
+- **Vecibanda Motors** (`js/concesionario.js`): a la salida de la ciudad, al costado de la autopista (`CONCESIONARIO`), como la foto de referencia: caja de paneles gris oscuro, vidriera de punta a punta, el nombre en la franja de arriba, cielorraso blanco con tiras de luz, escalones con luces, canteros y una palmera. Adentro, los autos con su cartel (nombre, precio y precio de verdad); el más caro, en una plataforma que gira. Solo se dibuja de cerca y los modelos se cargan recién cuando te acercás.
+- **Comprar:** acercate a un auto y "Comprar … (E)". Sin el galpón no se puede ("Primero comprá el Galpón Vecibanda"). El auto queda en el galpón (`estado.autos`), estacionado en su lugar, y **se maneja** igual que el Auto Deportivo (`AutoComprado` en `js/concesionario.js`), cada uno con su potencia (velocidad máxima).
+- **Autos y precios** (`data/autos.js`, ahí se agregan más): precio en el juego = 9B × (precio real en dólares / 350) ^ 0,6, redondeado (350 dólares es la Jordan 3 x J Balvin, que sale 9B). Con la proporción exacta el McLaren costaría 41T (más de 50 horas de juego), así que la escala se comprime pero mantiene el orden y los hace carísimos. Al final de la partida se ganan ~216M por segundo: el Miata sale unos 6 minutos de eso y la F40, unas 3 horas.
+
+| Auto | De verdad (aprox.) | En el juego |
+| --- | --- | --- |
+| Mazda MX-5 Miata (NA) | US$ 12.000 | 75B |
+| BMW Serie 3 E36 | US$ 14.000 | 85B |
+| VW Golf GTI Clubsport | US$ 28.000 | 130B |
+| Nissan GT-R R35 | US$ 120.000 | 350B |
+| McLaren P1 | US$ 1.600.000 | 1,5T |
+| Ferrari F40 | US$ 3.200.000 | 2,5T |
+
+- **Modelos 3D** (`assets/autos/`, de Sketchfab): venían con 100 a 400 mil triángulos cada uno; `herramientas/autos.mjs` (gltf-transform, acá en el contenedor) les saca el motor y las piezas diminutas, simplifica (con cuidado la carrocería, los vidrios y las luces) hasta ~30 mil triángulos, deja solo la textura de color a 256 px y comprime con meshopt: quedan entre 0,6 y 1 MB. Los zips originales se sacaron del repo (pesaban 58 MB para GitHub Pages); siguen en el historial de git (commits "Add files via upload").
+- **Créditos** (CC-BY 4.0 salvo el Golf, CC-BY-NC-SA 4.0): Mazda Miata MX-5, BMW 3-Series E36 [Street] y Nissan Skyline GTR R35 por [Black Snow](https://sketchfab.com/BlackSnow02); McLaren P1 y Ferrari F40 por [vecarz / Nic Cheung](https://sketchfab.com/heynic); 2016 Volkswagen Golf GTI Clubsport Mk7 por [Ddiaz Design](https://sketchfab.com/ddiaz-design). Modificados (achicados) para el juego.
+
 ## Tiendas de ropa y el ropero
 
 Sobre la avenida, enfrente de la plaza, hay tres tiendas: **KICKS** (zapatillas, joggings y la gorra; el cartel es `assets/especiales/logotiendaderopa.png`), **VECI DRIP** (remeras BAPE, Supreme, Corteiz y los conjuntos Corteiz) y **LA FUTBOLERA** (camperas de clubes, buzo SAFA y botines F50). En la vidriera hay maniquíes vestidos con la ropa de la tienda, y al fondo el que atiende (también vestido con ropa de ahí). En el mostrador aparece "Ver la ropa (E)" y se abre el catálogo. La ropa es cara (de 500 millones a 9 mil millones): es para el final de la partida. Con la primera compra, el que atiende te explica que te la ponés en el ropero.

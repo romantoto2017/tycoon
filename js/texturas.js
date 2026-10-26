@@ -814,6 +814,15 @@ const DIBUJOS = {
     g.fillRect(0, 0, s, s);
     ruido(g, s, s, 6000, 0.2, 12);
   },
+  // Chapa acanalada (galpón): ondas verticales con luz y sombra, y algo de grano.
+  chapa(g, s) {
+    for (let x = 0; x < s; x++) {
+      const v = Math.round(214 + 30 * Math.sin((x / s) * Math.PI * 2 * 16));
+      g.fillStyle = `rgb(${v},${v},${v + 3})`;
+      g.fillRect(x, 0, 1, s);
+    }
+    ruido(g, s, s, 1200, 0.05, 2);
+  },
   // Hormigón para veredas y canteros.
   concreto(g, s) {
     g.fillStyle = '#e4e4e4';

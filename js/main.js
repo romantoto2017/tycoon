@@ -21,6 +21,8 @@ import { Misiones } from './misiones.js';
 import { Dufre } from './dufre.js';
 import { Ottati } from './ottati.js';
 import { Ciudad } from './ciudad.js';
+import { Concesionario, Flota } from './concesionario.js';
+import { VEL_MAX } from './auto.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
 import { crearAK } from './arma.js';
@@ -84,6 +86,7 @@ async function iniciar() {
   if (estado.compras.length && !estado.compras.includes('terreno')) estado.compras.unshift('terreno');
   estado.ropa ??= [];
   estado.vestuario ??= {};
+  estado.autos ??= []; // los del concesionario (data/autos.js), en el orden en que se compraron
   const puedeVestirse = (id) => !(id === 'bauti' && bautiGordo(estado));
   let reiniciando = false;
   const guardarAhora = () => { if (!reiniciando && !vistaCompleta) guardar(estado); };
@@ -102,6 +105,8 @@ async function iniciar() {
   const dufre = new Dufre(escena, UI);
   const ottati = new Ottati(escena, UI);
   const ciudad = new Ciudad(escena, UI);
+  const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora });
+  const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
   // Choques de este cuadro: en la ciudad, solo los de alrededor (son muchos); si no, los de siempre.
   let choquesActuales = colisiones;
   let avisoAutopista = false;
@@ -122,15 +127,23 @@ async function iniciar() {
   let modo = 'menu';
   // ---------- Auto ----------
   let conduciendo = false;
-  let vehiculo = null; // el que estás manejando: tycoon.auto o tycoon.heli
+  let vehiculo = null; // el que estás manejando: un auto (el deportivo o uno del galpón) o tycoon.heli
   let avisoHeli = false;
   const ejes = { x: 0, y: 0 };
   const tmpBajada = new THREE.Vector3();
   const btnManejar = document.getElementById('btn-manejar');
   let textoManejar = '';
+  const autos = () => (tycoon.auto ? [tycoon.auto, ...flota.autos] : flota.autos);
+  // El auto más cercano para subirse (a menos de 6), o null.
   const cercaDelAuto = () => {
-    const a = tycoon.auto;
-    return a && jugador.pos.y < 2 && Math.hypot(jugador.pos.x - a.pos.x, jugador.pos.z - a.pos.z) < 6;
+    if (jugador.pos.y >= 2) return null;
+    let mejor = null;
+    let dMejor = 6;
+    for (const a of autos()) {
+      const d = Math.hypot(jugador.pos.x - a.pos.x, jugador.pos.z - a.pos.z);
+      if (d < dMejor) { dMejor = d; mejor = a; }
+    }
+    return mejor;
   };
   const cercaDelHeli = () => {
     const h = tycoon.heli;
@@ -148,13 +161,13 @@ async function iniciar() {
       jugador.pos.copy(v.puntoBajada(tmpBajada));
       jugador.vel.set(0, 0, 0);
     } else {
-      const v = cercaDelAuto() ? tycoon.auto : cercaDelHeli() ? tycoon.heli : null;
+      const v = cercaDelAuto() || (cercaDelHeli() ? tycoon.heli : null);
       if (!v) return;
       sacarArma(false);
       sacarLechuga(false);
       conduciendo = true;
       vehiculo = v;
-      if (v === tycoon.auto) v.vel = 0;
+      if (v !== tycoon.heli) v.vel = 0;
       else {
         v.prendido = true;
         if (!avisoHeli) {
@@ -200,6 +213,10 @@ async function iniciar() {
   const accion = () => {
     if (!conduciendo && ciudad.accion(jugador)) {
       ciudad.hacer(jugador);
+      return;
+    }
+    if (!conduciendo && concesionario.accion(jugador)) {
+      concesionario.hacer(jugador);
       return;
     }
     if (misiones.accion(jugador)) {
@@ -745,7 +762,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, lechugas, sacarLechuga };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, lechugas, sacarLechuga };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -836,21 +853,22 @@ async function iniciar() {
     const real = reloj.getDelta();
     const dt = Math.min(real, 0.05);
 
-    choquesActuales = ciudad.choquesCerca(jugador.pos, tycoon.auto?.caja, tycoon.heli?.caja) || colisiones;
+    choquesActuales = ciudad.choquesCerca(jugador.pos, tycoon.heli?.caja, ...autos().map((a) => a.caja)) || colisiones;
     if (enHeli()) {
       tycoon.heli.actualizar(dt, controles.ejes(ejes), controles.saltar, choquesActuales, mundo.altura);
       jugador.pos.copy(tycoon.heli.pos);
     } else if (conduciendo) {
-      tycoon.auto.terreno = mundo.altura;
-      // En la autopista el auto va mucho más rápido (la ciudad queda a 20 km).
-      const enAutopista = ciudad.enAutopista(tycoon.auto.pos);
-      tycoon.auto.velMax = enAutopista ? 150 : 0;
+      vehiculo.terreno = mundo.altura;
+      // En la autopista el auto va mucho más rápido (la ciudad queda a 20 km). Los del
+      // concesionario, según su potencia.
+      const enAutopista = ciudad.enAutopista(vehiculo.pos);
+      vehiculo.velMax = (enAutopista ? 150 : VEL_MAX) * (vehiculo.potencia || 1);
       if (enAutopista && !avisoAutopista) {
         avisoAutopista = true;
         UI.toast('¡Autopista! Acá el auto vuela: a fondo hasta la Ciudad Vecibanda', 'info');
       }
-      tycoon.auto.actualizar(dt, controles.ejes(ejes), choquesActuales);
-      jugador.pos.copy(tycoon.auto.pos);
+      vehiculo.actualizar(dt, controles.ejes(ejes), choquesActuales);
+      jugador.pos.copy(vehiculo.pos);
     } else if (gym.entrenando) {
       // Entrenando en el gym: moverse lo saca de la máquina; saltar (o el botón) hace la repetición.
       controles.direccion(dir);
@@ -870,7 +888,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : 'Bajar del auto (E)')
-      : ciudad.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : ciudad.accion(jugador) || concesionario.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -890,6 +908,8 @@ async function iniciar() {
     misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
     dufre.actualizar(dt, jugador, modo === 'juego');
     ottati.actualizar(dt, jugador, modo === 'juego');
+    concesionario.actualizar(dt, jugador);
+    flota.actualizar();
     ciudad.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);
     actualizarLechugas();

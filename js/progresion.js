@@ -147,6 +147,12 @@ obra('ak47', 'AK-47 (para la Schwepa)', ['garage'], suelo(66.5, 2), Es.armero, {
   descripcion: 'Apretá 1 o el botón de abajo para sacarla', multPrecio: 3,
 });
 agregar({ id: 'auto', nombre: 'Auto Deportivo (manejable)', tipo: 'construccion', requiere: ['ak47'], boton: suelo(59, 30), multPrecio: 10 });
+// Galpón Vecibanda: otro terreno pegado a la mansión. Sin él no se pueden comprar los autos del
+// concesionario (a la salida de la ciudad). Precio fijo y opcional: no cuenta para el final.
+agregar({
+  id: 'galpon', nombre: 'Galpón Vecibanda', tipo: 'construccion', requiere: ['auto'], boton: suelo(66, 44), construir: Ex.galpon,
+  especial: true, opcional: true, precio: 20e9, descripcion: 'Los autos de Vecibanda Motors (a la salida de la ciudad) se guardan acá',
+});
 cuarto(0);
 cuarto(1);
 mejora('velocidad', ['vel1', 'paredes_int_1']);

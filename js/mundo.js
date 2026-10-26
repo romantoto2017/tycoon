@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { caja, matTex, aleatorio } from './util.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LIMITE_MAPA, TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU } from './constantes.js';
+import { LIMITE_MAPA, TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU, GALPON as GA } from './constantes.js';
 import { crearCielo } from './cielo.js';
 
 // Largo del barrio (en x): llega del gym (-455) al restaurante (+160) con margen.
@@ -101,6 +101,7 @@ function crearArboles(escena, altura = () => 0) {
       if (z > CALLE_Z - 10 && z < CALLE_Z + 34) continue;                          // calle y casas
       if (x > R.x0 - 8 && x < PA.x + 14 && z > R.z0 - 8 && z < CALLE_Z) continue;    // restaurante y parrilla
       if (x > GYM.x0 - 8 && x < GYM.x1 + 8 && z > GYM.z0 - 8 && z < CALLE_Z) continue; // gym
+      if (x > GA.x0 - 18 && x < GA.x1 + 8 && z > GA.z0 - 8 && z < CALLE_Z) continue;  // lote del galpón
       if (Math.hypot(x - MO.x, z - MO.z) < MO.r + 6) continue;                      // montaña
       puntos.push([x, z, 0.8 + rnd() * 0.6]);
       n++;
