@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, crearEtiqueta } from './texturas.js';
-import { MANSION, CUSI_ESCONDIDO as CU, nivel } from './constantes.js';
+import { MANSION, TERRENO as T, CUSI_ESCONDIDO as CU, AUTOS_DESDE, nivel } from './constantes.js';
 import { BAUTI_GYM } from './gimnasio.js';
 import { sfx } from './sfx.js';
 import { formato } from './util.js';
@@ -13,19 +13,26 @@ import { formato } from './util.js';
 //    diálogo: el Cusi se perdió en el bosque al pie de la montaña del pelado. Solo con Juanma
 //    aparece ahí; lo agarrás y lo llevás a la casa. Ya rescatado, vive en el hall de la
 //    mansión y se lo ve con cualquier personaje.
+//  - Tepho: rescatar al Pipi (desde el 10%, igual que el Cusi): quedó tirado en el rincón más
+//    escondido de la cerca, al fondo del terreno. Rescatado, se queda en el hall con el Cusi.
 
 // El Cusi: un nene, chiquito y muy cabezón.
 export const CUSI = {
   id: 'cusi', nombre: 'Cusi', foto: 'cusi.jpeg', recorte: [0.385, 0.218, 0.52], pelo: '#2e2119', peinado: 'liso',
   remera: '#14806f', pantalon: '#78805d', capucha: '#14806f',
 };
-const ESCALA_CUSI = 0.58;
-const CABEZON = 1.95;
-const CASA_CUSI = { x: -4.5, z: -4, angulo: 0.4 }; // en el hall de planta baja, mirando a la puerta
+// El Pipi: chiquito como el Cusi pero más flaco (gordura negativa) y sin ser cabezón.
+export const PIPI = {
+  id: 'pipi', nombre: 'Pipi', foto: 'pipi.jpeg', recorte: [0.545, 0.62, 0.6], pelo: '#4a3020', peinado: 'liso', gordura: -0.35,
+  remera: '#4fc3f7', pantalon: '#5d4037',
+};
+// Dónde quedó tirado: el rincón del fondo a la izquierda (mirando desde la calle), detrás de la
+// fábrica y la mansión, contra la cerca (o donde va a ir, si todavía no se compró).
+export const PIPI_TIRADO = { x: T.x0 + 3.4, z: T.z0 + 3.4 };
 
 // La sección de misiones aparece cuando la mansión llega a este progreso. Una misión con
 // `desde` se ve gris (un "?" de piedra, sin decir cuánto falta) hasta llegar a ese progreso.
-export const MISIONES_DESDE = 0.15;
+export const MISIONES_DESDE = 0.1;
 // Premio de cada misión: lo que más convenga entre `base` (fijo, según el % al que se
 // desbloquea: más o menos 10 minutos de lo que se gana en ese momento de la partida) y
 // `minutos` de lo que estás ganando cuando la cumplís (según lo difícil que es). La de Bauti
@@ -40,14 +47,24 @@ export const MISIONES = [
     id: 'cusi', personaje: 'juanma', titulo: 'Rescatar al Cusi', desde: 0.5, premio: { base: 2e7, minutos: 6, tope: 6e8 },
     texto: 'El Cusi se perdió. Encontralo y llevalo de vuelta a casa.',
   },
+  {
+    id: 'pipi', personaje: 'tepho', titulo: 'Rescatar al Pipi', desde: 0.1, premio: { base: 3e4, minutos: 8, tope: 3e7 },
+    texto: 'El Pipi quedó tirado en algún lado de la cerca. Encontralo y traelo a casa.',
+  },
   // De cualquier personaje (personaje: null). Sin pistas: solo el texto.
   { id: 'empilchado', personaje: null, titulo: 'Empilchado', texto: 'Comprate 5 pilchas ricas', premio: { base: 1.5e9, minutos: 3, tope: 6e9 } },
-  // Autos de Vecibanda Motors (data/autos.js): caros a propósito, así que pagan bien.
-  { id: 'ricas_llantas', personaje: null, titulo: 'Ricas llantas', texto: 'Tené dos autos de colección en el galpón', premio: { base: 2e10, minutos: 8, tope: 2e11 } },
-  { id: 'il_conto', personaje: null, titulo: 'Il conto por favore', texto: 'Comprate la Ferrari', premio: { base: 1e11, minutos: 15, tope: 5e11 } },
+  // Autos de Vecibanda Motors (AUTOS en data/objetos.js): caros a propósito, así que pagan bien.
+  { id: 'ricas_llantas', personaje: null, desde: AUTOS_DESDE, titulo: 'Ricas llantas', texto: 'Tené dos autos de colección en el galpón', premio: { base: 2e10, minutos: 8, tope: 2e11 } },
+  { id: 'il_conto', personaje: null, desde: AUTOS_DESDE, titulo: 'Il conto por favore', texto: 'Comprate la Ferrari', premio: { base: 1e11, minutos: 15, tope: 5e11 } },
 ];
 export const PILCHAS = 5;
 export const AUTOS_COLECCION = 2;
+
+const DIALOGO_PIPI = [
+  '¿Y el Pipi? Hace un rato andaba por acá jugando...',
+  'La última vez lo vi corriendo por la cerca, allá en el fondo del terreno.',
+  'Seguro se cayó y quedó tirado en algún rincón. ¡Lo tengo que ir a buscar!',
+];
 
 const DIALOGO_CUSI = [
   '¿Eh? ¿Y el Cusi? ¿Alguien vio al Cusi?',
@@ -61,11 +78,8 @@ export class Misiones {
     this.escena = escena;
     this.tycoon = tycoon;
     this.ui = ui;
-    this.cusi = null;
-    this.cargando = false;
-    this.llevando = false;
     this.alHablar = null; // main.js: abre el diálogo (personaje, líneas, alTerminar)
-    this.reloj = 0;
+    this.perdidos = Object.fromEntries(Object.entries(PERDIDOS).map(([id, d]) => [id, new Perdido(this, id, d)]));
   }
 
   get estado() {
@@ -99,7 +113,7 @@ export class Misiones {
   }
 
   completar(id, mensaje) {
-    if (id === 'cusi') this.estado.cusi = 'rescatado';
+    if (PERDIDOS[id]) this.estado[id] = 'rescatado';
     else this.estado[id] = true;
     sfx.final();
     const plata = this.cobrar(id);
@@ -125,11 +139,12 @@ export class Misiones {
       } else if (m.id === 'trabado') {
         avance = Math.min(1, (e.bautiGym || 0) / (BAUTI_GYM.adelgazar + BAUTI_GYM.musculo));
         detalle = this.hecha('trabado') ? '¡Bauti quedó trabado!' : `Entrenamiento: ${Math.floor(avance * 100)}%`;
-      } else {
-        const c = this.estado.cusi;
-        if (c === 'rescatado') { avance = 1; detalle = 'El Cusi está a salvo en la casa'; }
+      } else if (PERDIDOS[m.id]) {
+        const d = PERDIDOS[m.id];
+        const c = this.estado[m.id];
+        if (c === 'rescatado') { avance = 1; detalle = `El ${d.def.nombre} está a salvo en la casa`; }
         else if (c === 'perdido' || c === 'llevando') { avance = c === 'llevando' ? 0.75 : 0.4; detalle = c === 'llevando' ? 'Llevalo hasta la mansión' : 'Todavía no lo encontraste... ¡buscalo!'; }
-        else { avance = 0; detalle = 'Jugá con Juanma para empezarla'; }
+        else { avance = 0; detalle = `Jugá con ${d.nombreDueno} para empezarla`; }
       }
       const bloqueada = progreso < (m.desde || 0);
       const cobrado = this.tycoon.estado.premios?.[m.id];
@@ -149,81 +164,18 @@ export class Misiones {
     if (!this.hecha('il_conto') && autos.includes('ferrari_f40')) this.completar('il_conto', 'Il conto por favore');
   }
 
-  // ---------- El Cusi ----------
-  async crearCusi() {
-    this.cargando = true;
-    const m = crearPersonaje(CUSI, await cargarCabeza(CUSI));
-    const { cabeza } = m.partes;
-    // Cabezón: la cabeza crece desde el cuello (y la capucha y todo lo demás quedan igual).
-    cabeza.scale.setScalar(CABEZON);
-    cabeza.position.y = 2 + 0.65 * CABEZON;
-    m.grupo.scale.setScalar(ESCALA_CUSI);
-    const nombre = crearEtiqueta([{ texto: 'Cusi', tam: 60, color: '#7cf0c8' }], 4);
-    nombre.sprite.position.y = 9.6;
-    m.grupo.add(nombre.sprite);
-    this.etiqueta = nombre.sprite;
-    this.cusi = m;
-    this.cargando = false;
-  }
-
-  // ¿Ya pasó el 50%? Antes de eso el Cusi no existe y su misión no se puede hacer.
-  get cusiDisponible() {
-    return this.tycoon.progreso >= MISIONES.find((m) => m.id === 'cusi').desde;
-  }
-
-  // Dónde tiene que estar el Cusi ahora (o null si no se ve).
-  lugarCusi(jugador) {
-    if (!this.cusiDisponible) return null;
-    const c = this.estado.cusi;
-    if (c === 'rescatado') return 'casa';
-    if (c === 'perdido' && jugador.personaje?.id === 'juanma') return 'bosque';
-    if (c === 'llevando' && this.llevando) return 'brazos';
-    return null;
-  }
-
-  ponerCusi(lugar, jugador) {
-    const g = this.cusi.grupo;
-    if (g.parent) g.parent.remove(g);
-    this.lugar = lugar;
-    if (!lugar) return;
-    if (lugar === 'brazos') {
-      // En brazos de Juanma, adelante a la altura del pecho, sentadito.
-      g.position.set(0, 1.65, 1.15);
-      g.rotation.set(0, 0, 0);
-      jugador.contenedor.add(g);
-      this.etiqueta.visible = false;
-    } else {
-      const p = lugar === 'casa' ? { x: CASA_CUSI.x, y: nivel(0), z: CASA_CUSI.z } : { x: CU.x, y: 0, z: CU.z };
-      g.position.set(p.x, p.y, p.z);
-      g.rotation.set(0, lugar === 'casa' ? CASA_CUSI.angulo : -0.77, 0); // en el bosque mira para el lado de la casa
-      this.escena.add(g);
-      this.etiqueta.visible = lugar === 'casa';
-    }
-  }
-
-  distCusi(jugador) {
-    if (this.lugar !== 'bosque') return Infinity;
-    return Math.hypot(jugador.pos.x - CU.x, jugador.pos.z - CU.z);
-  }
-
+  // ---------- Rescates (el Cusi y el Pipi) ----------
   // Texto del botón de acción, o ''.
   accion(jugador) {
-    if (this.lugar === 'bosque' && this.distCusi(jugador) < 4 && jugador.pos.y < 2) return 'Agarrar al Cusi (E)';
+    for (const p of Object.values(this.perdidos)) {
+      const t = p.accion(jugador);
+      if (t) return t;
+    }
     return '';
   }
 
   hacer(jugador) {
-    if (!this.accion(jugador) || !this.cusiDisponible) return;
-    this.estado.cusi = 'llevando';
-    this.llevando = true;
-    sfx.brillo();
-    this.ui.toast('Juanma: "¡Acá estabas! Vamos a casa, Cusi"', 'info');
-  }
-
-  // Si se cambia de personaje con el Cusi en brazos, el Cusi vuelve al bosque.
-  soltar() {
-    if (this.estado.cusi === 'llevando') this.estado.cusi = 'perdido';
-    this.llevando = false;
+    for (const p of Object.values(this.perdidos)) if (p.accion(jugador)) { p.agarrar(); return; }
   }
 
   enCasa(p) {
@@ -269,60 +221,185 @@ export class Misiones {
     const id = jugador.personaje.id;
     // Bauti trabado: musculoso al 100%.
     if (jugando && !this.hecha('trabado') && id === 'bauti' && (jugador.personaje.musculo || 0) >= 1) this.completar('trabado', 'Bauti quedó trabado');
-    // Al 50% con Juanma: el Cusi se pierde (diálogo).
-    if (jugando && !e.cusi && id === 'juanma' && this.cusiDisponible && this.alHablar && !this.hablando) {
-      this.hablando = true;
-      this.alHablar(DIALOGO_CUSI, () => {
-        e.cusi = 'perdido';
-        this.hablando = false;
-        this.ui.toast('Nueva misión: Rescatar al Cusi', 'info');
-        this.tycoon.guardar?.();
+    for (const p of Object.values(this.perdidos)) p.actualizar(dt, jugador, jugando);
+  }
+}
+
+// ---------- Rescates ----------
+// El Cusi (Juanma, desde el 50%) y el Pipi (Tepho, desde el 10%): jugando con el dueño, al llegar
+// al % salta un diálogo y el chico aparece perdido; lo agarrás (queda en brazos), lo llevás a la
+// mansión y se queda a vivir en el hall, a la vista de todos. Estado en estado.misiones[id]:
+// undefined → 'perdido' → 'llevando' → 'rescatado'.
+const PERDIDOS = {
+  cusi: {
+    def: CUSI, dueno: 'juanma', nombreDueno: 'Juanma', escala: 0.58, cabeza: 1.95, color: '#7cf0c8', dialogo: DIALOGO_CUSI,
+    perdido: { x: CU.x, z: CU.z, angulo: -0.77, pose: 'sentado' }, // en el bosque, mirando para el lado de la casa
+    casa: { x: -4.5, z: -4, angulo: 0.4 }, // en el hall de planta baja, mirando a la puerta
+    agarrar: 'Agarrar al Cusi (E)', alAgarrar: 'Juanma: "¡Acá estabas! Vamos a casa, Cusi"',
+    llama: 'Cusi: "¡¡Juanmaaa!! ¡Acá estoy!"', cumplida: 'El Cusi volvió a casa',
+  },
+  pipi: {
+    def: PIPI, dueno: 'tepho', nombreDueno: 'Tepho', escala: 0.56, cabeza: 1, color: '#9fdcff', dialogo: DIALOGO_PIPI,
+    perdido: { x: PIPI_TIRADO.x, z: PIPI_TIRADO.z, angulo: 0.8, pose: 'tirado' }, // tirado en el pasto, contra la cerca
+    casa: { x: -1.6, z: -3.4, angulo: -0.25 }, // al lado del Cusi
+    agarrar: 'Levantar al Pipi (E)', alAgarrar: 'Tepho: "¡Pipi! ¿Qué hacés tirado acá? Vamos a casa"',
+    llama: 'Pipi: "¡¡Tephooo!! ¡Estoy acá, en la cerca!"', cumplida: 'El Pipi volvió a casa (con el Cusi)',
+  },
+};
+
+class Perdido {
+  constructor(misiones, id, d) {
+    this.m = misiones;
+    this.id = id;
+    this.d = d;
+    this.modelo = null;
+    this.cargando = false;
+    this.llevando = false;
+    this.lugar = null;
+    this.reloj = 0;
+  }
+
+  get estado() { return this.m.estado[this.id]; }
+  set estado(v) { this.m.estado[this.id] = v; }
+
+  // ¿Ya pasó el % de su misión? Antes de eso no existe y la misión no se puede hacer.
+  get disponible() {
+    return this.m.tycoon.progreso >= MISIONES.find((x) => x.id === this.id).desde;
+  }
+
+  async crear() {
+    this.cargando = true;
+    const { def, escala, cabeza: grande, color } = this.d;
+    const m = crearPersonaje(def, await cargarCabeza(def));
+    if (grande !== 1) {
+      // Cabezón: la cabeza crece desde el cuello (y la capucha y todo lo demás quedan igual).
+      const { cabeza } = m.partes;
+      cabeza.scale.setScalar(grande);
+      cabeza.position.y = 2 + 0.65 * grande;
+    }
+    m.grupo.scale.setScalar(escala);
+    const nombre = crearEtiqueta([{ texto: def.nombre, tam: 60, color }], 4);
+    nombre.sprite.position.y = 6 + 1.85 * grande;
+    m.grupo.add(nombre.sprite);
+    this.etiqueta = nombre.sprite;
+    this.modelo = m;
+    this.cargando = false;
+  }
+
+  // Dónde tiene que estar ahora (o null si no se ve).
+  donde(jugador) {
+    if (!this.disponible) return null;
+    const c = this.estado;
+    if (c === 'rescatado') return 'casa';
+    if (c === 'perdido' && jugador.personaje?.id === this.d.dueno) return 'perdido';
+    if (c === 'llevando' && this.llevando) return 'brazos';
+    return null;
+  }
+
+  poner(lugar, jugador) {
+    const g = this.modelo.grupo;
+    if (g.parent) g.parent.remove(g);
+    this.lugar = lugar;
+    if (!lugar) return;
+    g.rotation.order = 'YXZ';
+    if (lugar === 'brazos') {
+      // En brazos del dueño, adelante a la altura del pecho, sentadito.
+      g.position.set(0, 1.65, 1.15);
+      g.rotation.set(0, 0, 0);
+      jugador.contenedor.add(g);
+      this.etiqueta.visible = false;
+    } else {
+      const p = lugar === 'casa' ? this.d.casa : this.d.perdido;
+      g.position.set(p.x, lugar === 'casa' ? nivel(0) : 0, p.z);
+      // Tirado: boca arriba en el pasto (la cabeza para el lado del ángulo).
+      g.rotation.set(lugar === 'perdido' && p.pose === 'tirado' ? -Math.PI / 2 : 0, p.angulo, 0);
+      this.m.escena.add(g);
+      this.etiqueta.visible = lugar === 'casa';
+    }
+  }
+
+  dist(jugador) {
+    if (this.lugar !== 'perdido') return Infinity;
+    return Math.hypot(jugador.pos.x - this.d.perdido.x, jugador.pos.z - this.d.perdido.z);
+  }
+
+  accion(jugador) {
+    if (this.lugar === 'perdido' && this.dist(jugador) < 4 && jugador.pos.y < 2) return this.d.agarrar;
+    return '';
+  }
+
+  agarrar() {
+    if (!this.disponible) return;
+    this.estado = 'llevando';
+    this.llevando = true;
+    sfx.brillo();
+    this.m.ui.toast(this.d.alAgarrar, 'info');
+  }
+
+  // Si se cambia de personaje con el chico en brazos, vuelve a donde estaba perdido.
+  soltar() {
+    if (this.estado === 'llevando') this.estado = 'perdido';
+    this.llevando = false;
+  }
+
+  actualizar(dt, jugador, jugando) {
+    const id = jugador.personaje.id;
+    const d = this.d;
+    // Al llegar al % con el dueño: se pierde (diálogo).
+    if (jugando && !this.estado && id === d.dueno && this.disponible && this.m.alHablar && !this.m.hablando) {
+      this.m.hablando = true;
+      this.m.alHablar(d.dueno, d.dialogo, () => {
+        this.estado = 'perdido';
+        this.m.hablando = false;
+        this.m.ui.toast(`Nueva misión: Rescatar al ${d.def.nombre}`, 'info');
+        this.m.tycoon.guardar?.();
       });
     }
-    // Una partida guardada a mitad del rescate arranca con el Cusi perdido otra vez.
-    if (e.cusi === 'llevando' && !this.llevando) e.cusi = 'perdido';
-    if (e.cusi === 'llevando' && id !== 'juanma') this.soltar();
-    const lugar = this.lugarCusi(jugador);
-    if (lugar && !this.cusi) {
-      if (!this.cargando) this.crearCusi();
+    // Una partida guardada a mitad del rescate arranca con el chico perdido otra vez.
+    if (this.estado === 'llevando' && !this.llevando) this.estado = 'perdido';
+    if (this.estado === 'llevando' && id !== d.dueno) this.soltar();
+    const lugar = this.donde(jugador);
+    if (lugar && !this.modelo) {
+      if (!this.cargando) this.crear();
       return;
     }
-    if (this.cusi && lugar !== this.lugar) this.ponerCusi(lugar, jugador);
-    if (!this.cusi || !lugar) return;
-    // Llegó a la casa con el Cusi en brazos.
+    if (this.modelo && lugar !== this.lugar) this.poner(lugar, jugador);
+    if (!this.modelo || !lugar) return;
+    // Llegó a la casa con el chico en brazos.
     if (lugar === 'brazos') {
       jugador.modelo && (jugador.modelo.llevar = true);
-      this.cusi.animar(dt, 0, true, false, true);
-      if (this.enCasa(jugador.pos) && this.cusiDisponible) {
+      this.modelo.animar(dt, 0, true, false, true);
+      if (this.m.enCasa(jugador.pos) && this.disponible) {
         this.llevando = false;
         if (jugador.modelo) jugador.modelo.llevar = false;
-        this.completar('cusi', 'El Cusi volvió a casa');
+        this.m.completar(this.id, d.cumplida);
       }
       return;
     }
     this.reloj += dt;
-    const g = this.cusi.grupo;
-    if (lugar === 'bosque') {
-      // Sentadito y perdido; cuando te acercás te llama.
-      this.cusi.animar(dt, 0, true, false, true);
-      g.position.y = -0.55;
-      const d = this.distCusi(jugador);
-      this.etiqueta.visible = d < 14;
-      if (d < 12 && !this.llamo) {
+    const g = this.modelo.grupo;
+    if (lugar === 'perdido') {
+      // Sentadito (o tirado) y perdido; cuando te acercás te llama.
+      const tirado = d.perdido.pose === 'tirado';
+      this.modelo.animar(dt, 0, true, false, !tirado);
+      g.position.y = tirado ? 0.32 : -0.55;
+      const dist = this.dist(jugador);
+      this.etiqueta.visible = dist < 14;
+      if (dist < 12 && !this.llamo) {
         this.llamo = true;
-        this.ui.toast('Cusi: "¡¡Juanmaaa!! ¡Acá estoy!"', 'info');
+        this.m.ui.toast(d.llama, 'info');
       }
-      if (d > 25) this.llamo = false;
+      if (dist > 25) this.llamo = false;
     } else {
       // En casa: parado, mira al que se acerca y se balancea un poquito.
-      this.cusi.animar(dt, 0, true);
+      this.modelo.animar(dt, 0, true);
       g.position.y = nivel(0);
       const cerca = Math.hypot(jugador.pos.x - g.position.x, jugador.pos.z - g.position.z) < 12 && Math.abs(jugador.pos.y - nivel(0)) < 3;
-      const objetivo = cerca ? Math.atan2(jugador.pos.x - g.position.x, jugador.pos.z - g.position.z) : CASA_CUSI.angulo;
+      const objetivo = cerca ? Math.atan2(jugador.pos.x - g.position.x, jugador.pos.z - g.position.z) : d.casa.angulo;
       let a = objetivo - g.rotation.y;
       a = Math.atan2(Math.sin(a), Math.cos(a));
       g.rotation.y += a * Math.min(1, dt * 5);
-      g.rotation.z = Math.sin(this.reloj * 2.2) * 0.03;
+      g.rotation.z = Math.sin(this.reloj * 2.2 + (this.id === 'pipi' ? 1.3 : 0)) * 0.03;
     }
   }
 }

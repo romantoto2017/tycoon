@@ -1724,7 +1724,7 @@ const estudioMusica = [
 ];
 
 // ---------- Karaoke ----------
-// La pantalla de letras (la usa karaoke.js para la letra al ritmo de la canción).
+// La pantalla de letras (la usa el Karaoke de sfx.js para la letra al ritmo de la canción).
 export const PANTALLA_KARAOKE = { malla: null };
 export function portadaKaraoke(g, w, h) {
   const d = g.createLinearGradient(0, 0, w, h);
@@ -1770,7 +1770,7 @@ const karaoke = [
   }),
   M('pantalla', 'Pantalla de letras', 2.8, -2.4, (k, s) => {
     s.d(8.55, 2.4, -3.2, 8.75, 7.4, 3.2, '#0b0b0f');
-    // karaoke.js le dibuja la letra encima mientras suena la canción; si no, esta portada.
+    // El Karaoke (sfx.js) le dibuja la letra encima mientras suena la canción; si no, esta portada.
     const pantalla = lamina(k, (g, w, h) => portadaKaraoke(g, w, h), 640, 400, 6.2, 4.8);
     PANTALLA_KARAOKE.malla = pantalla;
     s.plano(pantalla, 8.52, 4.9, 0, -Math.PI / 2);

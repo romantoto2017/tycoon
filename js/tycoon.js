@@ -425,6 +425,7 @@ export class Tycoon {
     for (const item of ITEMS) {
       if (comprados.has(item.id) || conBoton.has(item.id)) continue;
       if (!item.requiere.every((r) => comprados.has(r))) continue;
+      if (item.desde && this.progreso < item.desde) continue; // aparece recién a ese progreso
       this.crearBoton(item);
       if (avisar && item.tipo === 'construccion' && !item.especial && !item.mueble) this.ui.toast(`Nuevo botón: ${item.nombre}`, 'info');
     }

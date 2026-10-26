@@ -7,7 +7,7 @@ import { Tycoon } from './tycoon.js';
 import { crearPersonaje } from './personaje.js';
 import { prepararMoneda, cargarCabeza } from './texturas.js';
 import { cargar, guardar, borrar, cargarAjustes, guardarAjustes } from './guardado.js';
-import { iniciarAudio, setVolumenes, pausarAudio, sfx } from './sfx.js';
+import { iniciarAudio, setVolumenes, pausarAudio, sfx, Karaoke } from './sfx.js';
 import * as UI from './ui.js';
 import { formato } from './util.js';
 import { cargarModelos, MODELOS } from './modelos.js';
@@ -18,12 +18,9 @@ import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
-import { Dufre } from './dufre.js';
-import { Ottati } from './ottati.js';
+import { Dufre, Ottati } from './dufre.js';
 import { Ciudad } from './ciudad.js';
-import { Concesionario, Flota } from './concesionario.js';
-import { Karaoke } from './karaoke.js';
-import { VEL_MAX } from './auto.js';
+import { VEL_MAX, Concesionario, Flota } from './auto.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
 import { crearAK } from './arma.js';
@@ -87,7 +84,7 @@ async function iniciar() {
   if (estado.compras.length && !estado.compras.includes('terreno')) estado.compras.unshift('terreno');
   estado.ropa ??= [];
   estado.vestuario ??= {};
-  estado.autos ??= []; // los del concesionario (data/autos.js), en el orden en que se compraron
+  estado.autos ??= []; // los del concesionario (AUTOS en data/objetos.js), en el orden en que se compraron
   const puedeVestirse = (id) => !(id === 'bauti' && bautiGordo(estado));
   let reiniciando = false;
   const guardarAhora = () => { if (!reiniciando && !vistaCompleta) guardar(estado); };
@@ -106,7 +103,7 @@ async function iniciar() {
   const dufre = new Dufre(escena, UI);
   const ottati = new Ottati(escena, UI);
   const ciudad = new Ciudad(escena, UI);
-  const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora });
+  const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
   concesionario.alComprar = () => misiones.revisarAutos();
   const karaoke = new Karaoke(UI); // la canción con la letra al ritmo, en la sala del karaoke
@@ -719,12 +716,12 @@ async function iniciar() {
   };
   $('btn-misiones').addEventListener('click', abrirMisiones);
   window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && controles.activo && modo === 'juego') abrirMisiones(); });
-  // Diálogo de historia con un personaje a la derecha (por ahora, el del Cusi con Juanma).
-  misiones.alHablar = async (lineas, alTerminar) => {
+  // Diálogo de historia con un personaje a la derecha (el del Cusi con Juanma, el del Pipi con Tepho).
+  misiones.alHablar = async (id, lineas, alTerminar) => {
     if (gym.entrenando) gym.dejar(jugador);
     controles.activo = false;
-    const p = PERSONAJES.find((x) => x.id === 'juanma');
-    UI.dialogo({ nombre: p.nombre, cara: await caraDe('juanma'), remera: p.remera, lineas, alTerminar: () => { controles.activo = modo === 'juego'; UI.puntoMisiones(true); alTerminar(); } });
+    const p = PERSONAJES.find((x) => x.id === id);
+    UI.dialogo({ nombre: p.nombre, cara: await caraDe(id), remera: p.remera, lineas, alTerminar: () => { controles.activo = modo === 'juego'; UI.puntoMisiones(true); alTerminar(); } });
   };
   $('btn-cerrar-config').addEventListener('click', cerrarConfig);
   $('btn-salir-menu').addEventListener('click', () => { volverAlJuego = false; ir('menu'); });

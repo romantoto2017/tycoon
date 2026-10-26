@@ -81,6 +81,8 @@ export const CUSI_ESCONDIDO = { x: 94.5, z: -124.5 };
 export const CIUDAD = { x: -20000, z: CALLE_Z };
 // La autopista va desde donde termina la calle del barrio hasta la entrada de la ciudad.
 export const AUTOPISTA = { x0: CIUDAD.x + 340, x1: -640, z: CALLE_Z, medioAncho: 12 };
+// Vecibanda Motors, el Galpón Vecibanda y las misiones de los autos abren a este progreso.
+export const AUTOS_DESDE = 0.6;
 // Concesionario Vecibanda Motors: a la salida de la ciudad, al costado de la autopista (del
 // lado de las casas), con la vidriera mirando a la autopista (-z).
 export const CONCESIONARIO = { x0: CIUDAD.x + 384, x1: CIUDAD.x + 444, z0: CALLE_Z + 26, z1: CALLE_Z + 64, alto: 13 };
