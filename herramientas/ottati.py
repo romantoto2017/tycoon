@@ -29,14 +29,19 @@ def tela(w, h):
     return Image.fromarray(base.clip(0, 255).astype(np.uint8))
 
 tela(256, 256).save('assets/ropa/ottati_tela.jpg', quality=90)
-# Como las otras remeras (512x380): del cuello hasta abajo del logo, de lado a lado del pecho.
-# Lo que asoma de las mangas (el logo de Turil y las rayitas) se tapa con tela blanca.
+# Como las otras remeras (512x380), pero sin puntas vacías: fila por fila, el ancho de la remera
+# (sin las mangas, que van en los brazos) se estira de borde a borde, así no queda fondo en las
+# esquinas de los hombros.
 for lado_remera, nombre in (('frente', 'frente'), ('atras', 'espalda')):
-    foto = Image.open(f'assets/especiales/remeraottati{lado_remera}.jpeg').convert('RGB')
-    pecho = foto.crop((108, 62, 341, 235))
-    d = ImageDraw.Draw(pecho)
-    for x0, x1 in ((0, 34), (198, 233)):
-        d.rectangle((x0, 45, x1, 173), fill=pecho.getpixel((116, 150)))
+    foto = np.asarray(Image.open(f'assets/especiales/remeraottati{lado_remera}.jpeg').convert('RGB'), np.float32)
+    filas = []
+    for y in range(74, 236):
+        tela_fila = np.where(foto[y].min(axis=1) < 236)[0]
+        izq = max(tela_fila.min() + 3, 142)
+        der = min(tela_fila.max() - 3, 306)
+        xs = np.linspace(izq, der, 512)
+        filas.append(np.stack([np.interp(xs, np.arange(foto.shape[1]), foto[y, :, c]) for c in range(3)], axis=1))
+    pecho = Image.fromarray(np.stack(filas).clip(0, 255).astype(np.uint8))
     pecho.resize((512, 380), Image.LANCZOS).save(f'assets/ropa/ottati_{nombre}.jpg', quality=90)
 # Manga: el pedazo de la manga derecha de la foto (con el logo y las rayitas del puño).
 foto = Image.open('assets/especiales/remeraottatifrente.jpeg').convert('RGB')
