@@ -130,6 +130,7 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     const tela = lambert(tex(cabezaTex.ropa.tela));
     const espalda = cabezaTex.ropa.espalda ? lambert(tex(cabezaTex.ropa.espalda)) : tela;
     torso = [tela, tela, tela, tela, lambert(tex(cabezaTex.ropa.frente)), espalda];
+    if (cabezaTex.ropa.manga) mangaArriba = lambert(tex(cabezaTex.ropa.manga));
     // La panza muestra la parte del frente que tapa, así el diseño sigue continuo.
     const u0 = (anchoTorso / 2 - anchoPanza / 2) / anchoTorso;
     const frentePanza = lambert(tex(recorteCanvas(cabezaTex.ropa.frente, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2)));

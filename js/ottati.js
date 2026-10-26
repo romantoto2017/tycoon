@@ -9,7 +9,7 @@ import { sfx } from './sfx.js';
 export const OTTATI = {
   id: 'ottati', nombre: 'Ottati', foto: 'ottati.jpeg', piel: '#bd8262', pelo: '#120e0c', peinado: 'rapado', gordura: 0.45,
   remera: '#f6f6f6', pantalon: '#1f2a44',
-  remeraFotos: { frente: 'ropa/ottati_frente.jpg', espalda: 'ropa/ottati_espalda.jpg', tela: 'ropa/ottati_tela.jpg' },
+  remeraFotos: { frente: 'ropa/ottati_frente.jpg', espalda: 'ropa/ottati_espalda.jpg', manga: 'ropa/ottati_manga.jpg', tela: 'ropa/ottati_tela.jpg' },
 };
 const DESPUES = ['A lo baraja gil', 'Acá ando buscando unas churraskitas gil'];
 const ALCANCE = 5.4; // a cuánto se le puede chocar la mano

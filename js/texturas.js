@@ -346,13 +346,14 @@ export function cargarCabeza(p) {
       const [abajo, gab] = lienzo();
       gab.fillStyle = piel;
       gab.fillRect(0, 0, s, s);
-      // Remera con foto (opcional): { frente, tela, espalda? } en assets/.
+      // Remera con foto (opcional): { frente, tela, espalda?, manga? } en assets/.
       let ropa = null;
       if (p.remeraFotos) {
-        const [imgFrente, imgTela, imgEspalda] = await Promise.all([
+        const [imgFrente, imgTela, imgEspalda, imgManga] = await Promise.all([
           cargarImagen(`assets/${p.remeraFotos.frente}`),
           cargarImagen(`assets/${p.remeraFotos.tela}`),
           p.remeraFotos.espalda ? cargarImagen(`assets/${p.remeraFotos.espalda}`) : null,
+          p.remeraFotos.manga ? cargarImagen(`assets/${p.remeraFotos.manga}`) : null,
         ]);
         if (imgFrente && imgTela) {
           const aCanvas = (img) => {
@@ -360,7 +361,7 @@ export function cargarCabeza(p) {
             c.getContext('2d').drawImage(img, 0, 0);
             return c;
           };
-          ropa = { frente: aCanvas(imgFrente), tela: aCanvas(imgTela), espalda: imgEspalda ? aCanvas(imgEspalda) : null };
+          ropa = { frente: aCanvas(imgFrente), tela: aCanvas(imgTela), espalda: imgEspalda ? aCanvas(imgEspalda) : null, manga: imgManga ? aCanvas(imgManga) : null };
         }
       }
       if (p.barba) {
