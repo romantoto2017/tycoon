@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Zapatillas de las tiendas armadas en 3D (no son fotos): suela, capellada con su perfil de
 // costado, puntera, talonera, cuello, cordones y los detalles de cada modelo (swoosh, rayas,
@@ -62,6 +63,61 @@ function extruir(poli, ancho, bisel = 0) {
   });
   g.rotateY(-Math.PI / 2);
   g.translate((ancho - 2 * bisel) / 2, 0, 0);
+  // Los costados van aparte, en tiras finitas a lo largo: las tapas de la extrusión son pocos
+  // triángulos grandes y, al angostar la punta y el talón (afinar), se hundían en el medio y por
+  // ahí asomaba el pantalón (sobre todo en las Balvin).
+  const tapas = [-1, 1].map((lado) => tapa(poli, lado * (ancho / 2 + 0.002), lado));
+  const todo = mergeGeometries([g, ...tapas]);
+  todo.userData.extruida = true;
+  return todo;
+}
+
+// Tapa plana de un costado (en x), hecha de tiras verticales: en cada z va del punto más bajo
+// al más alto del perfil (si el perfil no tiene curvas para adentro).
+function tapa(poli, x, lado, n = 30) {
+  const z0 = Math.min(...poli.map((q) => q[0]));
+  const z1 = Math.max(...poli.map((q) => q[0]));
+  const corte = (z) => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    let cruces = 0;
+    for (let i = 0; i < poli.length; i++) {
+      const [az, ay] = poli[i];
+      const [bz, by] = poli[(i + 1) % poli.length];
+      if ((z < Math.min(az, bz)) || (z > Math.max(az, bz)) || az === bz) continue;
+      const y = ay + ((by - ay) * (z - az)) / (bz - az);
+      lo = Math.min(lo, y);
+      hi = Math.max(hi, y);
+      cruces++;
+    }
+    if (cruces > 2) concava = true;
+    return lo <= hi ? [lo, hi] : [0, 0];
+  };
+  let concava = false;
+  const pos = [];
+  const uv = [];
+  const punto = (z, y) => { pos.push(x, y, z); uv.push(z, y); };
+  for (let i = 0; i < n; i++) {
+    const za = z0 + ((z1 - z0) * i) / n;
+    const zb = z0 + ((z1 - z0) * (i + 1)) / n;
+    const e = (z1 - z0) * 1e-4; // el corte, apenas adentro (justo en un vértice da cualquier cosa)
+    const [a0, a1] = corte(za + e);
+    const [b0, b1] = corte(zb - e);
+    // Mirando desde afuera (normal = lado en x), en sentido antihorario.
+    const quad = lado > 0 ? [[za, a0], [za, a1], [zb, b1], [zb, b0]] : [[za, a0], [zb, b0], [zb, b1], [za, a1]];
+    for (const k of [0, 1, 2, 0, 2, 3]) punto(...quad[k]);
+  }
+  if (concava) {
+    // Formas con curvas para adentro (el swoosh, las ondas): triangulada, que ahí no se afina.
+    const t = new THREE.ShapeGeometry(new THREE.Shape(poli.map(([z, y]) => new THREE.Vector2(lado > 0 ? -z : z, y)))).toNonIndexed();
+    t.rotateY((lado * Math.PI) / 2);
+    t.translate(x, 0, 0);
+    return t;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
   return g;
 }
 
@@ -216,10 +272,13 @@ function capellada(g, base, alto, color, brillo = 0) {
   return poli;
 }
 
+// Cada pieza nueva un pelito más ancha que la anterior: si se superponen, la de arriba gana
+// (si no, los costados titilan).
+let capa = 0;
 function pieza(g, poli, recorte, base, color, brillo = 0, ancho = 1.04) {
   const p = recortar(encima(poli), recorte);
   if (p.length < 3) return;
-  const m = new THREE.Mesh(extruir(p, ancho, 0.06), mat(color, brillo));
+  const m = new THREE.Mesh(extruir(p, ancho + 0.01 * capa++, 0.06), mat(color, brillo));
   m.position.y = base;
   g.add(m);
 }
@@ -335,9 +394,10 @@ export function crearZapatilla(id) {
   if (!MODELOS[id]) return null;
   if (!hechas.has(id)) {
     const g = new THREE.Group();
+    capa = 0;
     MODELOS[id](g);
     // Se angostan las piezas que van de lado a lado (suela, capellada, punteras).
-    g.traverse((o) => { if (o.isMesh && o.position.x === 0 && o.geometry.type === 'ExtrudeGeometry') o.geometry = afinar(o.geometry); });
+    g.traverse((o) => { if (o.isMesh && o.position.x === 0 && o.geometry.userData.extruida) o.geometry = afinar(o.geometry); });
     hechas.set(id, g);
   }
   return hechas.get(id).clone();

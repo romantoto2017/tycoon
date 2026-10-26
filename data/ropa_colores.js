@@ -44,7 +44,7 @@ export const COLORES_ROPA = {
   },
   "buzocorteizceleste": {
     "tela": "#8eb4f1",
-    "aspecto": 0.615,
+    "aspecto": 0.481,
     "manga": true
   },
   "camperacerro": {

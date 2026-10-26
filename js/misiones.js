@@ -5,6 +5,7 @@ import { MANSION, TERRENO as T, CUSI_ESCONDIDO as CU, AUTOS_DESDE, nivel } from 
 import { BAUTI_GYM } from './gimnasio.js';
 import { sfx } from './sfx.js';
 import { formato } from './util.js';
+import { AUTOS } from '../data/objetos.js';
 
 // Misiones. Cada una es de un personaje y se cumple una sola vez (queda guardada en
 // estado.misiones). El panel de misiones del HUD las muestra con su avance.
@@ -15,6 +16,7 @@ import { formato } from './util.js';
 //    mansión y se lo ve con cualquier personaje.
 //  - Tepho: rescatar al Pipi (desde el 10%, igual que el Cusi): quedó tirado en el rincón más
 //    escondido de la cerca, al fondo del terreno. Rescatado, se queda en el hall con el Cusi.
+//  - Cualquiera: Hot-Wheels (oro en el autódromo con algún auto) y Verstappen (oro con todos).
 
 // El Cusi: un nene, chiquito y muy cabezón.
 export const CUSI = {
@@ -36,11 +38,11 @@ export const MISIONES_DESDE = 0.1;
 // Premio de cada misión: lo que más convenga entre `base` (fijo, según el % al que se
 // desbloquea: más o menos 10 minutos de lo que se gana en ese momento de la partida) y
 // `minutos` de lo que estás ganando cuando la cumplís (según lo difícil que es). La de Bauti
-// es lejos la más difícil (horas de gym): la que más minutos paga. `tope`: para que dejarla para
-// el final no rompa la partida.
+// es lejos la más difícil (horas de gym). `tope`: para que dejarla para el final no rompa la
+// partida. `fijo`: un premio fijo (Bauti, Hot-Wheels y Verstappen).
 export const MISIONES = [
   {
-    id: 'trabado', personaje: 'bauti', titulo: 'Ponerse trabado', premio: { base: 5e6, minutos: 20, tope: 3e9 },
+    id: 'trabado', personaje: 'bauti', titulo: 'Ponerse trabado', premio: { fijo: 1e11 },
     texto: 'Entrená en el Power Camp hasta adelgazar y quedar musculoso del todo.',
   },
   {
@@ -56,7 +58,12 @@ export const MISIONES = [
   // Autos de Vecibanda Motors (AUTOS en data/objetos.js): caros a propósito, así que pagan bien.
   { id: 'ricas_llantas', personaje: null, desde: AUTOS_DESDE, titulo: 'Ricas llantas', texto: 'Tené dos autos de colección en el galpón', premio: { base: 2e10, minutos: 8, tope: 2e11 } },
   { id: 'il_conto', personaje: null, desde: AUTOS_DESDE, titulo: 'Il conto por favore', texto: 'Comprate la Ferrari', premio: { base: 1e11, minutos: 15, tope: 5e11 } },
+  // Autódromo (abre con los autos): oro con un auto y oro con todos (el Auto Deportivo incluido).
+  { id: 'hotwheels', personaje: null, desde: AUTOS_DESDE, titulo: 'Hot-Wheels', texto: 'Sacá la medalla de oro en el autódromo con algún auto', premio: { fijo: 1e10 } },
+  { id: 'verstappen', personaje: null, desde: AUTOS_DESDE, titulo: 'Verstappen', texto: 'Sacá la medalla de oro con todos los autos', premio: { fijo: 1e12 } },
 ];
+// Los autos del autódromo (los del concesionario y el Auto Deportivo).
+const AUTOS_CARRERA = ['deportivo', ...AUTOS.map((a) => a.id)];
 export const PILCHAS = 5;
 export const AUTOS_COLECCION = 2;
 
@@ -95,6 +102,7 @@ export class Misiones {
   premio(id) {
     const p = MISIONES.find((m) => m.id === id)?.premio;
     if (!p) return 0;
+    if (p.fijo) return p.fijo;
     const n = Math.min(p.tope, Math.max(p.base, this.tycoon.ingresoPorSegundo * 60 * p.minutos));
     const e = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1);
     return Math.round(n / e) * e; // redondo (dos cifras)
@@ -136,6 +144,10 @@ export class Misiones {
         avance = Math.min(1, (e.autos?.length || 0) / AUTOS_COLECCION);
       } else if (m.id === 'il_conto') {
         avance = e.autos?.includes('ferrari_f40') ? 1 : 0;
+      } else if (m.id === 'hotwheels' || m.id === 'verstappen') {
+        const oros = this.oros();
+        avance = m.id === 'hotwheels' ? Math.min(1, oros) : oros / AUTOS_CARRERA.length;
+        if (m.id === 'verstappen') detalle = `Oros: ${oros} de ${AUTOS_CARRERA.length}`;
       } else if (m.id === 'trabado') {
         avance = Math.min(1, (e.bautiGym || 0) / (BAUTI_GYM.adelgazar + BAUTI_GYM.musculo));
         detalle = this.hecha('trabado') ? '¡Bauti quedó trabado!' : `Entrenamiento: ${Math.floor(avance * 100)}%`;
@@ -162,6 +174,18 @@ export class Misiones {
     const autos = this.tycoon.estado.autos || [];
     if (!this.hecha('ricas_llantas') && autos.length >= AUTOS_COLECCION) this.completar('ricas_llantas', 'Ricas llantas');
     if (!this.hecha('il_conto') && autos.includes('ferrari_f40')) this.completar('il_conto', 'Il conto por favore');
+  }
+
+  // Con cuántos autos sacaste oro en el autódromo.
+  oros() {
+    const medallas = this.tycoon.estado.autodromo?.medallas || {};
+    return AUTOS_CARRERA.filter((id) => medallas[id]?.includes('oro')).length;
+  }
+
+  revisarCarreras() {
+    const oros = this.oros();
+    if (!this.hecha('hotwheels') && oros >= 1) this.completar('hotwheels', 'Hot-Wheels');
+    if (!this.hecha('verstappen') && oros >= AUTOS_CARRERA.length) this.completar('verstappen', 'Verstappen');
   }
 
   // ---------- Rescates (el Cusi y el Pipi) ----------
@@ -221,6 +245,7 @@ export class Misiones {
     const id = jugador.personaje.id;
     // Bauti trabado: musculoso al 100%.
     if (jugando && !this.hecha('trabado') && id === 'bauti' && (jugador.personaje.musculo || 0) >= 1) this.completar('trabado', 'Bauti quedó trabado');
+    if (jugando) this.revisarCarreras();
     for (const p of Object.values(this.perdidos)) p.actualizar(dt, jugador, jugando);
   }
 }

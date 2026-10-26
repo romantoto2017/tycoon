@@ -3,6 +3,7 @@ texturas que usa el personaje (js/vestir.js) y las fotos recortadas del catálog
 Todo se hace acá (rembg local + PIL), sin mandar las fotos a ningún servicio.
 
     python3 herramientas/ropa.py
+    (después, herramientas/rellenar_ropa.py arregla el conjunto Corteiz celeste y el jogging Jordan)
 
 Salida:
   assets/ropa/prendas/<id>_frente.jpg   frente del torso (remeras, buzos, camperas) o de la gorra

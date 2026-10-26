@@ -15,9 +15,10 @@ import { sfx } from './sfx.js';
 // (con tus tiempos y las medallas). Largás detenido con el semáforo y son vueltas cronometradas.
 // Bronce, plata y oro salen de una simulación: un piloto automático da vueltas con la misma física
 // del juego (auto.js) siguiendo el medio de la pista y frenando justo para cada curva. Oro es ganarle
-// por un 3%, plata es ir apenas más lento y bronce, un 9% más lento. Pasarse de los límites de pista
-// (más allá del piano) anula la vuelta. Cada medalla paga una vez por auto (mucha plata) y cada
-// récord tuyo por debajo del bronce paga más cuanto más mejorás.
+// por un 4%, plata es ir apenas más lento (2%) y bronce, un 7% más lento. Pasarse de los límites de
+// pista (más allá del piano) anula la vuelta. Cada medalla paga una vez por auto y cada récord tuyo
+// por debajo del bronce paga un poco más cuanto más mejorás. Las misiones Hot-Wheels y Verstappen
+// (misiones.js) piden el oro con un auto y con todos.
 
 // ---------- Trazado ----------
 // Puntos del dibujo de referencia (píxeles de la imagen de 556 × 556), en el sentido de marcha.
@@ -36,11 +37,11 @@ const LIMITE = MEDIO + 7; // límites de pista: pasando el piano y la franja bla
 const PARED = MEDIO + 28; // las paredes de publicidad (y el alambrado): ahí el auto choca
 const GRILLA = 9; // puntos antes de la línea donde se larga
 export const MEDALLAS = [
-  { id: 'oro', nombre: 'Oro', factor: 0.97, premio: { base: 2e9, minutos: 30 }, color: '#ffd23f' },
-  { id: 'plata', nombre: 'Plata', factor: 1.03, premio: { base: 8e8, minutos: 15 }, color: '#cfd8dc' },
-  { id: 'bronce', nombre: 'Bronce', factor: 1.09, premio: { base: 3e8, minutos: 8 }, color: '#d18b47' },
+  { id: 'oro', nombre: 'Oro', factor: 0.96, premio: { base: 3e8, minutos: 5 }, color: '#ffd23f' },
+  { id: 'plata', nombre: 'Plata', factor: 1.02, premio: { base: 1.2e8, minutos: 2.5 }, color: '#cfd8dc' },
+  { id: 'bronce', nombre: 'Bronce', factor: 1.07, premio: { base: 5e7, minutos: 1 }, color: '#d18b47' },
 ];
-const RECORD = { base: 1e8, minutos: 2, tope: 15 }; // por cada segundo que mejorás tu récord
+const RECORD = { base: 1.5e7, minutos: 0.3, tope: 6 }; // por cada segundo que mejorás tu récord
 
 // Da vuelta los triángulos que miran para abajo (si no, no se ven desde arriba).
 function haciaArriba(pos) {
