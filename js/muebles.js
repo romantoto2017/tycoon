@@ -1724,6 +1724,25 @@ const estudioMusica = [
 ];
 
 // ---------- Karaoke ----------
+// La pantalla de letras (la usa karaoke.js para la letra al ritmo de la canción).
+export const PANTALLA_KARAOKE = { malla: null };
+export function portadaKaraoke(g, w, h) {
+  const d = g.createLinearGradient(0, 0, w, h);
+  d.addColorStop(0, '#1b2a6b');
+  d.addColorStop(1, '#5b1a6e');
+  g.fillStyle = d;
+  g.fillRect(0, 0, w, h);
+  g.textAlign = 'center';
+  g.font = '700 26px Fredoka, Arial, sans-serif';
+  g.fillStyle = 'rgba(255,255,255,0.7)';
+  g.fillText('♪ VECIBANDA KARAOKE ♪', w / 2, 44);
+  g.font = '700 52px Fredoka, Arial, sans-serif';
+  g.fillStyle = '#ffd23f';
+  g.fillText('Los Guaranguitos', w / 2, 170);
+  g.font = '700 30px Fredoka, Arial, sans-serif';
+  g.fillStyle = '#ffffff';
+  g.fillText('Acercate y tocá "Poner el karaoke"', w / 2, 250);
+}
 // Como un karaoke de Roblox: sala oscura con LED, la pantalla grande con la letra en la pared
 // de adentro (+x), un escenario bajo adelante con dos micrófonos, sillón largo y mesa ratona.
 // En la sala de afuera (WOF) la pared -x tiene ventanal: ahí solo va el sillón (bajo).
@@ -1751,27 +1770,10 @@ const karaoke = [
   }),
   M('pantalla', 'Pantalla de letras', 2.8, -2.4, (k, s) => {
     s.d(8.55, 2.4, -3.2, 8.75, 7.4, 3.2, '#0b0b0f');
-    s.plano(lamina(k, (g, w, h) => {
-      const d = g.createLinearGradient(0, 0, w, h);
-      d.addColorStop(0, '#1b2a6b');
-      d.addColorStop(1, '#5b1a6e');
-      g.fillStyle = d;
-      g.fillRect(0, 0, w, h);
-      g.textAlign = 'center';
-      g.font = '700 40px Fredoka, Arial, sans-serif';
-      const lineas = ['Somos la Vecibanda', 'de la casa más grande', 'subí el volumen', 'que esto recién empieza'];
-      lineas.forEach((l, i) => {
-        g.fillStyle = i === 1 ? '#ffd23f' : '#ffffff';
-        g.fillText(l, w / 2, 110 + i * 70);
-      });
-      g.fillStyle = '#ffd23f';
-      g.beginPath();
-      g.arc(w * 0.3, 140, 10, 0, Math.PI * 2);
-      g.fill();
-      g.font = '700 26px Fredoka, Arial, sans-serif';
-      g.fillStyle = 'rgba(255,255,255,0.7)';
-      g.fillText('♪ VECIBANDA KARAOKE ♪', w / 2, 44);
-    }, 640, 400, 6.2, 4.8), 8.52, 4.9, 0, -Math.PI / 2);
+    // karaoke.js le dibuja la letra encima mientras suena la canción; si no, esta portada.
+    const pantalla = lamina(k, (g, w, h) => portadaKaraoke(g, w, h), 640, 400, 6.2, 4.8);
+    PANTALLA_KARAOKE.malla = pantalla;
+    s.plano(pantalla, 8.52, 4.9, 0, -Math.PI / 2);
   }),
   M('sillon', 'Sillón largo', -5, 0, (k, s) => sofa(k, pieza(s, -7.6, 0, '+x'), 7, '#d81b60')),
   M('mesa_ratona', 'Mesa ratona', -2.4, 3.6, (k, s) => {

@@ -450,6 +450,20 @@ html, body {
 .slot[aria-pressed="true"] { border-color: #ffffff; background: rgba(60, 130, 255, 0.55); }
 .slot:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
 #hud .btn-manejar { bottom: calc(96px + env(safe-area-inset-bottom)); }
+/* Karaoke: la línea que se canta se va pintando de amarillo, palabra por palabra. */
+.karaoke {
+  position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: min(900px, calc(100% - 32px)); padding: 10px 16px; border-radius: 14px;
+  background: rgba(20, 12, 40, 0.72); text-align: center; pointer-events: none;
+}
+.karaoke p { margin: 0; font-weight: 700; line-height: 1.25; }
+.karaoke-actual { font-size: clamp(20px, 3.6vw, 38px); }
+.karaoke-siguiente { font-size: clamp(14px, 2.2vw, 22px); color: rgba(255, 255, 255, 0.6); margin-top: 4px !important; }
+.karaoke-actual span {
+  color: transparent; -webkit-text-stroke: 0; text-shadow: none;
+  background: linear-gradient(90deg, #ffd23f var(--avance, 0%), #ffffff var(--avance, 0%));
+  -webkit-background-clip: text; background-clip: text;
+}
 #btn-disparar {
   position: absolute;
   right: calc(140px + env(safe-area-inset-right));

@@ -22,6 +22,7 @@ import { Dufre } from './dufre.js';
 import { Ottati } from './ottati.js';
 import { Ciudad } from './ciudad.js';
 import { Concesionario, Flota } from './concesionario.js';
+import { Karaoke } from './karaoke.js';
 import { VEL_MAX } from './auto.js';
 import { PLATOS } from './resto.js';
 import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
@@ -107,6 +108,8 @@ async function iniciar() {
   const ciudad = new Ciudad(escena, UI);
   const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora });
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
+  concesionario.alComprar = () => misiones.revisarAutos();
+  const karaoke = new Karaoke(UI); // la canción con la letra al ritmo, en la sala del karaoke
   // Choques de este cuadro: en la ciudad, solo los de alrededor (son muchos); si no, los de siempre.
   let choquesActuales = colisiones;
   let avisoAutopista = false;
@@ -217,6 +220,10 @@ async function iniciar() {
     }
     if (!conduciendo && concesionario.accion(jugador)) {
       concesionario.hacer(jugador);
+      return;
+    }
+    if (!conduciendo && karaoke.accion(jugador)) {
+      karaoke.hacer(jugador);
       return;
     }
     if (misiones.accion(jugador)) {
@@ -762,7 +769,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, lechugas, sacarLechuga };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, lechugas, sacarLechuga };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -888,7 +895,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : 'Bajar del auto (E)')
-      : ciudad.accion(jugador) || concesionario.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : ciudad.accion(jugador) || concesionario.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -909,6 +916,7 @@ async function iniciar() {
     dufre.actualizar(dt, jugador, modo === 'juego');
     ottati.actualizar(dt, jugador, modo === 'juego');
     concesionario.actualizar(dt, jugador);
+    karaoke.actualizar(dt, jugador);
     flota.actualizar();
     ciudad.actualizar(dt, jugador, modo === 'juego');
     actualizarArma(dt);

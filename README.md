@@ -85,6 +85,12 @@ La sección de misiones aparece cuando la mansión llega al 15% (`MISIONES_DESDE
 - **Ponerse trabado (Bauti):** entrenar en el Power Camp hasta adelgazar y quedar musculoso del todo.
 - **Rescatar al Cusi (Juanma):** cuando la mansión llega al 50% jugando con Juanma, salta un diálogo (Juanma a la derecha y el texto abajo; se avanza con Continuar, E o Espacio): el Cusi se perdió, sin ninguna pista de dónde (está escondido en el bosque al pie de la montaña del pelado). Solo con Juanma aparece ahí (con cualquier otro no está). Al lado de él, "Agarrar al Cusi (E)": Juanma lo lleva en brazos y, al entrar a la mansión, se cumple la misión. Desde ahí el Cusi vive en el hall de planta baja y se lo ve con cualquier personaje. Si cambiás de personaje con el Cusi en brazos, vuelve al bosque. El Cusi es un nene chiquito y muy cabezón (cara de `assets/caras/cusi.jpeg`).
 
+- **Ricas llantas** y **Il conto por favore** (de cualquiera, con el ícono de la banda): tener dos autos de Vecibanda Motors y comprarse la Ferrari F40. Se revisan en cada compra del concesionario (`revisarAutos` en `js/misiones.js`).
+
+## Karaoke
+
+En la sala del karaoke (tercer piso), con la pantalla de letras comprada, al acercarte aparece "Poner el karaoke (E)" (y "Parar el karaoke"). Suena "Los Guaranguitos": una cumbia hecha con WebAudio en `js/karaoke.js` (bajo, acordes, güiro, bombo, palmas y la melodía guía), sin archivo de audio. La letra (`LETRA`) se va pintando de amarillo sílaba por sílaba, en la pantalla y en una barra abajo del HUD (solo si estás en la sala), con la línea que sigue más chica. Cada sílaba dura una corchea a 100 BPM y cada línea dos compases; el tiempo sale del reloj del audio, así la letra no se separa de la música aunque el juego vaya lento. Mientras suena, la canción del juego se baja (como con la radio de Lourdes), y se escucha aunque la música esté apagada.
+
 ## La montaña del pelado y la foto Vecibanda
 
 Atrás de la mansión, para el lado del garage, hay una montaña grande (con dos colinas más chicas al lado) y en la cima el pelado con la camiseta de La Dosis, recortado de `peladomontaña.jpeg` con `herramientas/pelado_montana.py` (rembg, acá en la compu, no se manda a ningún servicio). No le afecta la niebla, así se ve desde lejos. Se sube caminando hasta la cima (el piso sigue exacto la superficie dibujada; el auto no sube) y las piedras van enterradas en la ladera. Al pie está el bosque del Cusi.

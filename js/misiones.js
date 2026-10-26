@@ -42,8 +42,12 @@ export const MISIONES = [
   },
   // De cualquier personaje (personaje: null). Sin pistas: solo el texto.
   { id: 'empilchado', personaje: null, titulo: 'Empilchado', texto: 'Comprate 5 pilchas ricas', premio: { base: 1.5e9, minutos: 3, tope: 6e9 } },
+  // Autos de Vecibanda Motors (data/autos.js): caros a propósito, así que pagan bien.
+  { id: 'ricas_llantas', personaje: null, titulo: 'Ricas llantas', texto: 'Tené dos autos de colección en el galpón', premio: { base: 2e10, minutos: 8, tope: 2e11 } },
+  { id: 'il_conto', personaje: null, titulo: 'Il conto por favore', texto: 'Comprate la Ferrari', premio: { base: 1e11, minutos: 15, tope: 5e11 } },
 ];
 export const PILCHAS = 5;
+export const AUTOS_COLECCION = 2;
 
 const DIALOGO_CUSI = [
   '¿Eh? ¿Y el Cusi? ¿Alguien vio al Cusi?',
@@ -114,6 +118,10 @@ export class Misiones {
       if (m.id === 'empilchado') {
         avance = Math.min(1, (e.ropa?.length || 0) / PILCHAS);
         detalle = '';
+      } else if (m.id === 'ricas_llantas') {
+        avance = Math.min(1, (e.autos?.length || 0) / AUTOS_COLECCION);
+      } else if (m.id === 'il_conto') {
+        avance = e.autos?.includes('ferrari_f40') ? 1 : 0;
       } else if (m.id === 'trabado') {
         avance = Math.min(1, (e.bautiGym || 0) / (BAUTI_GYM.adelgazar + BAUTI_GYM.musculo));
         detalle = this.hecha('trabado') ? '¡Bauti quedó trabado!' : `Entrenamiento: ${Math.floor(avance * 100)}%`;
@@ -132,6 +140,13 @@ export class Misiones {
   // Después de cada compra de ropa (main.js).
   revisarRopa() {
     if (!this.hecha('empilchado') && (this.tycoon.estado.ropa?.length || 0) >= PILCHAS) this.completar('empilchado', 'Empilchado');
+  }
+
+  // Después de cada compra en el concesionario (main.js).
+  revisarAutos() {
+    const autos = this.tycoon.estado.autos || [];
+    if (!this.hecha('ricas_llantas') && autos.length >= AUTOS_COLECCION) this.completar('ricas_llantas', 'Ricas llantas');
+    if (!this.hecha('il_conto') && autos.includes('ferrari_f40')) this.completar('il_conto', 'Il conto por favore');
   }
 
   // ---------- El Cusi ----------

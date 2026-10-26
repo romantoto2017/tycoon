@@ -223,6 +223,30 @@ export function cerrarPanelGym() {
   mostrar('panel-gym', false);
 }
 
+// ---------- Karaoke ----------
+// actual: [{ texto, avance (0 a 1) }] palabra por palabra; siguiente: la línea que viene.
+let karaokePalabras = null;
+export function letraKaraoke(actual, siguiente) {
+  const p = $('karaoke-actual');
+  const clave = actual.map((x) => x.texto).join(' ');
+  if (karaokePalabras !== clave) {
+    karaokePalabras = clave;
+    p.replaceChildren(...actual.flatMap((x, i) => {
+      const span = document.createElement('span');
+      span.textContent = x.texto;
+      return i ? [' ', span] : [span];
+    }));
+  }
+  const sig = $('karaoke-siguiente');
+  if (sig.textContent !== siguiente) sig.textContent = siguiente;
+  p.querySelectorAll('span').forEach((span, i) => span.style.setProperty('--avance', `${Math.round(actual[i].avance * 100)}%`));
+  mostrar('karaoke', true);
+}
+export function ocultarKaraoke() {
+  mostrar('karaoke', false);
+  karaokePalabras = null;
+}
+
 // ---------- Misiones ----------
 // lista: [{ titulo, texto, detalle, avance, hecha, tuya, cara (dataURL), nombre }]
 export function abrirMisiones(lista, alCerrar) {

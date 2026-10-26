@@ -8,6 +8,8 @@ let radio = false;
 const volumenes = { general: 0.8, musica: 0.5, efectos: 0.8, musicaOn: true };
 const CANCION = 'assets/especiales/vecicoon.mp3';
 let ganCancion = null; // la canción pasa por acá para poder bajarla cuando suena la radio
+let busKaraoke = null; // la pista del karaoke (karaoke.js): suena aunque la música esté apagada
+let karaoke = false;
 
 export function iniciarAudio() {
   try {
@@ -49,6 +51,12 @@ function aplicarVolumenes() {
   maestro.gain.value = volumenes.general;
   busMusica.gain.value = volumenes.musicaOn ? volumenes.musica * 0.35 : 0;
   busEfectos.gain.value = volumenes.efectos;
+  if (busKaraoke) busKaraoke.gain.value = Math.max(0.15, volumenes.musica) * 0.5;
+}
+
+// Con la radio o el karaoke sonando, la canción del juego se baja.
+function ajustarCancion() {
+  if (ganCancion) ganCancion.gain.setTargetAtTime(radio || karaoke ? 0 : 1.2, ctx.currentTime, 0.3);
 }
 
 // En el restaurante suena la radio de Lourdes en vez de la música del juego.
@@ -56,7 +64,23 @@ export function setRadio(v) {
   if (v === radio) return;
   radio = v;
   paso = 0;
-  if (ganCancion) ganCancion.gain.setTargetAtTime(v ? 0 : 1.2, ctx.currentTime, 0.3);
+  ajustarCancion();
+}
+
+// Para karaoke.js: el reloj y la salida de audio (null si el audio todavía no arrancó).
+export function audioKaraoke() {
+  if (!ctx) return null;
+  if (!busKaraoke) {
+    busKaraoke = ctx.createGain();
+    busKaraoke.connect(maestro);
+    aplicarVolumenes();
+  }
+  return { ctx, destino: busKaraoke };
+}
+
+export function setKaraoke(v) {
+  karaoke = v;
+  ajustarCancion();
 }
 
 // Loop sin cortes: un AudioBuffer con loop (el <audio loop> del navegador deja un hueco con los mp3).
