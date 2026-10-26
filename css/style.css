@@ -755,17 +755,25 @@ html, body {
 .misiones-fondo { background: rgba(10, 20, 40, 0.6); }
 .panel-misiones {
   width: min(560px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border: 5px solid var(--borde);
   border-radius: 22px;
   overflow: hidden;
   color: #222;
 }
-.panel-misiones header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #2f8cff; color: #fff; }
+.panel-misiones header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #2f8cff; color: #fff; }
 .panel-misiones h2 { margin: 0; font-size: 26px; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
 .cerrar-x { width: 44px; height: 44px; border: none; border-radius: 12px; background: rgba(0, 0, 0, 0.2); color: #fff; font-size: 22px; font-weight: 800; cursor: pointer; }
 .cerrar-x:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
-.lista-misiones { list-style: none; margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.lista-misiones {
+  list-style: none; margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  /* En el celu no entran todas: la lista se desliza con el dedo (el encabezado queda fijo). */
+  min-height: 0; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+.mision { flex: none; }
 .mision { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; border: 2px solid #e3e6ea; background: #f7f8fa; }
 .mision.hecha { border-color: #3ccf4e; background: #effbf1; }
 .mision-cara { flex: none; width: 64px; text-align: center; font-size: 12px; font-weight: 700; color: #555; }
@@ -873,6 +881,7 @@ html, body {
   font-size: 22px; cursor: pointer; font-family: var(--fuente);
 }
 .cat-cerrar:focus-visible, .prenda:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.catalogo-lista, .ropero-lista { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .catalogo-lista, .ropero-grilla {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -915,3 +924,6 @@ html, body {
   .ropero-izq h2 { font-size: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .prenda { transition: none; } .prenda:hover { transform: none; } }
+
+/* Aviso adentro de la pantalla que está abierta (configuración o menú). */
+.aviso-pantalla { margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; background: #fff1f0; color: #b42318; font-size: 15px; font-weight: 700; text-align: center; }

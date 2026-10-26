@@ -246,7 +246,8 @@ async function iniciar() {
   const btnLechuga = document.getElementById('btn-lechuga');
   const cantLechugas = btnLechuga.querySelector('.slot-cant');
   let ultimoLechuga = null;
-  const hayLechugas = () => estado.lechugas > 0 || lechugas.puestas.length > 0;
+  // Sin lechugas en el bolsillo no aparece el ítem (las puestas quedan donde están).
+  const hayLechugas = () => estado.lechugas > 0;
   const sacarLechuga = (v) => {
     lechugas.enMano = v && hayLechugas() && !conduciendo && !gym.entrenando;
     if (lechugas.enMano && armaEnMano) sacarArma(false);
@@ -539,9 +540,16 @@ async function iniciar() {
 
   // Solo se cambia de personaje adentro de la mansión (cualquier piso).
   const enLaMansion = () => jugador.pos.x > MANSION.x0 && jugador.pos.x < MANSION.x1 && jugador.pos.z > MANSION.z0 && jugador.pos.z < MANSION.z1;
-  const puedeCambiar = () => {
+  // El aviso sale adentro de la pantalla desde donde se apretó (configuración o menú), no
+  // atrás de ella. Se va solo a los 4 segundos.
+  let avisoTimer = null;
+  const puedeCambiar = (dondeAviso) => {
     if (!estado.personaje || enLaMansion()) return true;
-    UI.toast('Para cambiar de personaje tenés que estar adentro de la mansión', 'error');
+    const el = document.getElementById(dondeAviso);
+    el.textContent = 'Para cambiar de personaje tenés que estar adentro de la mansión';
+    el.classList.remove('oculto');
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(() => el.classList.add('oculto'), 4000);
     sfx.error();
     return false;
   };
@@ -581,7 +589,7 @@ async function iniciar() {
     if (personajeGuardado()) ir('juego');
     else abrirSeleccion();
   });
-  $('btn-menu-personaje').addEventListener('click', () => { iniciarAudio(); if (puedeCambiar()) abrirSeleccion(); });
+  $('btn-menu-personaje').addEventListener('click', () => { iniciarAudio(); if (puedeCambiar('aviso-menu')) abrirSeleccion(); });
   $('btn-volver-seleccion').addEventListener('click', () => ir(personajeGuardado() && modo === 'seleccion' && volverAlJuego ? 'juego' : 'menu'));
 
   let volverAlJuego = false;
@@ -671,7 +679,7 @@ async function iniciar() {
   $('btn-cerrar-config').addEventListener('click', cerrarConfig);
   $('btn-salir-menu').addEventListener('click', () => { volverAlJuego = false; ir('menu'); });
   $('btn-cambiar-personaje').addEventListener('click', () => {
-    if (!puedeCambiar()) return;
+    if (!puedeCambiar('aviso-config')) return;
     volverAlJuego = true;
     abrirSeleccion();
   });
