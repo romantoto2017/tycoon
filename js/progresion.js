@@ -195,6 +195,12 @@ sala('bar', 'Bar Vecibanda', 3, 'EIF', 'bar');
 sala('trofeos', 'Sala de Trofeos', 3, 'EIB', 'salaTrofeos');
 sala('streaming', 'Estudio de Streaming', 3, 'EOF', 'streaming');
 sala('suite_vip', 'Suite VIP', 3, 'EOB', 'dormitorio1');
+// Muebles que cambiaron de nombre al rediseñar el piso 3 (las partidas viejas los conservan).
+Object.assign(MIGRAR, {
+  estudio_musica_bateria: ['estudio_musica_pc'],
+  estudio_musica_guitarras: ['estudio_musica_guitarra'],
+  streaming_croma: ['streaming_neones'],
+});
 obra('cancha', 'Cancha de Fútbol', ['piso_3'], suelo(24, -60), Ex.cancha);
 obra('gradas', 'Gradas y Marcador', ['cancha'], suelo(24, -44), Ex.gradas);
 obra('farolas', 'Farolas', ['jardin', 'piso_3'], suelo(-30, 30), Ex.farolas);

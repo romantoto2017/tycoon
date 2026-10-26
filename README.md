@@ -101,6 +101,19 @@ Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (
 
 Cada mueble se compra por separado, como en un tycoon: al entrar a una habitación aparece un botón en el piso donde va el próximo mueble (primero la luz, después la cama, el ropero, la alfombra...). Se compran de a uno y en orden. La lista de muebles de cada habitación, con su nombre y dónde aparece el botón, está en `js/muebles.js`. Si cambiás muebles, volvé a correr el balance (abajo) para recalcular los precios.
 
+
+### Tercer piso (rediseñado)
+
+Salas de noche, con neones (`js/muebles.js`, "Piso 3"). Los carteles van en las paredes de los costados o arriba de la puerta (antes algunos tapaban la puerta).
+
+- **Fiesta Vecibanda:** paredes oscuras con LED, truss en el techo, pista LED de baldosas con estrellas, bola de boliche colgada con haces de colores que giran (sin la lámpara), cabina de DJ con frente LED, bandejas y mixer, parlantes, cabezales móviles y la foto gigante.
+- **Estudio de música:** home studio, no sala de ensayo. Escritorio con la compu y dos pantallas (en una el FL Studio con su logo, `assets/especiales/fllogo.jpeg`; en la otra la lista de canales), monitores de estudio en pies, tecladito MIDI, una guitarra eléctrica con ampli chico, micrófono de condensador con antipop y paneles acústicos.
+- **Karaoke:** pantalla grande con la letra, neón KARAOKE, escenario bajo con dos micrófonos, sillón largo y mesa ratona.
+- **Bar Vecibanda:** terciopelo bordó con zócalo de madera, apliques dorados, barra de mármol, espejo y estantes de botellas iluminados, colgador de copas, banquetas y mesitas.
+- **Sala de trofeos (Vecibanda Awards):** estatuillas doradas con alas sobre una base con la placa "VECIBANDA AWARDS", podio 1-2-3 con el neón atrás, vitrinas y alfombra roja.
+- **Vecibanda TV:** setup violeta con tres monitores, la pantalla grande con la ciudad de noche, paneles de neón, silla gamer, parlantes con luz, aro de luz, puf y planta.
+
+Algunos muebles cambiaron de nombre (`estudio_musica_bateria` → `pc`, `guitarras` → `guitarra`, `streaming_croma` → `neones`); las partidas viejas los conservan (`MIGRAR` en `js/progresion.js`). Se recalcularon los precios con `node herramientas/balance.mjs --escribir`.
 ## Precios y duración
 
 Los precios de la mansión están en `js/precios.js` y se calculan con `herramientas/balance.mjs`, que simula una partida completa (unas 3 horas; `node herramientas/balance.mjs --escribir`). Los precios de los objetos especiales y los cuadros se editan directo en `data/objetos.js`.

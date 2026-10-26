@@ -717,7 +717,9 @@ async function iniciar() {
   });
   window.addEventListener('pagehide', guardarAhora);
 
-  if (location.search.includes('debug')) window.juego = { estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ciudad, lechugas, sacarLechuga };
+  // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
+  const depurar = { camaraLibre: false };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ciudad, lechugas, sacarLechuga };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -863,7 +865,7 @@ async function iniciar() {
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);
-      camaraJuego(dt);
+      if (!depurar.camaraLibre) camaraJuego(dt);
     } else {
       camaraMenu(dt);
     }

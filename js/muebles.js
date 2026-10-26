@@ -1021,81 +1021,500 @@ const dormitorioPrincipal = suite('#efe7da', '#8e6c4a', 5, true);
 const dormitorio1 = suite('#3f5873', '#c9b8a0', 4.4, false);
 
 // ---------- Piso 3 ----------
+// Las salas de este piso son de noche y con neones (inspiradas en boliches, karaokes y bares
+// de Roblox). Ojo con la puerta: en las salas de adelante (F) está en el medio de la pared
+// z = -6.6 y en las de atrás (B) en z = +6.6 (6 de ancho y 7 de alto); la pared de enfrente es
+// casi toda ventanal. Los carteles van en las paredes de los costados o arriba de la puerta.
 
-const salonFiestas = [
-  LUZ(2.5, 2.5, (k, s) => s.cartel('FIESTA VECIBANDA', 7, 1.4, 1, 5.2, -6.55, 0, '#ff4081', '#1a0033')),
-  M('pista', 'Pista de baile', -2, -2, (k, s) => {
-    const colores = ['#ff1744', '#00e5ff', '#76ff03', '#ffea00'];
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) s.d(-5 + i * 2.6, 0, -5 + j * 2.6, -5 + i * 2.6 + 2.5, 0.08, -5 + j * 2.6 + 2.5, brillo(k, colores[(i + j) % 4]));
+// Lámina que brilla sola (no le afecta la luz): pantallas, neones, piso LED. dibujar(g, w, h).
+function lamina(k, dibujar, pw, ph, ancho, alto, { transparente = false, aditivo = false } = {}) {
+  const THREE = k.THREE;
+  const c = document.createElement('canvas');
+  c.width = pw;
+  c.height = ph;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  dibujar(c.getContext('2d'), pw, ph, () => { tex.needsUpdate = true; });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({
+    map: tex, transparent: transparente || aditivo, depthWrite: !(transparente || aditivo),
+    blending: aditivo ? THREE.AdditiveBlending : THREE.NormalBlending,
+  }));
+  return k.noSolido(m);
+}
+
+// Cartel de neón: letras de color con resplandor y el centro más claro, sin chapa atrás.
+function neon(k, texto, ancho, alto, color) {
+  return lamina(k, (g, w, h) => {
+    let t = h * 0.7;
+    const fuente = () => { g.font = `700 ${t}px Fredoka, 'Arial Rounded MT Bold', Arial, sans-serif`; };
+    fuente();
+    while (g.measureText(texto).width > w * 0.9 && t > 10) { t -= 2; fuente(); }
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.shadowColor = color;
+    g.fillStyle = color;
+    for (const b of [36, 18, 6]) { g.shadowBlur = b; g.fillText(texto, w / 2, h / 2); }
+    g.shadowBlur = 0;
+    g.globalAlpha = 0.55;
+    g.fillStyle = '#ffffff';
+    g.fillText(texto, w / 2, h / 2);
+  }, 1024, Math.max(64, Math.round((1024 * alto) / ancho)), ancho, alto, { transparente: true });
+}
+
+// Reviste por dentro las paredes de la sala: '-x', '+x' y la de la puerta (zPuerta = -1 o 1),
+// dejando libre el hueco de la puerta. zocalo: color de la parte de abajo (madera), o null.
+function revestir(s, color, { lados = [], zPuerta = 0, zocalo = null, altoZocalo = 2.6 } = {}) {
+  const X = 8.78;
+  const Z = 6.73;
+  const A = 9.6;
+  const capa = (x0, y0, z0, x1, y1, z1) => {
+    if (zocalo) {
+      s.d(x0, y0, z0, x1, Math.min(y1, altoZocalo), z1, zocalo);
+      if (y1 > altoZocalo) s.d(x0, Math.max(y0, altoZocalo), z0, x1, y1, z1, color);
+    } else {
+      s.d(x0, y0, z0, x1, y1, z1, color);
     }
+  };
+  if (lados.includes('-x')) capa(-X, 0, -Z, -X + 0.05, A, Z);
+  if (lados.includes('+x')) capa(X - 0.05, 0, -Z, X, A, Z);
+  if (zPuerta) {
+    const z0 = zPuerta < 0 ? -Z : Z - 0.05;
+    capa(-8.8, 0, z0, -3.3, A, z0 + 0.05);
+    capa(3.3, 0, z0, 8.8, A, z0 + 0.05);
+    s.d(-3.3, 7.1, z0, 3.3, A, z0 + 0.05, color);
+  }
+}
+
+// Tira de LED en el borde del techo, en las paredes indicadas.
+function tirasLed(k, s, color, lados, zPuerta = 0) {
+  const m = brillo(k, color);
+  if (lados.includes('-x')) s.d(-8.7, 9.2, -6.6, -8.55, 9.32, 6.6, m);
+  if (lados.includes('+x')) s.d(8.55, 9.2, -6.6, 8.7, 9.32, 6.6, m);
+  if (zPuerta) {
+    const z = zPuerta < 0 ? -6.6 : 6.45;
+    s.d(-8.6, 9.2, z, 8.6, 9.32, z + 0.15, m);
+  }
+}
+
+// ---------- Estatuilla de los Vecibanda Awards ----------
+// Como la de la foto: un muñeco de bloques dorado con alas grandes, los brazos para arriba,
+// sobre una base escalonada con la placa "VECIBANDA AWARDS". Mide unos 2,4 de alto (e = 1).
+let matOro = null;
+let alaGeo = null;
+let placaAwards = null;
+function estatuillaAwards(k, e = 1) {
+  const THREE = k.THREE;
+  matOro ??= new THREE.MeshPhongMaterial({ color: '#d9a21b', specular: '#fff0b0', shininess: 70 });
+  const oro = matOro;
+  const g = new THREE.Group();
+  const caja = (w, h, d, x, y, z, rx = 0, rz = 0) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), oro);
+    m.position.set(x, y, z);
+    m.rotation.set(rx, 0, rz);
+    g.add(m);
+    return m;
+  };
+  const cil = (r0, r1, h, y) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, 20), oro);
+    m.position.y = y;
+    g.add(m);
+  };
+  // Base escalonada.
+  cil(0.5, 0.52, 0.1, 0.05);
+  cil(0.4, 0.44, 0.5, 0.35);
+  cil(0.46, 0.46, 0.08, 0.64);
+  cil(0.32, 0.36, 0.12, 0.74);
+  // Placa adelante de la base.
+  placaAwards ??= lamina(k, (c, w, h) => {
+    c.fillStyle = '#3a2a08';
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#f7d774';
+    c.lineWidth = 6;
+    c.strokeRect(6, 6, w - 12, h - 12);
+    c.fillStyle = '#f7d774';
+    c.font = '700 52px Fredoka, Arial, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('VECIBANDA', w / 2, h * 0.36);
+    c.font = '700 40px Fredoka, Arial, sans-serif';
+    c.fillText('AWARDS', w / 2, h * 0.72);
+  }, 384, 160, 0.56, 0.24);
+  const placa = placaAwards.clone();
+  placa.position.set(0, 0.36, 0.425);
+  g.add(placa);
+  // Muñeco: piernas, torso, cabeza y los brazos para arriba.
+  caja(0.15, 0.42, 0.16, -0.09, 1.01, 0);
+  caja(0.15, 0.42, 0.16, 0.09, 1.01, 0);
+  caja(0.38, 0.4, 0.2, 0, 1.42, 0);
+  caja(0.28, 0.28, 0.28, 0, 1.78, 0);
+  caja(0.11, 0.44, 0.12, -0.27, 1.75, 0, 0, 0.45);
+  caja(0.11, 0.44, 0.12, 0.27, 1.75, 0, 0, -0.45);
+  // Alas: plumas grandes hacia arriba y afuera, atrás del muñeco.
+  if (!alaGeo) {
+    const s = new THREE.Shape();
+    s.moveTo(0, 0);
+    s.bezierCurveTo(0.25, 0.15, 0.55, 0.5, 0.75, 1.15);
+    s.lineTo(0.62, 1.0);
+    s.lineTo(0.66, 1.18);
+    s.lineTo(0.5, 0.95);
+    s.lineTo(0.52, 1.1);
+    s.lineTo(0.36, 0.86);
+    s.lineTo(0.36, 0.98);
+    s.bezierCurveTo(0.2, 0.7, 0.08, 0.42, 0, 0.3);
+    s.closePath();
+    alaGeo = new THREE.ExtrudeGeometry(s, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1, curveSegments: 8 });
+  }
+  for (const lado of [-1, 1]) {
+    const ala = new THREE.Mesh(alaGeo, oro);
+    ala.position.set(lado * 0.1, 1.38, -0.16);
+    ala.scale.set(lado, 1, 1);
+    ala.rotation.y = lado * -0.35;
+    g.add(ala);
+  }
+  g.scale.setScalar(e);
+  return g;
+}
+
+// ---------- Salón de fiestas (Fiesta Vecibanda) ----------
+// Boliche: paredes oscuras con tiras de LED, estructura de truss en el techo, pista LED de
+// baldosas con estrellas, bola de boliche colgada con haces de colores (sin lámpara), cabina
+// de DJ con frente LED, parlantes, cabezales móviles y la foto gigante atrás del DJ.
+const COLORES_PISTA = ['#ff5a5f', '#ff9f1c', '#c77dff', '#ff4fd8', '#4cc9f0', '#80ffdb'];
+const salonFiestas = [
+  M('luz', 'Neones y truss', 2.5, 2.5, (k, s) => {
+    revestir(s, '#150b26', { lados: ['-x', '+x'], zPuerta: -1 });
+    tirasLed(k, s, '#ff2bd6', ['+x'], -1);
+    tirasLed(k, s, '#00e5ff', ['-x']);
+    // Truss: marco cuadrado colgado del techo, con travesaños.
+    const t = '#9aa1a8';
+    for (const z of [-4, 4]) s.d(-5.2, 8.55, z - 0.15, 5.2, 8.85, z + 0.15, t);
+    for (const x of [-5, 5]) s.d(x - 0.15, 8.55, -4, x + 0.15, 8.85, 4, t);
+    for (let x = -4; x <= 4; x += 2) s.d(x - 0.05, 8.6, -4, x + 0.05, 8.8, 4, t);
+    for (const [x, z] of [[-5, -4], [5, -4], [-5, 4], [5, 4]]) s.d(x - 0.05, 8.85, z - 0.05, x + 0.05, 9.6, z + 0.05, t);
+    // El cartel en la pared de la derecha (no en la puerta).
+    s.plano(neon(k, 'Fiesta Vecibanda', 10, 2.2, '#ff3bd4'), 8.6, 6.4, 0.5, -Math.PI / 2);
+    s.plano(neon(k, '★', 1.4, 1.4, '#fff59d'), 8.6, 7.9, -5, -Math.PI / 2);
+  }),
+  M('pista', 'Pista de baile LED', -1, -1.5, (k, s) => {
+    const nx = 6;
+    const nz = 5;
+    const lado = 1.8;
+    s.d(-nx * lado / 2 - 0.2, 0, -nz * lado / 2 - 0.2, nx * lado / 2 + 0.2, 0.06, nz * lado / 2 + 0.2, '#0c0c12');
+    const piso = lamina(k, (g, w, h) => {
+      const t = w / nx;
+      for (let i = 0; i < nx; i++) {
+        for (let j = 0; j < nz; j++) {
+          const c = COLORES_PISTA[(i + j * 2) % COLORES_PISTA.length];
+          const x = i * t;
+          const y = j * t;
+          g.fillStyle = '#111';
+          g.fillRect(x, y, t, t);
+          g.fillStyle = c;
+          g.globalAlpha = 0.85;
+          g.fillRect(x + 4, y + 4, t - 8, t - 8);
+          // Estrella de cuatro puntas clarita en el medio, y rombos en las esquinas.
+          g.globalAlpha = 1;
+          g.fillStyle = 'rgba(255,255,255,0.55)';
+          const cx = x + t / 2;
+          const cy = y + t / 2;
+          g.beginPath();
+          for (let k2 = 0; k2 < 8; k2++) {
+            const a = (k2 * Math.PI) / 4;
+            const r = k2 % 2 ? t * 0.12 : t * 0.4;
+            g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+          }
+          g.fill();
+          g.fillStyle = 'rgba(0,0,0,0.35)';
+          g.beginPath();
+          for (let k2 = 0; k2 < 8; k2++) {
+            const a = (k2 * Math.PI) / 4 + Math.PI / 4;
+            const r = k2 % 2 ? t * 0.05 : t * 0.16;
+            g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+          }
+          g.fill();
+        }
+      }
+    }, 768, 640, nx * lado, nz * lado);
+    piso.rotation.order = 'YXZ';
+    piso.rotation.x = -Math.PI / 2;
+    s.plano(piso, 0, 0.07, 0, 0);
   }),
   M('bola', 'Bola de boliche', 0, 1, (k, s) => {
-    s.esf(1, '#cfd8dc', 0, 5.5, 0).userData.girar = 1.5;
-    s.d(-0.05, 6.5, -0.05, 0.05, 7.6, 0.05, '#757575');
+    const THREE = k.THREE;
+    // Bola espejada (sin lámpara arriba): cadena al techo y haces de colores que giran con ella.
+    const tex = new THREE.CanvasTexture((() => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 128;
+      const g = c.getContext('2d');
+      for (let x = 0; x < 256; x += 8) for (let y = 0; y < 128; y += 8) {
+        const v = 150 + Math.floor(Math.random() * 105);
+        g.fillStyle = `rgb(${v},${v},${v + 10})`;
+        g.fillRect(x, y, 7, 7);
+      }
+      return c;
+    })());
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const bola = new THREE.Mesh(new THREE.SphereGeometry(0.85, 20, 14), new THREE.MeshPhongMaterial({ map: tex, specular: '#ffffff', shininess: 120, emissive: '#222233' }));
+    k.noSolido(bola);
+    bola.userData.girar = 0.8;
+    const haz = new THREE.ConeGeometry(1.5, 8, 16, 1, true);
+    haz.translate(0, -4, 0);
+    ['#ff3bd4', '#00e5ff', '#ffe600', '#7cff4f', '#ff8a00'].forEach((c, i) => {
+      const m = new THREE.Mesh(haz, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      const a = (i / 5) * Math.PI * 2;
+      m.rotation.set(0.55 * Math.cos(a), 0, 0.55 * Math.sin(a));
+      bola.add(k.noSolido(m));
+    });
+    s.plano(bola, 0, 7.9, 0, 0);
+    s.d(-0.03, 8.75, -0.03, 0.03, 9.6, 0.03, '#bdbdbd');
   }),
-  M('dj', 'Cabina de DJ', -7.1, 0, (k, s) => {
-    s.b(-8, 0, -3, -6.2, 2.4, 3, '#212121');
-    s.cil(0.6, 0.15, '#424242', -7.1, 2.4, -1.2, 16);
-    s.cil(0.6, 0.15, '#424242', -7.1, 2.4, 1.2, 16);
+  M('dj', 'Cabina de DJ', -6, 0, (k, s) => {
+    const P = pieza(s, -8.7, 0, '+x');
+    P.b(-2.8, 0, 0.3, 2.8, 2.4, 2.1, '#141418');
+    P.d(-2.9, 2.4, 0.2, 2.9, 2.55, 2.2, '#2b2b33');
+    // Frente LED con un ecualizador.
+    P.plano(lamina(k, (g, w, h) => {
+      g.fillStyle = '#05050a';
+      g.fillRect(0, 0, w, h);
+      const n = 24;
+      for (let i = 0; i < n; i++) {
+        const alto = (0.25 + 0.7 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.6))) * h;
+        const d = g.createLinearGradient(0, h, 0, h - alto);
+        d.addColorStop(0, '#00e5ff');
+        d.addColorStop(0.6, '#c77dff');
+        d.addColorStop(1, '#ff3bd4');
+        g.fillStyle = d;
+        g.fillRect((i * w) / n + 3, h - alto, w / n - 6, alto);
+      }
+    }, 512, 160, 5.4, 1.9), 0, 1.2, 2.12, 0);
+    // Bandejas, mixer y la compu.
+    for (const u of [-1.6, 1.6]) {
+      P.cil(0.62, 0.12, '#1d1d1d', u, 2.55, 1.2, 20);
+      P.cil(0.5, 0.03, '#3b3b3b', u, 2.67, 1.2, 20);
+      P.cil(0.07, 0.05, '#cfd8dc', u, 2.7, 1.2, 8);
+    }
+    P.d(-0.55, 2.55, 0.8, 0.55, 2.75, 1.7, '#202024');
+    for (let i = 0; i < 4; i++) P.d(-0.4 + i * 0.25, 2.75, 1.2, -0.3 + i * 0.25, 2.8, 1.5, brillo(k, ['#00e5ff', '#ff3bd4', '#ffe600', '#7cff4f'][i]));
+    P.d(-0.5, 2.55, 0.35, 0.5, 3.25, 0.4, '#1a1a1a');
+    P.d(-0.45, 2.6, 0.405, 0.45, 3.2, 0.41, brillo(k, '#5ad1ff'));
   }),
-  M('parlantes', 'Parlantes', -6.6, -4.6, (k, s) => [-5, 6].forEach((z) => s.modelo('speaker', -7.4, 0, z, Math.PI / 2, { alto: 4.8 }))),
-  M('luces', 'Luces de colores', 3, -4, (k, s) => ['#ff1744', '#00e5ff', '#76ff03', '#ffea00'].forEach((c, i) => s.d(-6 + i * 4, 7.2, -6.6, -4.5 + i * 4, 7.6, -6.2, brillo(k, c)))),
+  M('parlantes', 'Parlantes', -6.6, -4.6, (k, s) => [-4.4, 4.4].forEach((z) => s.modelo('speaker', -7.7, 0, z, Math.PI / 2, { alto: 5.2 }))),
+  M('luces', 'Cabezales móviles', 3, -3.2, (k, s) => {
+    const THREE = k.THREE;
+    const haz = new THREE.ConeGeometry(0.9, 8.2, 12, 1, true);
+    haz.translate(0, -4.1, 0);
+    [[-5, -4, '#ff3bd4'], [5, -4, '#00e5ff'], [-5, 4, '#7cff4f'], [5, 4, '#ffe600']].forEach(([x, z, c]) => {
+      s.d(x - 0.3, 8.0, z - 0.3, x + 0.3, 8.55, z + 0.3, '#1b1b1f');
+      const m = new THREE.Mesh(haz, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      m.rotation.set(-0.35 * Math.sign(z), 0, 0.35 * Math.sign(x));
+      s.plano(k.noSolido(m), x, 8.0, z, 0);
+    });
+  }),
   // La foto icónica de la Vecibanda (frente al Palacio Legislativo): ocupa toda la pared de
   // atrás del DJ, de arriba de la cabina hasta el techo. Sin cartel, como todos los cuadros.
   M('foto', 'Cuadro gigante', -4.8, 4.6, (k, s) => {
     const p = pieza(s, -8.62, 0, '+x');
-    p.plano(k.pintura('fotovecibanda.jpeg', 7.2, { carpeta: 'cuadros', marco: '#141414' }), 0, 5.85, 0);
+    p.plano(k.pintura('fotovecibanda.jpeg', 6.4, { carpeta: 'cuadros', marco: '#141414' }), 0, 6.15, 0);
   }),
 ];
 
+// ---------- Estudio de música ----------
+// Un home studio moderno, no una sala de ensayo: escritorio con la compu y dos pantallas (en una
+// el FL Studio), monitores de estudio en pies, un tecladito MIDI, una guitarra eléctrica, un
+// micrófono de condensador con antipop en brazo y paneles acústicos. Puerta en z = +6.6.
 const estudioMusica = [
-  LUZ(0, 3),
-  M('piso', 'Piso de madera oscura', 0, -1.5, (k, s) => s.d(-8, 0, -6.6, 8, 0.06, 3, '#3e2723')),
-  M('bateria', 'Batería', -5, -3.4, (k, s) => {
-    s.cil(1.1, 1, '#d32f2f', -5, 1.1, -4, 16).rotation.x = Math.PI / 2;
-    s.cil(0.6, 0.5, '#eeeeee', -6.4, 1.4, -2.8, 12);
-    s.cil(0.6, 0.5, '#eeeeee', -3.6, 1.4, -2.8, 12);
-    s.cil(0.8, 0.06, '#ffd54f', -6.8, 3, -5, 16);
-    s.cil(0.8, 0.06, '#ffd54f', -3.2, 3, -5, 16);
-    s.b(-5.3, 0, -1.8, -4.7, 1.2, -1.2, '#424242');
+  LUZ(0, 1, (k, s) => {
+    revestir(s, '#24262d', { lados: ['-x', '+x'], zPuerta: 1 });
+    tirasLed(k, s, '#7c4dff', ['-x', '+x']);
   }),
-  M('parlantes', 'Parlantes', 3.1, -4.6, (k, s) => {
-    s.modelo('speaker', 2.4, 0, -5.9, 0, { alto: 3.4 });
-    s.modelo('speaker', 3.9, 0, -5.9, 0, { alto: 3.4 });
+  M('piso', 'Piso de madera oscura', 0, -1.5, (k, s) => {
+    s.d(-8.8, 0, -6.75, 8.8, 0.06, 6.75, '#3b2a20');
+    s.d(-6.6, 0.06, -3.4, -1.4, 0.09, 3.4, '#1f2026');
   }),
-  M('guitarras', 'Guitarras y ampli', 6.2, -4.4, (k, s) => {
-    s.b(5, 0, -6.6, 6.6, 2, -5.4, '#212121');
-    [[5.5, '#ff7043'], [7.2, '#29b6f6']].forEach(([x, c]) => {
-      s.d(x - 0.6, 2, -6.62, x + 0.6, 3.6, -6.5, c);
-      s.d(x - 0.12, 3.6, -6.62, x + 0.12, 5.6, -6.5, '#5d4037');
+  M('pc', 'Escritorio con la compu', -5.6, 0, (k, s) => {
+    const P = pieza(s, -8.75, 0, '+x');
+    P.b(-3.2, 2.35, 0.2, 3.2, 2.5, 2.4, '#1c1c20');
+    for (const u of [-3, 3]) P.b(u - 0.12, 0, 0.3, u + 0.12, 2.35, 2.3, '#2a2a30');
+    P.d(-3.1, 2.2, 0.3, 3.1, 2.35, 0.4, brillo(k, '#7c4dff'));
+    // Pantallas: a la izquierda el FL Studio, a la derecha la lista de canales.
+    const pantalla = (u, rot, dibujar) => {
+      P.d(u - 1.25, 2.5, 0.75, u + 1.25, 2.56, 1.1, '#111');
+      P.d(u - 0.08, 2.56, 0.85, u + 0.08, 3.1, 0.95, '#111');
+      const q = P.plano(lamina(k, dibujar, 512, 300, 2.5, 1.46), u, 3.95, 0.98, rot);
+      const marco = k.noSolido(k.caja(2.62, 1.58, 0.06, '#0b0b0d'));
+      marco.position.z = -0.04;
+      q.add(marco);
+    };
+    pantalla(-1.35, 0.12, (g, w, h, listo) => {
+      g.fillStyle = '#2b3036';
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#3c434b';
+      g.fillRect(0, 0, w, 24);
+      g.fillStyle = '#ff8f1f';
+      g.font = '700 16px Arial, sans-serif';
+      g.fillText('FL STUDIO', 10, 17);
+      const logo = new Image();
+      logo.onload = () => {
+        const l = h * 0.78;
+        g.drawImage(logo, (w - l) / 2, 34, l, l);
+        listo();
+      };
+      logo.src = 'assets/especiales/fllogo.jpeg';
     });
+    pantalla(1.35, -0.12, (g, w, h) => {
+      g.fillStyle = '#262b30';
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#3c434b';
+      g.fillRect(0, 0, w, 24);
+      const colores = ['#ff8f1f', '#7bd389', '#5ab0ff', '#ff6b9a', '#c77dff', '#ffd23f'];
+      for (let fila = 0; fila < 8; fila++) {
+        const y = 32 + fila * 33;
+        g.fillStyle = fila % 2 ? '#2f353c' : '#2a3036';
+        g.fillRect(0, y, w, 30);
+        for (let x = 20 + (fila * 37) % 60; x < w - 30; x += 70 + (fila * 13) % 40) {
+          g.fillStyle = colores[fila % colores.length];
+          g.fillRect(x, y + 4, 54, 22);
+        }
+      }
+      g.fillStyle = '#ffffff';
+      g.fillRect(w * 0.42, 24, 2, h);
+    });
+    // Teclado y mouse de la compu, y la torre al costado.
+    P.d(-0.9, 2.5, 1.5, 0.9, 2.56, 1.9, '#18181c');
+    P.d(1.3, 2.5, 1.6, 1.55, 2.56, 1.85, '#18181c');
+    P.b(2.3, 0, 0.4, 2.9, 1.7, 1.8, '#18181c');
+    P.d(2.33, 0.3, 1.81, 2.87, 1.5, 1.82, brillo(k, '#7c4dff'));
   }),
-  M('microfono', 'Micrófono', 0.5, 0.6, (k, s) => {
-    s.b(0.4, 0, 1, 0.6, 4.5, 1.2, '#9e9e9e');
-    s.esf(0.3, '#212121', 0.5, 4.7, 1.1);
+  M('parlantes', 'Monitores de estudio', -4.4, 4, (k, s) => {
+    const P = pieza(s, -8.75, 0, '+x');
+    for (const u of [-4.3, 4.3]) {
+      P.b(u - 0.08, 0, 1.2, u + 0.08, 2.9, 1.36, '#2a2a30');
+      P.d(u - 0.5, 0, 0.9, u + 0.5, 0.08, 1.7, '#2a2a30');
+      P.b(u - 0.5, 2.9, 0.8, u + 0.5, 4.3, 1.75, '#141416');
+      P.cil(0.3, 0.06, '#f2c200', u, 3.25, 1.75, 16).rotation.z = Math.PI / 2;
+      P.cil(0.12, 0.06, '#1b1b1b', u, 3.25, 1.79, 12).rotation.z = Math.PI / 2;
+      P.cil(0.11, 0.06, '#2f2f33', u, 3.95, 1.75, 12).rotation.z = Math.PI / 2;
+    }
   }),
-  M('paneles', 'Paneles acústicos', -4, 4.5, (k, s) => [-6, -2, 2, 6].forEach((x, i) => s.d(x - 1.2, 2, 6.55, x + 1.2, 5, 6.6, ['#7e57c2', '#26a69a', '#ef5350', '#ffca28'][i]))),
+  M('guitarra', 'Guitarra eléctrica', 5.6, -3.6, (k, s) => {
+    const P = pieza(s, 6.4, -4.4, '-x');
+    // Pie de guitarra y la guitarra (cuerpo rojo, golpeador blanco, mástil y clavijero).
+    P.d(-0.5, 0, -0.4, 0.5, 0.1, 0.4, '#1b1b1b');
+    P.d(-0.06, 0, -0.1, 0.06, 1.3, 0.02, '#1b1b1b');
+    P.d(-0.55, 0.35, 0, 0.55, 1.6, 0.18, '#c62828');
+    P.d(-0.45, 1.5, 0, 0.45, 2.0, 0.18, '#c62828');
+    P.d(-0.2, 0.6, 0.185, 0.25, 1.5, 0.2, '#f2f2f2');
+    P.d(-0.08, 2.0, 0.05, 0.08, 3.6, 0.15, '#6d4c41');
+    P.d(-0.13, 3.6, 0.05, 0.13, 4.0, 0.15, '#1b1b1b');
+    P.d(-0.3, 0.75, 0.19, 0.3, 0.8, 0.21, '#bdbdbd');
+    // Ampli chico al lado.
+    P.b(0.9, 0, -0.5, 2.1, 1.3, 0.4, '#1b1b1d');
+    P.d(1.0, 0.15, 0.41, 2.0, 1.0, 0.42, '#3a3a3e');
+    P.d(1.0, 1.05, 0.41, 2.0, 1.2, 0.42, '#c9a227');
+  }),
+  M('microfono', 'Micrófono de estudio', 2, 2.6, (k, s) => {
+    // Pie con brazo, micrófono de condensador con su araña y el antipop adelante.
+    s.d(1.6, 0, 2.6, 2.6, 0.08, 3.6, '#1b1b1b');
+    s.d(2.06, 0, 3.06, 2.14, 4.6, 3.14, '#2a2a2a');
+    s.d(2.1, 4.55, 2.2, 2.18, 4.63, 3.1, '#2a2a2a');
+    s.cil(0.2, 0.75, '#c7ccd1', 2.14, 4.2, 2.2, 14);
+    s.esf(0.2, '#9aa0a6', 2.14, 4.95, 2.2);
+    const pop = s.cil(0.38, 0.03, '#111111', 2.14, 4.55, 1.55, 18);
+    pop.rotation.x = Math.PI / 2;
+    // Auriculares colgados.
+    s.d(1.9, 3.5, 3.05, 2.3, 3.55, 3.15, '#111');
+  }),
+  M('paneles', 'Paneles acústicos', -4, 4.5, (k, s) => {
+    // Paneles de goma espuma en las dos paredes de los costados (no en la de la puerta).
+    const colores = ['#2d2f36', '#4b2a6b', '#2d2f36'];
+    for (const x of [-8.7, 8.55]) {
+      for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 2; j++) {
+          const z = -5.6 + i * 2.6;
+          const y = 4.8 + j * 2.2;
+          s.d(x, y, z, x + 0.15, y + 2, z + 2.3, colores[(i + j) % 3]);
+          for (let r = 0; r < 4; r++) s.d(x + (x < 0 ? 0.15 : -0.05), y + 0.25 + r * 0.45, z + 0.2, x + (x < 0 ? 0.2 : 0), y + 0.4 + r * 0.45, z + 2.1, '#1b1b20');
+        }
+      }
+    }
+  }),
+  M('teclado', 'Tecladito MIDI', -4.3, -2, (k, s) => {
+    const P = pieza(s, -8.75, 0, '+x');
+    // Teclado de 25 teclas arriba del escritorio, adelante de las pantallas.
+    P.d(-1.1, 2.5, 1.95, 0.7, 2.62, 2.35, '#1d1d22');
+    const teclas = lamina(k, (g, w, h) => {
+      g.fillStyle = '#f5f5f5';
+      g.fillRect(0, 0, w, h);
+      const n = 15;
+      g.fillStyle = '#222';
+      for (let i = 0; i <= n; i++) g.fillRect((i * w) / n - 1, 0, 2, h);
+      [0, 1, 3, 4, 5, 7, 8, 10, 11, 12].forEach((i) => g.fillRect(((i + 0.68) * w) / n, 0, w / n * 0.62, h * 0.6));
+    }, 256, 64, 1.4, 0.32);
+    teclas.rotation.order = 'YXZ';
+    teclas.rotation.x = -Math.PI / 2;
+    P.plano(teclas, -0.25, 2.63, 2.2, 0);
+    for (let i = 0; i < 4; i++) P.d(0.3 + (i % 2) * 0.18, 2.62, 2.0 + Math.floor(i / 2) * 0.16, 0.42 + (i % 2) * 0.18, 2.66, 2.12 + Math.floor(i / 2) * 0.16, brillo(k, ['#ff8f1f', '#5ab0ff', '#7bd389', '#ff6b9a'][i]));
+  }),
 ];
 
+// ---------- Karaoke ----------
+// Como un karaoke de Roblox: sala oscura con LED, la pantalla grande con la letra en la pared
+// de adentro (+x), un escenario bajo adelante con dos micrófonos, sillón largo y mesa ratona.
+// En la sala de afuera (WOF) la pared -x tiene ventanal: ahí solo va el sillón (bajo).
 const karaoke = [
-  LUZ(0, 3, (k, s) => {
-    ['#ff1744', '#00e5ff', '#76ff03', '#ffea00'].forEach((c, i) => s.d(-6 + i * 4, 9.2, -0.4, -5 + i * 4, 9.5, 0.4, brillo(k, c)));
-    s.cartel('KARAOKE', 5, 1.2, 0, 7.6, -6.7, 0, '#ff4081', '#1a0033');
+  LUZ(0, 2, (k, s) => {
+    revestir(s, '#1a1030', { lados: ['+x'], zPuerta: -1 });
+    tirasLed(k, s, '#ff2bd6', ['+x'], -1);
+    s.plano(neon(k, 'KARAOKE', 6, 1.4, '#ff3bd4'), 8.6, 8.35, 0, -Math.PI / 2);
+    s.plano(neon(k, '♪', 1.2, 1.2, '#00e5ff'), 8.6, 8.3, -4.4, -Math.PI / 2);
+    s.plano(neon(k, '♫', 1.2, 1.2, '#00e5ff'), 8.6, 8.3, 4.4, -Math.PI / 2);
   }),
-  M('alfombra', 'Alfombra', 3, -4, (k, s) => s.d(-8, 0, -6.6, 8, 0.06, 6.6, '#311b92')),
-  M('escenario', 'Escenario con micrófono', -6.5, 0, (k, s) => {
-    s.b(-8.6, 0, -4, -4.5, 0.6, 4, '#4a148c');
-    s.b(-6.6, 0.6, -0.1, -6.4, 4.5, 0.1, '#9e9e9e');
-    s.esf(0.3, '#212121', -6.5, 4.7, 0);
-    [-3, 3].forEach((z) => s.modelo('speaker', -7.9, 0.6, z, Math.PI / 2, { alto: 3.6 }));
+  M('alfombra', 'Alfombra', -3, 3.5, (k, s) => {
+    s.d(-8.8, 0, -6.75, 8.8, 0.06, 6.75, '#24143f');
+    s.d(-7.4, 0.06, -3.6, -1.6, 0.09, 3.6, '#4a1d6b');
   }),
-  M('pantalla', 'Pantalla de letras', -3, -5, (k, s) => {
-    s.b(-8.66, 2.5, -3.5, -8.6, 7.5, 3.5, '#111111');
-    s.d(-8.6, 2.7, -3.3, -8.56, 7.3, 3.3, brillo(k, '#e1bee7'));
+  M('escenario', 'Escenario con micrófonos', 4.2, 4.4, (k, s) => {
+    s.b(4.4, 0, -4.6, 8.6, 0.55, 4.6, '#2b1650');
+    s.d(4.35, 0.08, -4.65, 4.42, 0.5, 4.65, brillo(k, '#00e5ff'));
+    for (const z of [-1.4, 1.4]) {
+      s.d(5.2, 0.55, z - 0.4, 6.0, 0.62, z + 0.4, '#1b1b1b');
+      s.d(5.56, 0.55, z - 0.04, 5.64, 4.4, z + 0.04, '#9e9e9e');
+      s.esf(0.22, '#2a2a2a', 5.6, 4.6, z);
+    }
+    [-3.6, 3.6].forEach((z) => s.modelo('speaker', 7.8, 0.55, z, -Math.PI / 2, { alto: 3.6 }));
   }),
-  M('sillon', 'Sillón largo', 3.6, 0, (k, s) => sofa(k, pieza(s, 4, 0, '-x'), 7, '#d81b60')),
-  M('mesa_ratona', 'Mesa ratona', 1.2, 0, (k, s) => s.modelo('tableCoffeeGlass', 1.2, 0, 0, Math.PI / 2, { ancho: 3, fondo: 1.6, alto: 1.1 })),
+  M('pantalla', 'Pantalla de letras', 5, -2.4, (k, s) => {
+    s.d(8.55, 2.4, -3.2, 8.75, 7.4, 3.2, '#0b0b0f');
+    s.plano(lamina(k, (g, w, h) => {
+      const d = g.createLinearGradient(0, 0, w, h);
+      d.addColorStop(0, '#1b2a6b');
+      d.addColorStop(1, '#5b1a6e');
+      g.fillStyle = d;
+      g.fillRect(0, 0, w, h);
+      g.textAlign = 'center';
+      g.font = '700 40px Fredoka, Arial, sans-serif';
+      const lineas = ['Somos la Vecibanda', 'de la casa más grande', 'subí el volumen', 'que esto recién empieza'];
+      lineas.forEach((l, i) => {
+        g.fillStyle = i === 1 ? '#ffd23f' : '#ffffff';
+        g.fillText(l, w / 2, 110 + i * 70);
+      });
+      g.fillStyle = '#ffd23f';
+      g.beginPath();
+      g.arc(w * 0.3, 140, 10, 0, Math.PI * 2);
+      g.fill();
+      g.font = '700 26px Fredoka, Arial, sans-serif';
+      g.fillStyle = 'rgba(255,255,255,0.7)';
+      g.fillText('♪ VECIBANDA KARAOKE ♪', w / 2, 44);
+    }, 640, 400, 6.2, 4.8), 8.52, 4.9, 0, -Math.PI / 2);
+  }),
+  M('sillon', 'Sillón largo', -5, 0, (k, s) => sofa(k, pieza(s, -7.6, 0, '+x'), 7, '#d81b60')),
+  M('mesa_ratona', 'Mesa ratona', -2.4, 3.6, (k, s) => {
+    s.modelo('tableCoffeeGlass', -4.3, 0, 0, Math.PI / 2, { ancho: 3, fondo: 1.6, alto: 1.1 });
+    [[-4.6, -0.8, '#ff3bd4'], [-4.1, 0.6, '#00e5ff']].forEach(([x, z, c]) => s.cil(0.14, 0.4, brillo(k, c), x, 1.1, z, 10));
+    s.d(-4.2, 1.1, -0.2, -3.6, 1.2, 0.1, '#1b1b1b');
+  }),
 ];
 
 const dormitorio2 = [
@@ -1112,78 +1531,223 @@ const dormitorio2 = [
   M('planta', 'Planta', -6.6, 5.4, (k, s) => planta(k, P0(s), -7.7, 5.6)),
 ];
 
+// ---------- Bar Vecibanda ----------
+// Bar elegante (como el de la foto): paredes de terciopelo bordó con zócalo de madera,
+// apliques dorados, la barra de mármol oscuro contra la pared de la derecha con el espejo y
+// los estantes de botellas iluminados atrás, el colgador de copas arriba, banquetas tapizadas
+// y dos mesitas. El cartel va arriba de las botellas, no en la puerta.
 const bar = [
-  LUZ(0, 0, (k, s) => s.cartel('BAR VECIBANDA', 6, 1.3, -1, 5.5, -6.55, 0, '#00e5ff', '#0d0221')),
-  M('barra', 'Barra', 5, -5.6, (k, s) => {
-    s.b(2.8, 0, -6.6, 7.9, 2.4, -4.6, '#6d4c41');
-    s.d(2.6, 2.4, -6.7, 8, 2.6, -4.4, '#3e2723');
-    s.b(6.2, 0, -4.6, 7.9, 2.4, 2, '#6d4c41');
-    s.d(6, 2.4, -4.6, 8, 2.6, 2.2, '#3e2723');
+  LUZ(-3, -2, (k, s) => {
+    revestir(s, '#5c1420', { lados: ['-x', '+x'], zPuerta: -1, zocalo: '#4a2f1d' });
+    for (const x of [-8.7, 8.65]) s.d(x, 2.6, -6.6, x + 0.05, 2.75, 6.6, '#a07a3b');
+    // Apliques dorados de dos luces a los costados de la barra.
+    for (const z of [-5, 5]) {
+      s.d(8.55, 5.2, z - 0.25, 8.7, 5.9, z + 0.25, '#b8892f');
+      for (const dz of [-0.45, 0.45]) {
+        s.d(8.3, 5.75, z + dz - 0.05, 8.6, 5.85, z + dz + 0.05, '#b8892f');
+        s.esf(0.22, brillo(k, '#ffe7b0'), 8.3, 6.15, z + dz);
+      }
+    }
+    s.plano(neon(k, 'Bar Vecibanda', 7, 1.5, '#ffcf6b'), 8.62, 8.1, 0, -Math.PI / 2);
   }),
-  M('botellas', 'Estantes con botellas', 4.4, -3, (k, s) => {
-    ['#ffca28', '#66bb6a', '#ef5350', '#42a5f5', '#ab47bc'].forEach((c, i) => {
-      s.d(3 + i * 0.9, 3.4, -6.6, 3.4 + i * 0.9, 4.6, -6.3, c);
-      s.d(3 + i * 0.9, 5, -6.6, 3.4 + i * 0.9, 6.2, -6.3, c);
-    });
-    s.d(2.8, 3.3, -6.7, 7.8, 3.4, -6.2, '#5d4037');
-    s.d(2.8, 4.9, -6.7, 7.8, 5, -6.2, '#5d4037');
+  M('barra', 'Barra de mármol', 3.2, -3.4, (k, s) => {
+    s.b(4.6, 0, -4.4, 5.9, 2.35, 4.4, '#4a2f1d');
+    for (let z = -4; z < 4.2; z += 1.6) s.d(4.55, 0.3, z, 4.6, 2.0, z + 1.2, '#5c3a24');
+    s.d(4.3, 2.35, -4.6, 6.1, 2.55, 4.6, '#2f3b38');
+    s.d(4.3, 0.15, -4.4, 4.45, 0.3, 4.4, '#b8892f');
   }),
-  M('banquetas', 'Banquetas', 3.4, -1.2, (k, s) => [[3.6, -3.4, 0], [5.2, -3.4, 0], [5, 1, -Math.PI / 2], [5, -1.5, -Math.PI / 2]].forEach(([x, z, r]) => s.modelo('stoolBar', x, 0, z, r + Math.PI, { tela: '#c62828' }))),
-  M('mesa', 'Mesa alta', -1, 3, (k, s) => {
-    s.modelo('tableRound', -1, 0, 3, 0, { ancho: 2.6 });
-    s.modelo('stoolBar', -2.8, 0, 3, 0, { tela: '#c62828' });
-    s.modelo('stoolBar', 0.8, 0, 3, 0, { tela: '#c62828' });
+  M('botellas', 'Espejo y botellas', 7, -3, (k, s) => {
+    // Mueble bajo, espejo iluminado y tres estantes de botellas de colores.
+    s.b(7.6, 0, -4, 8.75, 2.2, 4, '#3b2416');
+    s.d(8.7, 2.9, -3.4, 8.75, 6.9, 3.4, '#b8892f');
+    s.d(8.65, 3.0, -3.3, 8.7, 6.8, 3.3, brillo(k, '#e8d9b0'));
+    const colores = ['#2e7d32', '#8d6e63', '#ffb300', '#c62828', '#ece6d0', '#5d4037', '#1565c0', '#d4a017'];
+    for (const [i, y] of [3.3, 4.6, 5.9].entries()) {
+      s.d(8.0, y - 0.1, -3.3, 8.7, y, 3.3, '#3b2416');
+      s.d(8.0, y - 0.13, -3.3, 8.7, y - 0.1, 3.3, brillo(k, '#ffcf6b'));
+      for (let z = -3, n = 0; z < 3.1; z += 0.55, n++) {
+        const c = colores[(n + i * 3) % colores.length];
+        s.cil(0.13, 0.6, c, 8.35, y, z, 8);
+        s.cil(0.05, 0.25, c, 8.35, y + 0.6, z, 6);
+      }
+    }
+    // Colgador de copas arriba de la barra.
+    s.d(4.6, 7.6, -3.5, 6.0, 7.75, 3.5, '#1d1d1d');
+    for (const x of [4.7, 5.9]) for (const z of [-3.4, 3.4]) s.d(x - 0.02, 7.75, z - 0.02, x + 0.02, 9.6, z + 0.02, '#9e9e9e');
+    for (let z = -3.2; z <= 3.2; z += 0.8) for (const x of [4.95, 5.6]) {
+      s.cil(0.02, 0.3, '#e0f2f1', x, 7.3, z, 6);
+      s.cil(0.16, 0.25, k.vidrio, x, 7.05, z, 10);
+    }
+  }),
+  M('banquetas', 'Banquetas', 2.6, 0, (k, s) => [-3.3, -1.1, 1.1, 3.3].forEach((z) => s.modelo('stoolBar', 3.6, 0, z, Math.PI / 2, { tela: '#2b2b35' }))),
+  M('mesa', 'Mesitas', -4.2, 1.4, (k, s) => {
+    // Mesitas de pie (tapa redonda de mármol, columna y base de bronce) con dos sillones
+    // tapizados y una velita.
+    for (const z of [-2.6, 3]) {
+      s.cil(0.75, 0.08, '#b8892f', -5, 0, z, 16);
+      s.cil(0.12, 2.15, '#b8892f', -5, 0.08, z, 10);
+      s.cil(1.05, 0.12, '#2f3b38', -5, 2.23, z, 20);
+      for (const dx of [-1.9, 1.9]) {
+        s.b(-5 + dx - 0.6, 0, z - 0.6, -5 + dx + 0.6, 1.2, z + 0.6, '#5c1420');
+        const atras = dx < 0 ? -5 + dx - 0.6 : -5 + dx + 0.45;
+        s.b(atras, 1.2, z - 0.6, atras + 0.15, 2.6, z + 0.6, '#5c1420');
+        s.d(-5 + dx - 0.55, 0, z - 0.55, -5 + dx + 0.55, 0.25, z + 0.55, '#3b2416');
+      }
+      s.cil(0.12, 0.3, '#fff3d6', -5, 2.35, z, 8);
+      s.cil(0.04, 0.12, brillo(k, '#ffcf6b'), -5, 2.65, z, 6);
+    }
   }),
 ];
 
+// ---------- Sala de trofeos: Vecibanda Awards ----------
+// Paredes azul noche con guarda dorada, alfombra roja desde la puerta (z = +6.6) hasta el
+// podio con la estatuilla grande y el fondo con el neón "VECIBANDA AWARDS", vitrinas con
+// estatuillas a los costados y lo de La Dosis en la pared.
 const salaTrofeos = [
   LUZ(0, 3, (k, s) => {
-    s.cil(0.25, 0.06, '#212121', -2, 4, -6.55, 16).rotation.x = Math.PI / 2;
-    s.cartel('SALA DE TROFEOS', 6, 1.2, 3, 5.6, -6.55, 0, '#ffd54f', '#3e2723');
-    s.plano(k.imagen('assets/especiales/ladosis_banderin.png', 2.4, 3.5, { dosLados: true }), 8.6, 5.2, 3.8, -Math.PI / 2);
-    s.plano(k.imagen('assets/especiales/ladosis_escudo.png', 2.6, 2.6), 8.6, 5.4, -1.8, -Math.PI / 2);
+    revestir(s, '#141c3a', { lados: ['-x', '+x'], zPuerta: 1 });
+    for (const x of [-8.7, 8.65]) s.d(x, 8.3, -6.6, x + 0.05, 8.5, 6.6, '#d4a017');
+    s.plano(k.imagen('assets/especiales/ladosis_banderin.png', 2.4, 3.5, { dosLados: true }), 8.6, 6.4, 3.8, -Math.PI / 2);
+    s.plano(k.imagen('assets/especiales/ladosis_escudo.png', 2.6, 2.6), 8.6, 6.6, -1.8, -Math.PI / 2);
   }),
-  M('alfombra', 'Alfombra roja', 0.25, -2.5, (k, s) => s.d(-1, 0, -6.6, 1.5, 0.08, 6.6, '#c62828')),
-  M('vitrinas1', 'Vitrinas', -7, -3, (k, s) => vitrinas(k, s, [[-7, -5], [-7, -1]])),
-  M('vitrinas2', 'Más vitrinas', -6.6, 4.6, (k, s) => vitrinas(k, s, [[-7, 3], [5.8, -5]])),
-  M('podio', 'Podio con copa', 5, 0, (k, s) => {
-    s.b(3, 0, -1, 7, 0.8, 1, '#eeeeee');
-    s.b(4.3, 0.8, -1, 5.7, 1.6, 1, '#eeeeee');
-    s.cil(0.6, 1.4, '#ffd600', 5, 1.6, 0, 12);
+  M('alfombra', 'Alfombra roja', 0.25, 2.5, (k, s) => {
+    s.d(-1.5, 0, -3.4, 1.5, 0.08, 6.7, '#b71c1c');
+    for (const x of [-1.5, 1.4]) s.d(x, 0.08, -3.4, x + 0.1, 0.1, 6.7, '#d4a017');
+  }),
+  M('vitrinas1', 'Vitrinas', -5.6, -3, (k, s) => vitrinas(k, s, [[-7.4, -4], [-7.4, 0], [-7.4, 4]])),
+  M('vitrinas2', 'Más vitrinas', 5.6, 3, (k, s) => vitrinas(k, s, [[7.4, -4], [7.4, 0]])),
+  M('podio', 'Podio con la estatuilla', 3.4, -2, (k, s) => {
+    // Fondo oscuro con el neón, y el podio de tres escalones con las estatuillas.
+    s.d(-5, 0, -6.2, 5, 8.8, -5.95, '#0e1430');
+    s.d(-5.1, 8.8, -6.25, 5.1, 9.0, -5.9, '#d4a017');
+    s.plano(neon(k, 'VECIBANDA AWARDS', 9, 1.7, '#ffd54f'), 0, 7.3, -5.9, 0);
+    s.b(-3.6, 0, -5.6, -1.2, 1.0, -3.6, '#eeeeee');
+    s.b(-1.2, 0, -5.6, 1.2, 1.6, -3.6, '#ffffff');
+    s.b(1.2, 0, -5.6, 3.6, 0.7, -3.6, '#eeeeee');
+    s.plano(estatuillaAwards(k, 1.6), 0, 1.6, -4.6, 0);
+    s.plano(estatuillaAwards(k, 1.15), -2.4, 1.0, -4.6, 0);
+    s.plano(estatuillaAwards(k, 1.15), 2.4, 0.7, -4.6, 0);
+    for (const [x, n] of [[0, '1'], [-2.4, '2'], [2.4, '3']]) {
+      s.plano(neon(k, n, 0.8, 0.8, '#d4a017'), x, 0.35, -3.58, 0);
+    }
   }),
 ];
 
+// Vitrinas de vidrio con una estatuilla de los Vecibanda Awards cada una.
 function vitrinas(k, s, lugares) {
   lugares.forEach(([x, z]) => {
-    s.b(x - 1, 0, z - 1, x + 1, 2, z + 1, '#5d4037');
-    s.b(x - 0.9, 2, z - 0.9, x + 0.9, 4.2, z + 0.9, k.vidrio);
-    s.cil(0.35, 0.9, '#ffc928', x, 2.4, z, 10);
-    s.d(x - 0.2, 2, z - 0.2, x + 0.2, 2.4, z + 0.2, '#ffb300');
+    s.b(x - 1, 0, z - 1, x + 1, 2, z + 1, '#2a1d14');
+    s.d(x - 1.05, 2, z - 1.05, x + 1.05, 2.1, z + 1.05, '#d4a017');
+    s.b(x - 0.95, 2.1, z - 0.95, x + 0.95, 5.2, z + 0.95, k.vidrio);
+    s.d(x - 1, 5.2, z - 1, x + 1, 5.35, z + 1, '#2a1d14');
+    s.d(x - 0.3, 5.18, z - 0.3, x + 0.3, 5.2, z + 0.3, brillo(k, '#fff3d6'));
+    s.plano(estatuillaAwards(k, 1.05), x, 2.1, z, x < 0 ? Math.PI / 2 : -Math.PI / 2);
   });
 }
 
+// ---------- Vecibanda TV (estudio de streaming) ----------
+// Setup violeta con neones (como la foto): escritorio blanco largo contra la pared de adentro
+// con tres monitores, la pantalla grande arriba con la ciudad de noche y paneles de neón,
+// silla gamer, parlantes en pie con luz, aro de luz, puf y planta. "EN VIVO" arriba de la
+// puerta y "VECIBANDA TV" arriba de la pantalla. La pared +x es la de afuera (ventanal).
 const streaming = [
   LUZ(0, 0, (k, s) => {
-    s.cartel('EN VIVO', 4, 1.2, 0, 7.6, -6.7, 0, '#ffffff', '#d50000');
-    s.cartel('VECIBANDA TV', 5, 1, -8.65, 5.5, 0, Math.PI / 2, '#ffd23f', '#212121');
+    revestir(s, '#3d2b8a', { lados: ['-x'], zPuerta: -1 });
+    tirasLed(k, s, '#b388ff', ['-x'], -1);
+    s.plano(neon(k, '● EN VIVO', 4.6, 1.2, '#ff3b3b'), 0, 8.3, -6.6, 0);
+    s.plano(neon(k, 'VECIBANDA TV', 7.5, 1.4, '#7df9ff'), -8.62, 8.55, 0, Math.PI / 2);
   }),
-  M('alfombra', 'Alfombra', -1.5, 0, (k, s) => alfombra(s, -3, -2, 5, 4, '#263238')),
-  M('escritorio', 'Escritorio con 2 monitores', 3.8, 4.6, (k, s) => {
-    const P = pieza(s, 3.8, 4.3, '-z');
-    P.modelo('desk', 0, 0, { ancho: 5.6, atras: -0.7 });
-    const alto = P.medida('desk', { ancho: 5.6 }).y;
-    [-1.2, 1.2].forEach((u, i) => {
-      P.modelo('computerScreen', u, 0, { atras: -0.6, y: alto, solido: false });
-      P.d(u - 0.75, alto + 0.45, -0.04, u + 0.75, alto + 1.4, -0.02, brillo(k, i ? '#7c4dff' : '#00e5ff'));
+  M('alfombra', 'Alfombra', -1.5, 2, (k, s) => {
+    s.d(-8.8, 0, -6.75, 8.8, 0.06, 6.75, '#2a2350');
+    s.d(-5.6, 0.06, -3.6, 1.4, 0.09, 3.6, '#5b3fb0');
+  }),
+  M('escritorio', 'Escritorio con 3 monitores', -4.6, 4.6, (k, s) => {
+    const P = pieza(s, -8.75, 0, '+x');
+    P.b(-4, 2.3, 0.2, 4, 2.45, 2.2, '#f2f2f6');
+    P.b(-4, 0, 0.3, -2.6, 2.3, 2.1, '#e8e8ee');
+    for (let i = 0; i < 3; i++) P.d(-3.9, 0.3 + i * 0.7, 2.11, -2.7, 0.9 + i * 0.7, 2.12, '#d6d6de');
+    P.b(3.8, 0, 0.3, 4, 2.3, 2.1, '#e8e8ee');
+    P.d(-3.9, 2.18, 2.1, 3.9, 2.28, 2.2, brillo(k, '#00e5ff'));
+    // Pantalla grande en la pared: ciudad de noche, con marco de neón y dos paneles al costado.
+    P.plano(lamina(k, (g, w, h) => {
+      const d = g.createLinearGradient(0, 0, 0, h);
+      d.addColorStop(0, '#0b1240');
+      d.addColorStop(1, '#2a7ad8');
+      g.fillStyle = d;
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ffffff';
+      for (let i = 0; i < 40; i++) g.fillRect((i * 97) % w, (i * 53) % (h * 0.5), 2, 2);
+      g.fillStyle = '#d9f1ff';
+      g.beginPath();
+      g.arc(w * 0.62, h * 0.32, h * 0.22, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#0d1b3d';
+      let x = 0;
+      let n = 0;
+      while (x < w) {
+        const bw = 26 + ((n * 37) % 40);
+        const bh = h * (0.25 + ((n * 53) % 50) / 100);
+        g.fillRect(x, h - bh, bw, bh);
+        x += bw + 4;
+        n++;
+      }
+    }, 512, 256, 6.4, 3.1), 0, 6.2, 0.05, 0);
+    P.d(-3.3, 4.55, 0.0, 3.3, 4.65, 0.06, brillo(k, '#7df9ff'));
+    P.d(-3.3, 7.75, 0.0, 3.3, 7.85, 0.06, brillo(k, '#7df9ff'));
+    for (const u of [-5, 5]) {
+      P.d(u - 0.9, 5.2, 0.0, u + 0.9, 5.3, 0.06, brillo(k, '#e0b3ff'));
+      P.d(u - 0.9, 7.0, 0.0, u + 0.9, 7.1, 0.06, brillo(k, '#e0b3ff'));
+      P.d(u - 0.9, 5.2, 0.0, u - 0.8, 7.1, 0.06, brillo(k, '#e0b3ff'));
+      P.d(u + 0.8, 5.2, 0.0, u + 0.9, 7.1, 0.06, brillo(k, '#e0b3ff'));
+    }
+    // Tres monitores (el del medio más grande, los de los costados un poco girados).
+    [[-1.9, 0.3, 1.5], [0, 0, 2.0], [1.9, -0.3, 1.5]].forEach(([u, rot, ancho]) => {
+      P.d(u - 0.08, 2.45, 0.9, u + 0.08, 3.0, 1.0, '#1b1b1b');
+      const q = P.plano(lamina(k, (g, w, h) => {
+        g.fillStyle = '#e8f6ff';
+        g.fillRect(0, 0, w, h);
+        g.fillStyle = '#6a5acd';
+        g.fillRect(0, 0, w, h * 0.12);
+        g.fillStyle = '#b8d9ff';
+        g.fillRect(w * 0.06, h * 0.2, w * 0.6, h * 0.6);
+        g.fillStyle = '#c7b8ff';
+        g.fillRect(w * 0.7, h * 0.2, w * 0.24, h * 0.6);
+      }, 256, 150, ancho, ancho * 0.58), u, 3.0 + ancho * 0.29, 1.02, rot);
+      const marco = k.noSolido(k.caja(ancho + 0.12, ancho * 0.58 + 0.12, 0.06, '#111'));
+      marco.position.z = -0.04;
+      q.add(marco);
     });
-    P.modelo('computerKeyboard', 0, 0.4, { y: alto, solido: false });
+    P.d(-0.9, 2.45, 1.45, 0.9, 2.5, 1.85, '#222');
+    P.d(1.15, 2.45, 1.5, 1.4, 2.5, 1.8, '#222');
+    // Cartelito "Enjoy" de neón y la webcam.
+    P.plano(neon(k, 'Vecis', 1.2, 0.5, '#7df9ff'), -3.2, 2.75, 1.3, 0);
+    P.d(-0.15, 4.0, 1.0, 0.15, 4.18, 1.15, '#111');
   }),
-  M('silla', 'Silla gamer', 3.8, 0.9, (k, s) => sillaEscritorio(k, pieza(s, 3.8, 4.3, '-z'), '#e53935', 3.2)),
-  M('aro', 'Aro de luz', -0.6, 2.4, (k, s) => {
-    s.b(-0.7, 0, 2.3, -0.5, 3.8, 2.5, '#9e9e9e');
-    s.cil(0.8, 0.12, '#fffde7', -0.6, 4.2, 2.4, 20).rotation.x = Math.PI / 2;
+  M('silla', 'Silla gamer', -3.4, 0, (k, s) => sillaEscritorio(k, pieza(s, -8.75, 0, '+x'), '#ffb300', 3.6)),
+  M('aro', 'Parlantes y aro de luz', -3, 5.2, (k, s) => {
+    const P = pieza(s, -8.75, 0, '+x');
+    for (const u of [-5.4, 5.4]) {
+      P.b(u - 0.6, 0, 0.4, u + 0.6, 2.6, 1.6, '#f2f2f6');
+      for (const y of [0.8, 1.9]) {
+        P.cil(0.38, 0.05, '#2a2a33', u, y, 1.62, 16).rotation.z = Math.PI / 2;
+        P.cil(0.42, 0.03, brillo(k, '#00b0ff'), u, y, 1.6, 16).rotation.z = Math.PI / 2;
+      }
+    }
+    s.d(-1.1, 0, 4.5, -0.9, 4.0, 4.7, '#9e9e9e');
+    const aro = s.cil(0.8, 0.12, brillo(k, '#fffde7'), -1, 4.4, 4.6, 24);
+    aro.rotation.x = Math.PI / 2;
   }),
-  M('croma', 'Pantalla verde', 7, -1, (k, s) => s.d(8.6, 0, -4, 8.66, 7, 3, '#00c853')),
+  M('neones', 'Puf, planta y neones', 4.6, 3.6, (k, s) => {
+    // Puf blanco, planta y los símbolos de joystick en la pared de la puerta (a un costado).
+    s.plano(neon(k, '○', 1.1, 1.1, '#ff6ec7'), -6.4, 5.6, -6.6, 0);
+    s.plano(neon(k, '△', 1.1, 1.1, '#7df9ff'), -5.0, 5.6, -6.6, 0);
+    s.plano(neon(k, '✕', 1.1, 1.1, '#b388ff'), -6.4, 4.3, -6.6, 0);
+    s.plano(neon(k, '□', 1.1, 1.1, '#ffd23f'), -5.0, 4.3, -6.6, 0);
+    s.plano(neon(k, 'PLAY', 3.2, 1.2, '#7df9ff'), 5.9, 5.4, -6.6, 0);
+    const puf = s.esf(1.1, '#f4f4fb', 5.6, 0.75, 4.6);
+    puf.scale.y = 0.65;
+    planta(k, P0(s), 7.4, 5.6, 3.6);
+  }),
 ];
 
 // ---------- Registro ----------
