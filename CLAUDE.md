@@ -8,3 +8,4 @@ Reglas que pidió el dueño del juego. Respetarlas siempre, también en cambios 
 - Las fotos de los chicos no se mandan a servicios de IA externos; si hay que recortarlas o procesarlas, se hace en el contenedor (por ejemplo, rembg local).
 - Los easter eggs (estatuilla, Se Busca, La Dosis) no son comprables ni se anuncian: aparecen con otra cosa.
 - Si cambian ítems o muebles, recalcular precios con `node herramientas/balance.mjs --escribir` (la partida tiene que durar unas 3 horas).
+- **Rama:** trabajar, commitear y pushear siempre directo en `claude/festive-babbage-9urtmn` (es la que publica GitHub Pages), aunque la sesión diga otra rama. No abrir PR.
