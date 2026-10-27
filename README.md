@@ -82,6 +82,21 @@ Los pesos son realistas: cada ejercicio tiene el máximo que levanta una persona
 
 Solo Bauti cambia de cuerpo: cada repetición le suma puntos (`estado.bautiGym`); con unas 1000 repeticiones adelgaza (y camina más rápido) y, ya flaco, con unas 2400 más se pone musculoso. El progreso se ve en el panel y se guarda con la partida. Los números están en `BAUTI_GYM` de `js/gimnasio.js`.
 
+## Casino Vecibanda
+
+En la Ciudad Vecibanda, sobre la avenida de la entrada (al lado del hotel), está el casino, inspirado en el del Schedule 1: edificio de ladrillo con la marquesina redonda, la escalinata y las letras CASINO de neón arriba (de día rosas; de noche cambian de colores y titilan, igual que las lamparitas de la marquesina). Todo está en `js/casino.js`; la manzana la marca `ESPECIALES` en `js/ciudad.js`.
+
+Adentro, un casino de verdad: alfombra roja con firuletes, boiserie de madera y tapiz bordó con columnas doradas y apliques, cielorraso artesonado dorado, arañas rosas, neón fucsia alrededor, la pantalla del JACKPOT en el fondo, la barra con botellas iluminadas y charcos de luz en la alfombra. Hay 36 tragamonedas como las de las fotos y tres mesas. Se juega con "Jugar al ... (E)" parado en la banqueta; se abre un panel abajo (la cámara mira la mesa o la máquina) con la apuesta (escalera 1-2-5, ÷10, ×10 y Máx) y los botones. Espacio o Enter hacen la acción principal y E o Esc te levantan (no mientras gira o se reparte). **Máximo por apuesta: 100 B** (`LIMITE`). Las chances son las de verdad (la casa gana un poquito en promedio):
+
+- **Tragamonedas:** tres rodillos que giran de verdad. 3 frutas x2, misma fruta x10, 3 campanas x25, 3 sietes x100 (devuelve el 96%).
+- **Blackjack:** zapato de 6 mazos; el crupier pide hasta 16 y se planta en 17; blackjack paga 3 a 2; se puede doblar.
+- **Póker (Casino Hold'em):** ante, flop, y ir (el doble del ante) o retirarse. El crupier califica con par de 4; el ante paga según la mano (escalera real 100, escalera de color 20, póker 10, full 3, color 2, el resto 1) y el ir 1 a 1.
+- **Ruleta europea:** fichas en el paño (plenos 35 a 1, docenas y columnas 2 a 1, rojo/negro, par/impar y mitades 1 a 1), quedan puestas para repetir; la rueda y la bolita giran de verdad y se ve el historial.
+
+El crupier de las tres mesas es **Astrojorge**: alto y flaco, pelo blanco con dos entradas y la "piscina" en la coronilla, camisa blanca, chaleco, moño rojo y la plaquita con el nombre. Camina a la mesa donde te sentás y te habla. La cara sale de `assets/caras/astrojorge.jpeg` y la ropa se dibuja con `herramientas/casino.py` (acá en el contenedor); la calva es `calva: true` en `js/texturas.js`.
+
+Afuera hay un estacionamiento y siempre está el **auto de Astrojorge** (un sedán viejo celeste con óxido, "Auto de Astrojorge" pintado en las puertas, el lugar reservado y una papa metida en el caño de escape).
+
 ## Misiones
 
 **Premios:** cada misión da plata al cumplirla: lo que más convenga entre un monto fijo según el % al que se desbloquea (unos 10 minutos de lo que se gana en ese momento de la partida) y unos minutos de lo que estás ganando cuando la cumplís, según lo difícil que es, con un tope para que dejarla para el final no rompa la partida. Ponerse trabado (Bauti, lejos la más difícil): 100 B fijos. Rescatar al Cusi: 20 M o 6 minutos, hasta 600 M. Empilchado: 1.500 M o 3 minutos, hasta 6.000 M. El panel muestra el premio de cada una (y "Cobraste" cuando ya está). Las misiones cumplidas antes de que hubiera premios se cobran una vez al cargar (`estado.premios`).

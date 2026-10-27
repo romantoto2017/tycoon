@@ -149,6 +149,13 @@ export const sfx = {
   robo() { efecto([[660, 0, 0.12, 'square', 0.05], [440, 0.1, 0.12, 'square', 0.05], [220, 0.2, 0.3, 'square', 0.05]]); },
   choque() { efecto([[180, 0, 0.07, 'triangle', 0.09], [2400, 0, 0.04, 'square', 0.035], [1600, 0.01, 0.05, 'square', 0.03]]); },
   pesa() { efecto([[196, 0, 0.14, 'square', 0.035], [784, 0.01, 0.22, 'triangle', 0.03], [1568, 0.01, 0.12, 'sine', 0.02]]); },
+  // Casino: fichas, carta que se reparte, el tic de los rodillos al frenar, la bolita de la ruleta,
+  // y el premio (más largo cuanto más grande).
+  ficha() { efecto([[2200, 0, 0.04, 'square', 0.03], [3100, 0.03, 0.05, 'square', 0.025]]); },
+  carta() { efecto([[900, 0, 0.03, 'sawtooth', 0.025], [500, 0.02, 0.05, 'triangle', 0.03]]); },
+  rodillo() { efecto([[180, 0, 0.06, 'square', 0.05], [90, 0.02, 0.08, 'triangle', 0.05]]); },
+  bolita() { efecto(Array.from({ length: 14 }, (_, i) => [1800 + (i % 3) * 300, i * (0.05 + i * 0.012), 0.03, 'square', 0.02])); },
+  premio(grande = false) { efecto((grande ? [523, 659, 784, 1047, 784, 1047, 1319, 1568, 2093] : [784, 988, 1319]).map((f, i) => [f, i * 0.08, 0.2, 'square', 0.05])); },
   final() { efecto([523, 659, 784, 1047, 784, 1047, 1319, 1568].map((f, i) => [f, i * 0.14, 0.4, 'square', 0.06])); },
 };
 

@@ -343,6 +343,27 @@ export function cargarCabeza(p) {
       gar.fillRect(0, 0, s, s);
       gar.globalAlpha = 1;
       mechones(gar, s, 0, s, 11, peinado);
+      if (p.calva) {
+        // Pelado arriba: la "piscina" de la coronilla (un poco atrás del medio; arriba en la
+        // textura es la nuca) y las entradas que llegan desde la frente (abajo en la textura).
+        const mancha = (x, y, rx, ry) => {
+          const gr = gar.createRadialGradient(0, 0, 0, 0, 0, 1);
+          gr.addColorStop(0, piel);
+          gr.addColorStop(0.75, piel);
+          gr.addColorStop(1, 'rgba(0,0,0,0)');
+          gar.save();
+          gar.translate(x * s, y * s);
+          gar.scale(rx * s, ry * s);
+          gar.fillStyle = gr;
+          gar.beginPath();
+          gar.arc(0, 0, 1, 0, Math.PI * 2);
+          gar.fill();
+          gar.restore();
+        };
+        mancha(0.5, 0.42, 0.3, 0.27);
+        mancha(0.28, 0.95, 0.15, 0.3);
+        mancha(0.72, 0.95, 0.15, 0.3);
+      }
       const [abajo, gab] = lienzo();
       gab.fillStyle = piel;
       gab.fillRect(0, 0, s, s);

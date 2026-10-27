@@ -1134,3 +1134,64 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
   body:has(.minimapa:not(.oculto)) .carrera { top: calc(150px + env(safe-area-inset-top)); }
   .mapa-ayuda { display: none; }
 }
+
+/* ---------- Casino (casino.js): panel abajo, atrás se ve la mesa o la máquina ---------- */
+.casino { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; padding: 0 calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left)); pointer-events: none; z-index: 20; color: #fff; font-family: var(--fuente); }
+.casino.oculto { display: none; }
+.cas-panel { pointer-events: auto; width: min(920px, 100%); max-height: 50vh; overflow-y: auto; background: linear-gradient(180deg, rgba(42, 6, 30, 0.9), rgba(14, 4, 20, 0.92)); border: 2px solid #d4a93a; border-radius: 18px; box-shadow: 0 0 24px rgba(255, 47, 180, 0.35), inset 0 0 18px rgba(255, 210, 63, 0.08); padding: 8px 12px 10px; }
+.cas-cab { display: flex; align-items: center; gap: 12px; }
+.cas-titulo { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 2px; color: #ffd23f; text-shadow: 0 0 10px rgba(255, 47, 180, 0.8); white-space: nowrap; }
+.cas-dealer { flex: 1; margin: 0; font-size: 14px; color: #f3d9ff; font-style: italic; min-width: 0; }
+.cas-salir, .cas-apuesta button, .cas-botones button { font-family: var(--fuente); cursor: pointer; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 800; }
+.cas-salir { padding: 6px 12px; font-size: 14px; }
+.cas-salir:hover, .cas-apuesta button:hover, .cas-botones button:hover:not([disabled]) { background: rgba(255, 255, 255, 0.2); }
+.cas-mesa { margin: 6px 0 2px; }
+.cas-msj { min-height: 22px; font-size: 16px; font-weight: 800; text-align: center; color: #e8e0f0; }
+.cas-msj.gana { color: #7dff6a; text-shadow: 0 0 12px rgba(125, 255, 106, 0.7); animation: casGana 0.6s ease 2; }
+.cas-msj.pierde { color: #ff8a8a; }
+@keyframes casGana { 50% { transform: scale(1.08); } }
+.cas-pie { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; margin-top: 4px; }
+.cas-apuesta { display: flex; align-items: center; gap: 5px; }
+.cas-apuesta.bloqueada { opacity: 0.45; pointer-events: none; }
+.cas-etq { font-size: 13px; color: #d9c7e8; margin-right: 2px; }
+.cas-apuesta button { padding: 6px 9px; font-size: 14px; min-width: 38px; }
+.cas-monto { min-width: 84px; text-align: center; font-size: 20px; color: #ffd23f; background: rgba(0, 0, 0, 0.4); border-radius: 10px; padding: 4px 8px; border: 1px solid #d4a93a; }
+.cas-botones { display: flex; gap: 8px; }
+.cas-botones button { padding: 9px 18px; font-size: 17px; }
+.cas-botones button[disabled] { opacity: 0.4; cursor: default; }
+.cas-botones .cas-principal { background: linear-gradient(180deg, #ffde4d, #e8a312); color: #3a1d00; border-color: #fff3b0; box-shadow: 0 0 14px rgba(255, 210, 63, 0.55); }
+.cas-botones .cas-principal:hover:not([disabled]) { background: linear-gradient(180deg, #fff07a, #f0b52a); }
+.casino button:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+/* Cartas */
+.cas-fila { display: flex; align-items: center; gap: 10px; margin: 3px 0; }
+.cas-quien { width: 92px; font-size: 14px; color: #d9c7e8; font-weight: 800; }
+.cas-cartas { display: flex; gap: 5px; min-height: 58px; }
+.cas-total { font-size: 18px; font-weight: 900; color: #ffd23f; }
+.cas-carta { width: 42px; height: 58px; border-radius: 6px; background: #fff; color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); animation: casCarta 0.25s ease; }
+.cas-carta b { font-size: 19px; }
+.cas-carta i { font-style: normal; font-size: 21px; }
+.cas-carta.roja { color: #c8102e; }
+.cas-carta.tapada { background: repeating-linear-gradient(45deg, #b3122a 0 6px, #8a0c1f 6px 12px); border: 3px solid #fff; }
+.cas-carta.vacia { background: transparent; border: 2px dashed rgba(255, 255, 255, 0.25); box-shadow: none; animation: none; }
+@keyframes casCarta { from { transform: translateY(-14px) rotate(-8deg); opacity: 0; } }
+/* Tragamonedas */
+.cas-rodillos { display: flex; justify-content: center; gap: 8px; }
+.cas-simbolo { width: 64px; height: 64px; border-radius: 8px; border: 3px solid #d4a93a; }
+/* Ruleta */
+.cas-historial { display: flex; gap: 4px; justify-content: center; min-height: 24px; margin-bottom: 4px; }
+.rh { min-width: 26px; padding: 2px 4px; border-radius: 6px; font-size: 13px; font-weight: 900; text-align: center; }
+.rh.rojo, .rc.rojo { background: #c8102e; }
+.rh.negro, .rc.negro { background: #141414; }
+.rh.verde, .rc.cero { background: #0f8a3c; }
+.cas-pano { display: grid; grid-template-columns: 34px repeat(12, minmax(0, 1fr)) 40px; grid-template-rows: repeat(5, 30px); gap: 2px; background: #0d5a2b; padding: 4px; border-radius: 10px; border: 2px solid #d4a93a; }
+.rc { position: relative; font-family: var(--fuente); font-size: 13px; font-weight: 800; color: #fff; border: 1px solid rgba(242, 233, 201, 0.6); border-radius: 4px; cursor: pointer; padding: 0; }
+.rc.afuera { background: rgba(0, 0, 0, 0.18); }
+.rc:hover { filter: brightness(1.3); }
+.ficha { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, #ffd23f 55%, #c98a00 56%); color: #3a1d00; border: 2px dashed #fff; border-radius: 50%; min-width: 26px; height: 26px; padding: 0 3px; font-size: 9px; line-height: 22px; pointer-events: none; z-index: 1; }
+@media (max-height: 520px) {
+  .cas-panel { max-height: 56vh; padding: 6px 10px 8px; }
+  .cas-pano { grid-template-rows: repeat(5, 24px); }
+  .cas-carta { width: 34px; height: 46px; }
+  .cas-cartas { min-height: 46px; }
+  .cas-botones button { padding: 7px 14px; font-size: 15px; }
+}
