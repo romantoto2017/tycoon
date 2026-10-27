@@ -32,6 +32,7 @@ rng = np.random.default_rng(7)
 # Cajas en fracciones de la foto: (x0, y0, x1, y1).
 # torso: el cuerpo de la prenda, entre las sisas (o los brazos), del cuello al ruedo.
 # tela: un pedazo liso para sacar el color (o el estampado, si 'estampado').
+# estirar: (pantalones) en cada fila, el pantalón se estira a todo el ancho de la pierna (cubre la pierna entera).
 # manga: (hombro, puño, ancho) de una manga larga: se endereza y se pone en los brazos.
 PRENDAS = [
     # ---- remeras ----
@@ -75,9 +76,9 @@ PRENDAS = [
     dict(id='lb_puntocom', foto='luccabossio/lb_puntocom.jpg', slot='torso', torso=(0.13, 0.37, 0.5, 0.91), tela=(0.2, 0.72, 0.3, 0.85)),
     dict(id='lb_trigrama', foto='luccabossio/lb_trigrama.jpg', slot='torso', torso=(0.23, 0.12, 0.77, 0.88), tela=(0.3, 0.4, 0.45, 0.55)),
     dict(id='lb_voynich', foto='luccabossio/lb_voynich.jpg', slot='torso', torso=(0.1, 0.42, 0.48, 0.92), tela=(0.12, 0.76, 0.2, 0.86), manga='lisa'),
-    dict(id='lb_jean', foto='luccabossio/lb_jean.jpg', slot='piernas', piernas=[(0.18, 0.03, 0.5, 0.98), (0.5, 0.03, 0.78, 0.98)], tela=(0.25, 0.5, 0.35, 0.7), estampado=True),
-    dict(id='lb_jogbigrama', foto='luccabossio/lb_jogbigrama.jpg', slot='piernas', piernas=[(0.15, 0.05, 0.5, 0.95), (0.5, 0.05, 0.85, 0.95)], tela=(0.2, 0.5, 0.3, 0.7)),
-    dict(id='lb_acanto', foto='luccabossio/lb_acanto.jpg', slot='piernas', piernas=[(0.15, 0.05, 0.5, 0.95), (0.5, 0.05, 0.85, 0.95)], tela=(0.2, 0.5, 0.3, 0.7)),
+    dict(id='lb_jean', estirar=True, foto='luccabossio/lb_jean.jpg', slot='piernas', piernas=[(0.18, 0.03, 0.5, 0.98), (0.5, 0.03, 0.78, 0.98)], tela=(0.25, 0.5, 0.35, 0.7), estampado=True),
+    dict(id='lb_jogbigrama', estirar=True, foto='luccabossio/lb_jogbigrama.jpg', slot='piernas', piernas=[(0.15, 0.05, 0.5, 0.95), (0.5, 0.05, 0.85, 0.95)], tela=(0.2, 0.5, 0.3, 0.7)),
+    dict(id='lb_acanto', estirar=True, foto='luccabossio/lb_acanto.jpg', slot='piernas', piernas=[(0.15, 0.05, 0.5, 0.95), (0.5, 0.05, 0.85, 0.95)], tela=(0.2, 0.5, 0.3, 0.7)),
     # ---- gorra ----
     dict(id='tiffosigorra', foto='tiffosigorra.webp', slot='cabeza', torso=(0.26, 0.32, 0.62, 0.6), tela=(0.4, 0.62, 0.5, 0.7)),
 ]
@@ -138,6 +139,53 @@ def mascara_fondo(im):
     bordes = set(np.unique(np.concatenate([etiquetas[0], etiquetas[-1], etiquetas[:, 0], etiquetas[:, -1]]))) - {0}
     es_fondo = np.isin(etiquetas, list(bordes))
     return (~es_fondo).astype(np.float32)
+
+
+def mascara_blanca(im, tolerancia=18):
+    """Máscara de una prenda sobre fondo blanco o gris liso (las fotos de producto): lo que se
+    llega desde los bordes por píxeles parecidos al fondo es fondo; el resto, prenda."""
+    from scipy import ndimage
+    arr = np.asarray(im).astype(np.int16)
+    borde = np.concatenate([arr[0], arr[-1], arr[:, 0], arr[:, -1]])
+    fondo = np.median(borde, axis=0)
+    cerca = np.abs(arr - fondo).max(axis=2) < tolerancia
+    etiquetas, _ = ndimage.label(cerca)
+    bordes = set(np.unique(np.concatenate([etiquetas[0], etiquetas[-1], etiquetas[:, 0], etiquetas[:, -1]]))) - {0}
+    # También es fondo lo grande del color del fondo que quedó encerrado (el hueco entre las
+    # piernas, cerrado por la sombra del piso); lo chico (cordones, logos blancos) es prenda.
+    tam = np.bincount(etiquetas.ravel())
+    bordes |= set(np.where(tam > im.size[0] * im.size[1] * 0.004)[0]) - {0}
+    prenda = ~np.isin(etiquetas, list(bordes))
+    return ndimage.binary_opening(prenda, iterations=2)
+
+
+def pierna_estirada(im, mascara, caja, W=160, H=512):
+    """Una pierna que ocupa todo: en cada fila, lo que hay de pantalón (de borde a borde) se
+    estira a todo el ancho, así en el juego el pantalón cubre la pierna entera, como puesto."""
+    x0, y0, x1, y1 = caja
+    a = np.asarray(im.crop(caja)).astype(np.float32)
+    m = mascara[y0:y1, x0:x1]
+    filas = []
+    ultima = None
+    for y in range(a.shape[0]):
+        # El tramo más largo de pantalón en la fila (los cortitos, como un cordón blanco o el
+        # hueco entre las piernas, no lo parten: se juntan si el hueco es de menos de 8 píxeles).
+        cols = np.where(m[y])[0]
+        tramos = []
+        for c in cols:
+            if tramos and c - tramos[-1][1] <= 8:
+                tramos[-1][1] = c
+            else:
+                tramos.append([c, c])
+        mejor = max(tramos, key=lambda t: t[1] - t[0]) if tramos else None
+        if mejor and mejor[1] - mejor[0] > 6:
+            corte = int((mejor[1] - mejor[0]) * 0.03)  # sin el filito del borde (sombra o fondo)
+            tramo = a[y, mejor[0] + corte:mejor[1] + 1 - corte]
+            ultima = np.asarray(Image.fromarray(tramo[None].astype(np.uint8)).resize((W, 1), Image.LANCZOS))[0]
+        if ultima is not None:
+            filas.append(ultima)
+    hoja = np.stack(filas)
+    return Image.fromarray(hoja.astype(np.uint8)).resize((W, H), Image.LANCZOS)
 
 
 def color_de(im, caja):
@@ -236,10 +284,14 @@ for p in PRENDAS:
         tela = achicar(im.crop(px(im, p['tela'])), 128).resize((128, 128)) if p.get('estampado') else tela_lisa(color)
         tela.save(f"{OUT}/{p['id']}_tela.jpg", quality=88)
         hoja = Image.new('RGB', (320, 512))
+        blanca = mascara_blanca(im) if p.get('estirar') else None
         for i, c in enumerate(p['piernas']):
             caja = px(im, c)
-            pierna = rellenar(im.crop(caja), mask[caja[1]:caja[3], caja[0]:caja[2]], tela)
-            hoja.paste(pierna.resize((160, 512), Image.LANCZOS), (i * 160, 0))
+            if p.get('estirar'):
+                pierna = pierna_estirada(im, blanca, caja)
+            else:
+                pierna = rellenar(im.crop(caja), mask[caja[1]:caja[3], caja[0]:caja[2]], tela).resize((160, 512), Image.LANCZOS)
+            hoja.paste(pierna, (i * 160, 0))
         hoja.save(f"{OUT}/{p['id']}_piernas.jpg", quality=88)
         info.update(tela=hexa(color))
     colores[p['id']] = info

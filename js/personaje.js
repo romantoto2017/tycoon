@@ -56,6 +56,51 @@ function canvasKipa() {
   return c;
 }
 
+// Pasamontañas de Lucca Bossio x TussiWarriors (como el de la foto): tejido negro, los agujeros
+// de los ojos y de la boca donde los tiene cada uno (personajes.js: ojos y boca), el logo blanco
+// arriba del ojo derecho, "TU$$i" bordado en el cachete y las costuras a los costados de la boca.
+const LOGO_LB = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: 'assets/especiales/luccabossio_logo_blanco.png' }) : null;
+function canvasTejido(n = 128) {
+  const c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d');
+  g.fillStyle = '#151515';
+  g.fillRect(0, 0, n, n);
+  for (let x = 0; x < n; x += 4) { g.fillStyle = x % 8 ? '#1d1d1d' : '#0e0e0e'; g.fillRect(x, 0, 2, n); }
+  return c;
+}
+function canvasPasamontanas(p, c = canvasTejido(256)) {
+  const s = c.width;
+  const g = c.getContext('2d');
+  const [oy, ox0, ox1] = p.ojos || [0.45, 0.33, 0.67];
+  const by = Math.min(0.93, p.boca ?? oy + 0.38);
+  // Bordados (antes de los agujeros, así no tapan la cara).
+  if (LOGO_LB?.complete && LOGO_LB.naturalWidth) g.drawImage(LOGO_LB, (ox1 - 0.02) * s, (oy - 0.17) * s, s * 0.2, s * 0.088);
+  g.fillStyle = '#f2f2f2';
+  g.font = `700 ${Math.round(s * 0.075)}px Arial, sans-serif`;
+  g.textAlign = 'center';
+  g.fillText('TU$$i', ox0 * s, Math.min(by - 0.06, oy + 0.17) * s);
+  g.strokeStyle = '#f2f2f2';
+  g.lineWidth = s * 0.012;
+  for (const lado of [-1, 1]) {
+    const x0 = 0.5 + lado * 0.11;
+    const x1 = 0.5 + lado * 0.3;
+    g.beginPath(); g.moveTo(x0 * s, by * s); g.lineTo(x1 * s, by * s);
+    for (let k = 0; k < 4; k++) { const x = x0 + (x1 - x0) * (0.15 + k * 0.25); g.moveTo(x * s, (by - 0.035) * s); g.lineTo(x * s, (by + 0.035) * s); }
+    g.stroke();
+  }
+  // Agujeros: transparentes (atrás se ve la cara).
+  g.globalCompositeOperation = 'destination-out';
+  for (const x of [ox0, ox1]) {
+    g.beginPath();
+    g.ellipse(x * s, oy * s, s * 0.125, s * 0.075, x < 0.5 ? 0.12 : -0.12, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.beginPath(); g.ellipse(0.5 * s, by * s, s * 0.075, s * 0.065, 0, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'source-over';
+  return c;
+}
+
 // Muñeco de bloques. Mira hacia +Z. Los pies están en y = 0 (alto total ~5.4).
 // cabeza: lo que devuelve cargarCabeza() (las 6 texturas y el color de piel de la foto).
 // vestido: (opcional) la ropa de las tiendas puesta, como la arma vestir.js:
@@ -251,7 +296,8 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
   // 14 cm sobre una cabeza de 18), en la coronilla y un poco hacia atrás: de costado se ve
   // paradita. Satén azul oscuro con la estrella bordada y el borde en zigzag plateado.
   const vg = vestido?.cabeza;
-  if (p.kipa && !vg) {
+  const pasamontanas = !!vt?.prenda?.pasamontanas;
+  if (p.kipa && !vg && !pasamontanas) {
     const r = 0.44;
     const geo = new THREE.SphereGeometry(r, 28, 8, 0, Math.PI * 2, 0, 1.15);
     geo.scale(1, 0.8, 1);
@@ -267,8 +313,28 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     kipa.rotation.x = -0.25;
     cuerpo.add(kipa);
   }
+  // Pasamontañas (viene con el hoodie de Lucca Bossio x TussiWarriors): tapa la cabeza entera
+  // menos los ojos y la boca; con él no se ven el pelo largo, la colita, la kipá ni los lentes.
+  if (pasamontanas) {
+    const frente = canvasPasamontanas(p);
+    const texFrente = tex(frente);
+    if (LOGO_LB && !LOGO_LB.complete) {
+      // El logo todavía no cargó: cuando llega, se vuelve a dibujar con el logo.
+      LOGO_LB.addEventListener('load', () => {
+        const g = frente.getContext('2d');
+        g.clearRect(0, 0, frente.width, frente.height);
+        g.drawImage(canvasTejido(256), 0, 0);
+        canvasPasamontanas(p, frente);
+        texFrente.needsUpdate = true;
+      }, { once: true });
+    }
+    const lado = lambert(tex(canvasTejido()));
+    const cara = new THREE.MeshLambertMaterial({ map: texFrente, transparent: true, alphaTest: 0.5 });
+    extras.push(cara);
+    cuerpo.add(bloque(1.37, 1.37, 1.37, [lado, lado, lado, lado, cara, lado], 0, cabeza.position.y + 0.01, 0));
+  }
   // Lentes (lentes: color del marco): marco rectangular, puente y patillas.
-  if (p.lentes) {
+  if (p.lentes && !pasamontanas) {
     const yc = cabeza.position.y + 0.14;
     const zc = 0.665;
     const m = p.lentes;
@@ -283,7 +349,7 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     cuerpo.add(caja(0.2, 0.04, 0.04, m, 0, yc + 0.06, zc));
   }
   // Pelo atado en una colita (colita: true) con la gomita.
-  if (p.colita) {
+  if (p.colita && !pasamontanas) {
     const colorPelo = p.pelo || cabezaTex.pelo || '#1b1411';
     const yc = cabeza.position.y;
     cuerpo.add(caja(0.42, 0.42, 0.3, colorPelo, 0, yc + 0.25, -0.78));
@@ -323,7 +389,7 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
   // Aritos plateados.
   if (p.aros) for (const lado of [-1, 1]) cuerpo.add(caja(0.08, 0.14, 0.08, '#d9dde2', lado * 0.69, cabeza.position.y - 0.2, 0.05));
   // Pelo largo (data/personajes.js: peloLargo): cae por la espalda y a los costados de la cara.
-  if (p.peloLargo) {
+  if (p.peloLargo && !pasamontanas) {
     const colorPelo = cabezaTex.pelo || p.pelo || '#3b2a20';
     const yc = cabeza.position.y;
     cuerpo.add(caja(1.42, 2.4, 0.3, colorPelo, 0, yc - 0.55, -0.72));

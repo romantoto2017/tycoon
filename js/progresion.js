@@ -12,7 +12,7 @@
 // Este archivo no importa three: lo usa también la simulación de balance.
 import { DROPPERS, MEJORAS_VALOR, MEJORAS_VELOCIDAD, OBJETOS_VECIBANDA, CUADROS, OBRAS_DE_ARTE, LUJOS, PERROS, PERROS_DESDE } from '../data/objetos.js';
 import { PERSONAJES } from '../data/personajes.js';
-import { SLOTS_DROPPER, ASCENSOR, PARRILLA, AUTOS_DESDE, nivel } from './constantes.js';
+import { SLOTS_DROPPER, ASCENSOR, PARRILLA, AUTOS_DESDE, nivel, TP_CIUDAD } from './constantes.js';
 import { PRECIOS } from './precios.js';
 import * as A from './arquitectura.js';
 import * as Mu from './muebles.js';
@@ -163,6 +163,12 @@ for (const p of PERROS) {
     especial: true, opcional: true, precio: p.precio, desde: PERROS_DESDE, descripcion: p.descripcion,
   });
 }
+// TP a la ciudad, a la salida de la mansión: precio fijo (10 T) y opcional. Los portales los
+// pone main.js cuando está comprado (como los perros).
+agregar({
+  id: 'tp_ciudad', nombre: 'TP a la Ciudad Vecibanda', tipo: 'construccion', requiere: ['auto'], boton: suelo(TP_CIUDAD.x, TP_CIUDAD.z),
+  especial: true, opcional: true, precio: TP_CIUDAD.precio, descripcion: 'Un portal: de la mansión a la ciudad en un segundo (y de vuelta)',
+});
 cuarto(0);
 cuarto(1);
 mejora('velocidad', ['vel1', 'paredes_int_1']);

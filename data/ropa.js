@@ -53,7 +53,7 @@ const LISTA = [
   { id: 'lb_oriental', nombre: 'Remera "Oriental" (Manya)', slot: 'torso', precio: 12 * B, tienda: 'lucca' },
   { id: 'lb_tranca', nombre: 'Remera Bossio x Tranca', slot: 'torso', precio: 14 * B, tienda: 'lucca' },
   { id: 'lb_escrituras', nombre: 'Remera Full Print "Escrituras"', slot: 'torso', precio: 14 * B, tienda: 'lucca' },
-  { id: 'lb_pasamontanas', nombre: 'Hoodie + Pasamontañas x TussiWarriors', slot: 'torso', precio: 30 * B, tienda: 'lucca', largas: true, capucha: true },
+  { id: 'lb_pasamontanas', nombre: 'Hoodie + Pasamontañas x TussiWarriors', slot: 'torso', precio: 30 * B, tienda: 'lucca', largas: true, capucha: true, pasamontanas: true },
   { id: 'lb_nudos', nombre: 'Hoodie "Nudos de Archibald"', slot: 'torso', precio: 32 * B, tienda: 'lucca', largas: true, capucha: true },
   { id: 'lb_knox', nombre: 'Full Zip Hoodie Tejido "Knox"', slot: 'torso', precio: 36 * B, tienda: 'lucca', largas: true, capucha: true },
   { id: 'lb_voynich', nombre: 'Campera Reversible Fur "Voynich"', slot: 'torso', precio: 38 * B, tienda: 'lucca', largas: true, capucha: true },

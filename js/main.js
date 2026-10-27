@@ -19,13 +19,13 @@ import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
-import { Ciudad, planoCiudad, RADIO_CIUDAD } from './ciudad.js';
+import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino } from './casino.js';
 import { Lucca } from './lucca.js';
 import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA } from './constantes.js';
+import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD } from './constantes.js';
 import { crearAK } from './arma.js';
 import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
 import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
@@ -353,10 +353,53 @@ async function iniciar() {
     controles.activo = modo === 'juego';
     UI.toast('¡Buen día!', 'info');
   };
+  // TP a la ciudad (se compra a la salida de la mansión): el portal de la mansión te lleva a la
+  // entrada de la ciudad, donde está el de vuelta. Solo a pie.
+  const tpComprado = () => estado.compras.includes('tp_ciudad');
+  let portalCasa = null;
+  let portalCiudad = null;
+  const cercaTP = () => {
+    if (!tpComprado() || conduciendo || enHeli()) return null;
+    const lejos = (x, z) => Math.hypot(jugador.pos.x - x, jugador.pos.z - z);
+    if (lejos(TP_CIUDAD.x, TP_CIUDAD.z) < 3.4) return 'casa';
+    if (lejos(TP_CIUDAD.llegada.x, TP_CIUDAD.llegada.z) < 3.4) return 'ciudad';
+    return null;
+  };
+  const textoTP = () => ({ casa: 'Ir a la Ciudad Vecibanda (E)', ciudad: 'Volver a la mansión (E)' })[cercaTP()] || '';
+  const usarTP = (desde) => {
+    const d = desde === 'casa' ? TP_CIUDAD.llegada : TP_CIUDAD;
+    jugador.pos.set(d.x, 1, d.z - 5);
+    jugador.vel?.set(0, 0, 0);
+    sfx.brillo();
+    UI.toast(desde === 'casa' ? '¡TP a la Ciudad Vecibanda!' : '¡De vuelta en la mansión!', 'plata');
+  };
+  let esperaTP = 0;
+  const actualizarTP = (dt) => {
+    if ((esperaTP -= dt) <= 0) {
+      esperaTP = 1;
+      if (tpComprado() && !portalCiudad) {
+        portalCiudad = crearPortal('MANSIÓN');
+        portalCiudad.position.set(TP_CIUDAD.llegada.x, 0, TP_CIUDAD.llegada.z);
+        escena.add(portalCiudad);
+      }
+      if (tpComprado() && !portalCasa) {
+        portalCasa = crearPortal('CIUDAD VECIBANDA');
+        portalCasa.position.set(TP_CIUDAD.x, 0, TP_CIUDAD.z);
+        escena.add(portalCasa);
+      }
+      if (!tpComprado() && portalCasa) { escena.remove(portalCasa); portalCasa = null; } // partida nueva
+    }
+    portalCasa?.userData.girar(dt);
+    portalCiudad?.userData.girar(dt);
+  };
   // Un solo botón de acción (como los avisos de Roblox): manejar o dormir, con la E.
   const accion = () => {
     if (conduciendo && !enHeli() && !autodromo.corriendo && taller.accion(jugador, vehiculo)) {
       if (taller.hacer(vehiculo)) controles.activo = false;
+      return;
+    }
+    if (cercaTP()) {
+      usarTP(cercaTP());
       return;
     }
     if (!conduciendo && casino.accion(jugador)) {
@@ -1074,7 +1117,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : textoTP() || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1113,6 +1156,7 @@ async function iniciar() {
     ciudad.actualizar(dt, jugador, modo === 'juego');
     casino.actualizar(dt, jugador, momento(hora()).noche);
     lucca.actualizar(dt, jugador);
+    actualizarTP(dt);
     actualizarArma(dt);
     actualizarLechugas();
     brillos.actualizar(dt);

@@ -1463,3 +1463,68 @@ function dibujarCara(canvas, piel, pelo) {
   g.arc(s * 0.5, s * 0.6, s * 0.16, 0.15 * Math.PI, 0.85 * Math.PI);
   g.stroke();
 }
+
+// ---------- TP a la ciudad ----------
+// Portal: plataforma redonda con aro celeste brillante, dos columnas y el arco con el cartel. Se
+// compra a la salida de la mansión (TP_CIUDAD en constantes.js); el mismo modelo, de vuelta, está en
+// la entrada de la Ciudad Vecibanda. main.js los pone cuando está comprado y los usa con la E.
+export function crearPortal(destino) {
+  const g = new THREE.Group();
+  const mat = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const luz = (c) => new THREE.MeshBasicMaterial({ color: c });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.35, 28), mat('#2b2f36'));
+  base.position.y = 0.17;
+  g.add(base);
+  const aro = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.14, 6, 32), luz('#38e8ff'));
+  aro.rotation.x = Math.PI / 2;
+  aro.position.y = 0.37;
+  g.add(aro);
+  const centro = new THREE.Mesh(new THREE.CircleGeometry(2.5, 28), new THREE.MeshBasicMaterial({ color: '#7ff4ff', transparent: true, opacity: 0.55 }));
+  centro.rotation.x = -Math.PI / 2;
+  centro.position.y = 0.36;
+  g.add(centro);
+  for (const s of [-1, 1]) {
+    const col = new THREE.Mesh(new THREE.BoxGeometry(0.6, 8, 0.6), mat('#3a3f48'));
+    col.position.set(s * 3.4, 4, 0);
+    g.add(col);
+    const tira = new THREE.Mesh(new THREE.BoxGeometry(0.15, 7.4, 0.62), luz('#38e8ff'));
+    tira.position.set(s * 3.4, 4, 0);
+    g.add(tira);
+  }
+  const arco = new THREE.Mesh(new THREE.BoxGeometry(7.4, 1.4, 0.7), mat('#3a3f48'));
+  arco.position.y = 8.6;
+  g.add(arco);
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 96;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0d1b2a';
+  x.fillRect(0, 0, 512, 96);
+  x.fillStyle = '#7ff4ff';
+  x.font = '800 44px Arial, sans-serif';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.fillText(`TP · ${destino}`, 256, 50, 490);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  for (const lado of [1, -1]) {
+    const cartel = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.3), new THREE.MeshBasicMaterial({ map: t }));
+    cartel.position.set(0, 8.6, lado * 0.36);
+    if (lado < 0) cartel.rotation.y = Math.PI;
+    g.add(cartel);
+  }
+  // Partículas que suben (se animan desde main.js con g.userData.girar).
+  const brillos = new THREE.Group();
+  for (let i = 0; i < 10; i++) {
+    const b = new THREE.Mesh(new THREE.OctahedronGeometry(0.12), luz('#b8fbff'));
+    const a = (i / 10) * Math.PI * 2;
+    b.position.set(Math.cos(a) * 2.1, 0.5 + (i % 5), Math.sin(a) * 2.1);
+    brillos.add(b);
+  }
+  g.add(brillos);
+  g.userData.girar = (dt) => {
+    brillos.rotation.y += dt * 1.2;
+    for (const b of brillos.children) { b.position.y += dt * 1.5; if (b.position.y > 6) b.position.y = 0.5; }
+  };
+  return g;
+}

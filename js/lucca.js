@@ -12,7 +12,7 @@ import { LUCCA } from '../data/ropa.js';
 // maceta de granito afuera. Adentro: paredes blancas, piso de madera clara, percheros con la ropa
 // colgada de costado y dos prendas de frente, mueble blanco con remeras dobladas, el cubo blanco
 // de la vidriera, el banco y el mostrador de madera al fondo, donde atiende Shaggy (el cuñado de
-// Lucca). La mascota (el bichito) flota por el local. Lucca Bossio a veces está en el local y si
+// Lucca, con ropa de la marca). La mascota (el bichito) flota por el local. Lucca Bossio a veces está en el local y si
 // no anda caminando por la ciudad, y te tira alguna de las suyas.
 
 const ALTO = 13; // del piso al techo del local (saltando no se llega a ver el techo)
@@ -31,6 +31,7 @@ export const LUCCA_P = {
   remera: '#1f4f9a', pantalon: '#3b3c40',
 };
 const ROPA_LUCCA = { torso: 'lb_knox', piernas: 'lb_jean' };
+const ROPA_SHAGGY = { torso: 'lb_tranca', piernas: 'lb_acanto' }; // el cuñado también viste la marca
 export const SHAGGY = {
   id: 'shaggy', nombre: 'Shaggy', foto: 'shaggy.jpeg', recorte: [0.4, 0.22, 0.46], pelo: '#6e4a2c', peinado: 'liso', peloLargo: true,
   remera: '#c9d6cf', pantalon: '#2c3440', mangasLargas: true, gordura: -0.2,
@@ -299,7 +300,7 @@ export class Lucca {
 
   async crearGente() {
     // Shaggy, atrás del mostrador.
-    const sh = crearPersonaje(SHAGGY, await cargarCabeza(SHAGGY));
+    const sh = crearPersonaje(SHAGGY, await cargarCabeza(SHAGGY), await vestido(ROPA_SHAGGY));
     sh.grupo.position.set(this.cajero.x, this.L.P, this.cajero.z);
     sh.grupo.rotation.y = Math.PI;
     sh.grupo.scale.setScalar(1.04);

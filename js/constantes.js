@@ -80,6 +80,9 @@ export const CUSI_ESCONDIDO = { x: 94.5, z: -124.5 };
 // misma calle de la mansión). Centro de la ciudad en el mundo; la avenida principal es la
 // autopista que entra por el este.
 export const CIUDAD = { x: -20000, z: CALLE_Z };
+// TP a la ciudad: el portal a la salida de la mansión (se compra, 10 T) y donde aparecés en la
+// ciudad (en la avenida de la entrada, con el portal de vuelta).
+export const TP_CIUDAD = { x: -18, z: 47, precio: 1e13, llegada: { x: CIUDAD.x + 296, z: CALLE_Z + 18 } };
 // La autopista va desde donde termina la calle del barrio hasta la entrada de la ciudad.
 export const AUTOPISTA = { x0: CIUDAD.x + 340, x1: -640, z: CALLE_Z, medioAncho: 12 };
 // Vecibanda Motors, el Galpón Vecibanda y las misiones de los autos abren a este progreso.

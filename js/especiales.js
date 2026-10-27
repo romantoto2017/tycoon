@@ -542,3 +542,4 @@ export function helicoptero(k, g) {
   blanco(cx - 1.5, cz - 0.5, cx + 1.5, cz + 0.5);
   // El helicóptero es aparte (helicoptero.js): se maneja.
 }
+
