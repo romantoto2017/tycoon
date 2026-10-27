@@ -776,8 +776,7 @@ export function abrirTaller(d) {
 
 // ======================= Mapa =======================
 // Minimapa en la esquina (centrado en vos, con el norte arriba) y el mapa entero a pantalla
-// completa (se arrastra, se hace zoom con la rueda, pellizcando o con + y −, y tiene botones para
-// ir a cada zona). Abajo de todo va el plano dibujado (calles, autopista, la pista, la ciudad) y
+// completa (se arrastra y se hace zoom con la rueda, pellizcando o con + y −). Abajo de todo va el plano dibujado (calles, autopista, la pista, la ciudad) y
 // arriba las fotos desde arriba de cada zona, que saca main.js (capturarMapa) con todo lo que hay.
 // mapa: { zonas: [{ x0, z0, x1, z1, canvas }], plano: { ... }, etiquetas: [{ x, z, texto, nivel }] }
 const MAPA = { zonas: [], plano: null, etiquetas: [], pos: { x: 0, z: 0 }, angulo: 0 };
@@ -929,24 +928,8 @@ export function abrirMapa() {
     v.cz = wz - (sy - c.clientHeight / 2) / v.s;
     redibujarGrande();
   };
-  const ir = (x0, z0, x1, z1) => {
-    v.cx = (x0 + x1) / 2;
-    v.cz = (z0 + z1) / 2;
-    v.s = Math.min(c.clientWidth / (x1 - x0), c.clientHeight / (z1 - z0)) * 0.92;
-    limitar();
-    redibujarGrande();
-  };
-  const z = MAPA.plano.zonas;
-  const botones = {
-    'mapa-vos': () => { v.cx = MAPA.pos.x; v.cz = MAPA.pos.z; v.s = Math.max(v.s, 0.8); redibujarGrande(); },
-    'mapa-barrio': () => ir(...z.barrio),
-    'mapa-autodromo': () => ir(...z.autodromo),
-    'mapa-ciudad': () => ir(...z.ciudad),
-    'mapa-todo': () => ir(...z.todo),
-    'mapa-mas': () => zoom(1.5),
-    'mapa-menos': () => zoom(1 / 1.5),
-  };
-  for (const [id, f] of Object.entries(botones)) $(id).onclick = f;
+  $('mapa-mas').onclick = () => zoom(1.5);
+  $('mapa-menos').onclick = () => zoom(1 / 1.5);
   // Arrastrar para moverse; con dos dedos, pellizcar para el zoom.
   const punteros = new Map();
   let distancia = 0;

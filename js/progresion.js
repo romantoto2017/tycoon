@@ -10,7 +10,7 @@
 // Los precios salen de js/precios.js (generado con herramientas/balance.mjs),
 // salvo los objetos especiales y cuadros, que están en data/objetos.js.
 // Este archivo no importa three: lo usa también la simulación de balance.
-import { DROPPERS, MEJORAS_VALOR, MEJORAS_VELOCIDAD, OBJETOS_VECIBANDA, CUADROS, OBRAS_DE_ARTE, LUJOS } from '../data/objetos.js';
+import { DROPPERS, MEJORAS_VALOR, MEJORAS_VELOCIDAD, OBJETOS_VECIBANDA, CUADROS, OBRAS_DE_ARTE, LUJOS, PERROS, PERROS_DESDE } from '../data/objetos.js';
 import { PERSONAJES } from '../data/personajes.js';
 import { SLOTS_DROPPER, ASCENSOR, PARRILLA, AUTOS_DESDE, nivel } from './constantes.js';
 import { PRECIOS } from './precios.js';
@@ -155,6 +155,14 @@ agregar({
   id: 'galpon', nombre: 'Galpón Vecibanda', tipo: 'construccion', requiere: ['auto'], boton: suelo(66, 44), construir: Ex.galpon,
   especial: true, opcional: true, precio: 20e9, desde: AUTOS_DESDE, descripcion: 'Los autos de Vecibanda Motors (a la salida de la ciudad) se guardan acá',
 });
+// Los perros (Olga, Olivia y Pancho): como el galpón, precio fijo, opcionales y desde el 75%. Los
+// arma ladron.js (Perros) cuando están comprados.
+for (const p of PERROS) {
+  agregar({
+    id: `perro_${p.id}`, nombre: p.nombre, tipo: 'construccion', requiere: ['auto'], boton: suelo(p.x, p.z),
+    especial: true, opcional: true, precio: p.precio, desde: PERROS_DESDE, descripcion: p.descripcion,
+  });
+}
 cuarto(0);
 cuarto(1);
 mejora('velocidad', ['vel1', 'paredes_int_1']);

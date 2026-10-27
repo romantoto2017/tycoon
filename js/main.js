@@ -13,7 +13,7 @@ import { formato } from './util.js';
 import { cargarModelos, MODELOS } from './modelos.js';
 import { ITEMS } from './progresion.js';
 import { momento, hastaLaManana } from './cielo.js';
-import { Ladron } from './ladron.js';
+import { Ladron, Perros } from './ladron.js';
 import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
@@ -97,6 +97,9 @@ async function iniciar() {
   jugador.terreno = mundo.altura;
   UI.prepararHUD();
   const ladron = new Ladron(escena, tycoon, UI);
+  // Olga, Olivia y Pancho: se compran al 75%, se sientan afuera y cuidan la casa de la Schwepa.
+  const perros = new Perros(escena, tycoon, UI, () => guardarAhora());
+  ladron.perros = perros;
   const mazza = new Mazza(escena, tycoon, UI);
   const resto = new Restaurante(escena, tycoon, UI);
   const gym = new Gimnasio(escena, UI);
@@ -372,6 +375,10 @@ async function iniciar() {
     }
     if (gym.accion(jugador)) {
       gym.hacer(jugador);
+      return;
+    }
+    if (!conduciendo && perros.accion(jugador)) {
+      perros.hacer(jugador);
       return;
     }
     if (!conduciendo && ottati.accion(jugador)) {
@@ -917,7 +924,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, autodromo, taller, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1048,7 +1055,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1067,8 +1074,12 @@ async function iniciar() {
       btnManejar.textContent = texto;
       btnManejar.classList.toggle('oculto', !texto);
     }
+    // Manejando, el botón (bajar del auto, entrar al taller...) va arriba a la izquierda: abajo
+    // en el medio tapaba la calle.
+    btnManejar.classList.toggle('arriba', conduciendo);
     tycoon.actualizar(dt, jugador);
     ladron.actualizar(dt, modo === 'juego' && !vistaCompleta);
+    perros.actualizar(dt, jugador);
     mazza.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, estado.personaje === 'juanma');
     resto.actualizar(dt, jugador, modo === 'juego');
     gym.actualizar(dt, jugador, modo === 'juego');

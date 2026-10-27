@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, crearEtiqueta, canvasCartel, texturaDeCanvas } from './texturas.js';
-import { CALLE_Z, COBRAR } from './constantes.js';
+import { CALLE_Z, COBRAR, TERRENO as T } from './constantes.js';
+import { PERROS } from '../data/objetos.js';
 import { caja, mat, formato } from './util.js';
 import { sfx } from './sfx.js';
 
@@ -156,7 +157,8 @@ export class Ladron {
       this.reloj += dt;
       if (this.reloj >= CADA) {
         this.reloj = 0;
-        if (Math.random() < PROBABILIDAD) this.aparecer();
+        // Si no estás en casa, los perros la paran en la puerta (ver Perros, abajo).
+        if (Math.random() < PROBABILIDAD && !this.perros?.llegaSchwepa()) this.aparecer();
       }
       return;
     }
@@ -296,5 +298,230 @@ export class Ladron {
     this.escena.remove(this.moto.grupo);
     this.tycoon.pausaCobro = false;
     this.estado = 'fuera';
+  }
+}
+
+// ======================= Los perros =======================
+// Olga (labradora negra de 5-6 meses, como las fotos: orejas caídas, ojos marrones y su osito de
+// peluche), Olivia (labradora rubia, muy gorda) y Pancho (salchicha mini negro y marrón). Se compran
+// desde el 75% y se sientan afuera, a la derecha de la entrada, mirando a la calle; se les pueden
+// hacer mimos. Cuando no estás en casa y llega la Schwepa, la echan (de a uno, una vez cada uno:
+// Olga, Olivia, Pancho). Después, cada vez que vuelve y no estás, mata a uno (en el mismo orden) sin
+// que nadie se entere: lo ves al volver, tirado donde estaba, y al día de juego ya no está. Mientras
+// quede un perro vivo, la Schwepa no puede robar cuando no estás.
+const DEF_PERROS = {
+  olga: { pelo: '#17171a', panza: '#17171a', ojos: '#6b3d1c', largo: 1.9, alto: 0.95, ancho: 0.85, cabeza: 0.95, hocico: 0.42, orejas: 0.55, cola: 0.85, gordura: 0, ladrido: 1.25, osito: true },
+  olivia: { pelo: '#e7cf9f', panza: '#f1dfba', ojos: '#3b2414', largo: 2.3, alto: 1.15, ancho: 1.5, cabeza: 1.0, hocico: 0.55, orejas: 0.55, cola: 1.1, gordura: 1, ladrido: 0.8, lengua: true },
+  pancho: { pelo: '#141210', panza: '#b5651d', ojos: '#2b1a10', largo: 2.1, alto: 0.4, ancho: 0.6, cabeza: 0.6, hocico: 0.42, orejas: 0.6, cola: 0.85, gordura: 0, ladrido: 1.5, fuego: '#b5651d' },
+};
+const UN_DIA = 1440; // segundos de juego (un día y su noche, ver cielo.js)
+
+// Perro de bloques, sentado, mirando a +z. Devuelve el grupo y lo que se mueve.
+function crearPerro(d) {
+  const g = new THREE.Group();
+  const pelo = mat(d.pelo);
+  const panza = mat(d.panza);
+  const fuego = d.fuego ? mat(d.fuego) : null; // las marcas marrones del salchicha
+  const caja3 = (w, h, l, m, x, y, z) => { const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), m); c.position.set(x, y, z); return c; };
+  const { largo: L, alto: A, ancho: W } = d;
+  // Cuerpo inclinado (sentado): de la cadera (atrás, abajo) a los hombros (adelante, arriba).
+  const inclinacion = d.alto < 0.6 ? 0.45 : d.gordura ? 0.6 : 0.75; // el salchicha y la gorda, más echados
+  const cadera = new THREE.Group();
+  cadera.position.set(0, W * 0.45, -L * 0.25);
+  cadera.rotation.x = -inclinacion;
+  const alto = W * (0.75 + 0.15 * d.gordura);
+  cadera.add(caja3(W, alto, L * 0.8, pelo, 0, 0, L * 0.4));
+  if (d.gordura) cadera.add(caja3(W * 0.92, alto * 0.35, L * 0.55, panza, 0, -alto * 0.55, L * 0.42)); // la panza que cuelga
+  g.add(cadera);
+  const hombro = new THREE.Vector3(0, Math.sin(inclinacion) * L * 0.72, Math.cos(inclinacion) * L * 0.72).add(cadera.position);
+  // Patas: las de adelante derechas hasta el piso; las de atrás dobladas a los costados.
+  for (const s of [-1, 1]) {
+    const hp = hombro.y;
+    g.add(caja3(W * 0.26, hp, W * 0.26, pelo, s * W * 0.28, hp / 2, hombro.z + 0.05));
+    g.add(caja3(W * 0.3, 0.12, W * 0.42, fuego || pelo, s * W * 0.28, 0.06, hombro.z + 0.15)); // pata (marrón en Pancho)
+    g.add(caja3(W * 0.3, W * 0.55, L * 0.42, pelo, s * W * 0.42, W * 0.28, -L * 0.18));
+    g.add(caja3(W * 0.28, 0.12, W * 0.55, fuego || pelo, s * W * 0.42, 0.06, L * 0.05));
+  }
+  if (fuego) g.add(caja3(W * 0.6, W * 0.5, 0.06, fuego, 0, hombro.y - W * 0.15, hombro.z + W * 0.42)); // pecho marrón
+  // Cabeza (con cuello), hocico, nariz, ojos y orejas caídas.
+  const cabeza = new THREE.Group();
+  cabeza.position.set(0, hombro.y + d.cabeza * 0.55, hombro.z + 0.1);
+  g.add(caja3(W * 0.55, d.cabeza * 0.8, W * 0.55, pelo, 0, hombro.y + d.cabeza * 0.1, hombro.z));
+  const C = d.cabeza;
+  cabeza.add(caja3(C, C * 0.9, C, pelo, 0, 0, 0));
+  cabeza.add(caja3(C * 0.62, C * 0.45, d.hocico, fuego || pelo, 0, -C * 0.2, C / 2 + d.hocico / 2));
+  cabeza.add(caja3(C * 0.3, C * 0.2, 0.1, mat('#0b0b0c'), 0, -C * 0.05, C / 2 + d.hocico + 0.03));
+  if (d.lengua) cabeza.add(caja3(C * 0.22, 0.05, C * 0.3, mat('#e2687a'), 0, -C * 0.46, C / 2 + d.hocico * 0.75));
+  const ojos = new THREE.Group();
+  const cruces = new THREE.Group(); // los ojos de muerto (X)
+  for (const s of [-1, 1]) {
+    ojos.add(caja3(C * 0.17, C * 0.17, 0.05, mat(d.ojos), s * C * 0.24, C * 0.12, C / 2 + 0.02));
+    ojos.add(caja3(C * 0.06, C * 0.06, 0.02, mat('#ffffff'), s * C * 0.24 + C * 0.04, C * 0.16, C / 2 + 0.05));
+    if (fuego) ojos.add(caja3(C * 0.14, C * 0.08, 0.04, fuego, s * C * 0.24, C * 0.3, C / 2 + 0.02)); // las cejitas marrones
+    for (const r of [0.8, -0.8]) {
+      const x = caja3(C * 0.24, C * 0.05, 0.05, mat('#0b0b0c'), s * C * 0.24, C * 0.12, C / 2 + 0.03);
+      x.rotation.z = r;
+      cruces.add(x);
+    }
+    const oreja = caja3(C * 0.14, d.orejas * C * 1.3, C * 0.5, pelo, s * (C / 2 + 0.06), -C * 0.12, -C * 0.02);
+    oreja.rotation.z = s * 0.15;
+    cabeza.add(oreja);
+  }
+  cruces.visible = false;
+  cabeza.add(ojos, cruces);
+  g.add(cabeza);
+  // Cola (se mueve): sale de la cadera, apoyada atrás.
+  const cola = new THREE.Group();
+  cola.position.set(0, W * 0.3, -L * 0.5);
+  cola.add(caja3(W * 0.16, W * 0.16, d.cola, pelo, 0, 0, -d.cola / 2));
+  cola.rotation.x = 0.5;
+  g.add(cola);
+  // El osito de peluche de Olga (como en la foto).
+  if (d.osito) {
+    const oso = new THREE.Group();
+    const marron = mat('#b97a3c');
+    oso.add(caja3(0.42, 0.34, 0.5, marron, 0, 0.17, 0));
+    oso.add(caja3(0.36, 0.34, 0.34, marron, 0, 0.3, 0.38));
+    oso.add(caja3(0.18, 0.12, 0.08, mat('#e8cfa6'), 0, 0.26, 0.56));
+    for (const s of [-1, 1]) oso.add(caja3(0.12, 0.12, 0.08, mat('#e8cfa6'), s * 0.15, 0.5, 0.36));
+    oso.position.set(W * 0.9, 0, hombro.z + 0.4);
+    oso.rotation.y = -0.6;
+    g.add(oso);
+    g.userData.oso = oso;
+  }
+  return { grupo: g, cabeza, cola, ojos, cruces, oso: g.userData.oso || null };
+}
+
+export class Perros {
+  constructor(escena, tycoon, ui, guardar) {
+    this.escena = escena;
+    this.tycoon = tycoon;
+    this.ui = ui;
+    this.guardar = guardar;
+    this.jugador = null; // main.js
+    this.modelos = {}; // id -> { ...crearPerro, mimos, etiqueta }
+    this.reloj = 0;
+  }
+
+  datos(id) {
+    const e = this.tycoon.estado;
+    e.perros ??= {};
+    e.perros[id] ??= {};
+    return e.perros[id];
+  }
+
+  tiene(id) {
+    return this.tycoon.estado.compras.includes(`perro_${id}`);
+  }
+
+  // Comprado y todavía no enterrado (vivo o tirado).
+  visible(id) {
+    const d = this.datos(id);
+    return this.tiene(id) && !(d.muerto != null && this.tycoon.estado.tiempoJugado - d.muerto > UN_DIA);
+  }
+
+  vivo(id) {
+    return this.tiene(id) && this.datos(id).muerto == null;
+  }
+
+  enCasa(p) {
+    return p.x > T.x0 - 15 && p.x < T.x1 + 15 && p.z > T.z0 - 15 && p.z < T.z1 + 15;
+  }
+
+  // Llega la Schwepa (ladron.js, antes de aparecer). Si no estás en casa y hay perros, no entra:
+  // devuelve true. Primero cada perro la echa una vez (avisando); después mata a uno sin avisar.
+  llegaSchwepa() {
+    if (!this.jugador || this.enCasa(this.jugador.pos)) return false;
+    const vivos = PERROS.filter((p) => this.vivo(p.id));
+    const defensor = vivos.find((p) => !this.datos(p.id).defendio);
+    if (defensor) {
+      this.datos(defensor.id).defendio = true;
+      this.ui.toast(`La Schwepa te vino a robar..... ¡${defensor.nombre} defendió tu plata de la Schwepa!`, 'plata', 6000);
+      sfx.ladrido(DEF_PERROS[defensor.id].ladrido);
+      this.guardar?.();
+      return true;
+    }
+    if (vivos.length) {
+      this.datos(vivos[0].id).muerto = this.tycoon.estado.tiempoJugado;
+      this.guardar?.();
+      return true;
+    }
+    return false;
+  }
+
+  cercano(jugador) {
+    let mejor = null;
+    let dm = 3.6;
+    for (const p of PERROS) {
+      if (!this.vivo(p.id) || !this.modelos[p.id]) continue;
+      const d = Math.hypot(jugador.pos.x - p.x, jugador.pos.z - p.z);
+      if (d < dm && jugador.pos.y < 3) { dm = d; mejor = p; }
+    }
+    return mejor;
+  }
+
+  accion(jugador) {
+    const p = this.cercano(jugador);
+    return p ? `Hacerle mimos a ${p.nombre} (E)` : '';
+  }
+
+  hacer(jugador) {
+    const p = this.cercano(jugador);
+    if (!p) return;
+    const m = this.modelos[p.id];
+    m.mimos = 3;
+    m.etiqueta.sprite.visible = true;
+    sfx.ladrido(DEF_PERROS[p.id].ladrido);
+  }
+
+  actualizar(dt, jugador) {
+    this.jugador = jugador;
+    this.reloj += dt;
+    for (const p of PERROS) {
+      const ver = this.visible(p.id);
+      let m = this.modelos[p.id];
+      if (!ver) {
+        if (m) { this.escena.remove(m.grupo); if (m.oso) this.escena.remove(m.oso); delete this.modelos[p.id]; }
+        continue;
+      }
+      if (!m) {
+        m = this.modelos[p.id] = crearPerro(DEF_PERROS[p.id]);
+        m.grupo.position.set(p.x, 0.02, p.z);
+        m.mimos = 0;
+        m.etiqueta = crearEtiqueta([{ texto: '❤ ❤ ❤', tam: 70, color: '#ff4d6d' }], 3);
+        m.etiqueta.sprite.position.y = 3.2;
+        m.etiqueta.sprite.visible = false;
+        m.grupo.add(m.etiqueta.sprite);
+        this.escena.add(m.grupo);
+      }
+      if (!this.vivo(p.id)) {
+        // Tirado de costado, con los ojos en X.
+        m.grupo.rotation.set(0, 0, Math.PI / 2);
+        m.grupo.position.y = DEF_PERROS[p.id].ancho * 0.5;
+        if (m.oso && m.oso.parent === m.grupo) {
+          // El osito queda en el piso, al lado.
+          m.grupo.remove(m.oso);
+          m.oso.position.set(p.x + 1.4, 0, p.z + 0.8);
+          this.escena.add(m.oso);
+        }
+        m.ojos.visible = false;
+        m.cruces.visible = true;
+        m.etiqueta.sprite.visible = false;
+        continue;
+      }
+      // Vivo: mueve la cola (más rápido con mimos) y te mira si estás cerca.
+      const cerca = Math.hypot(jugador.pos.x - p.x, jugador.pos.z - p.z) < 14;
+      m.cola.rotation.y = Math.sin(this.reloj * (m.mimos > 0 ? 18 : cerca ? 9 : 4)) * (m.mimos > 0 ? 0.7 : 0.35);
+      const objetivo = cerca ? Math.atan2(jugador.pos.x - p.x, jugador.pos.z - p.z) : 0;
+      let d = objetivo - m.cabeza.rotation.y;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      m.cabeza.rotation.y = THREE.MathUtils.clamp(m.cabeza.rotation.y + d * Math.min(1, dt * 5), -1, 1);
+      m.cabeza.rotation.z = m.mimos > 0 ? Math.sin(this.reloj * 6) * 0.2 : 0; // ladea la cabeza
+      if (m.mimos > 0) {
+        m.mimos -= dt;
+        m.etiqueta.sprite.position.y = 3.2 + (3 - m.mimos) * 0.4;
+        if (m.mimos <= 0) m.etiqueta.sprite.visible = false;
+      }
+    }
   }
 }

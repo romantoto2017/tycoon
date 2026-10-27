@@ -119,3 +119,12 @@ export const AUTOS = [
 
 // El Auto Deportivo de la mansión (en realidad un BYD F0): también corre en el autódromo.
 export const AUTO_DEPORTIVO = { id: 'deportivo', nombre: 'Auto Deportivo (BYD F0)', largo: 3.46, real: 'el auto papa', vmax: 151, cero100: 15, agarre: 0.75 };
+
+// Los perros guardianes: aparecen para comprar al 75% (PERROS_DESDE) y se sientan afuera, a la
+// derecha de la entrada, mirando a la calle (x, z: donde está el botón y donde se sientan).
+export const PERROS_DESDE = 0.75;
+export const PERROS = [
+  { id: 'olga', nombre: 'Olga', precio: 2.5e8, x: 6, z: 46, descripcion: 'Labradora negra de 5 meses: cuida la casa' },
+  { id: 'olivia', nombre: 'Olivia', precio: 3e8, x: 12, z: 46, descripcion: 'Labradora rubia (bien gordita): cuida la casa' },
+  { id: 'pancho', nombre: 'Pancho', precio: 2e8, x: 18, z: 46, descripcion: 'Salchicha mini: cuida la casa' },
+];

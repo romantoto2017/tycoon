@@ -605,6 +605,8 @@ html, body {
   min-height: 48px;
 }
 .btn-manejar:active { transform: translateX(-50%) translateY(4px); }
+.btn-manejar.arriba, #hud .btn-manejar.arriba { left: calc(12px + env(safe-area-inset-left)); top: calc(66px + env(safe-area-inset-top)); bottom: auto; transform: none; font-size: 16px; min-height: 42px; }
+.btn-manejar.arriba:active { transform: translateY(4px); }
 
 /* ---------- Menú del restaurante (paleta Restaurant/Food Service: rojo + dorado) ---------- */
 .menu-resto { background: rgba(40, 12, 8, 0.55); }
@@ -1130,6 +1132,5 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
 @media (max-width: 700px), (max-height: 520px) {
   .minimapa { width: 130px; height: 130px; }
   body:has(.minimapa:not(.oculto)) .carrera { top: calc(150px + env(safe-area-inset-top)); }
-  .mapa-barra { top: calc(62px + env(safe-area-inset-top)); }
   .mapa-ayuda { display: none; }
 }

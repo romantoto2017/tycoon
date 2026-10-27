@@ -134,6 +134,8 @@ export const sfx = {
   comprar() { efecto([523, 659, 784, 1047].map((f, i) => [f, i * 0.07, 0.15])); },
   cobrar() { efecto([[988, 0, 0.08, 'square', 0.05], [1319, 0.07, 0.25, 'square', 0.05]]); },
   error() { efecto([[160, 0, 0.25, 'sawtooth', 0.05]]); },
+  // Un ladrido cortito (agudo para el salchicha y la cachorra, grave para la gorda).
+  ladrido(agudo = 1) { efecto([[420 * agudo, 0, 0.07, 'sawtooth', 0.05], [300 * agudo, 0.05, 0.1, 'sawtooth', 0.045], [520 * agudo, 0.22, 0.06, 'sawtooth', 0.04], [340 * agudo, 0.26, 0.09, 'sawtooth', 0.04]]); },
   salto() { efecto([[330, 0, 0.12, 'triangle', 0.05], [500, 0.04, 0.1, 'triangle', 0.04]]); },
   gol() { efecto([392, 523, 659, 784, 1047, 1319].map((f, i) => [f, i * 0.09, 0.3, 'square', 0.05])); },
   brillo() { efecto([1568, 2093, 2637, 3136].map((f, i) => [f, 0.05 + i * 0.05, 0.25, 'sine', 0.035])); },
