@@ -212,6 +212,29 @@
     </div>
   </div>
 
+  <!-- Mapa: el minimapa en la esquina (se toca para abrir) y el mapa entero -->
+  <button id="minimapa" class="minimapa oculto" aria-label="Abrir el mapa (N)" title="Mapa (N)">
+    <canvas id="minimapa-lienzo" aria-hidden="true"></canvas>
+    <span class="minimapa-n" aria-hidden="true">N</span>
+    <span class="minimapa-abrir" aria-hidden="true">Mapa · N</span>
+  </button>
+  <div id="mapa" class="mapa oculto" role="dialog" aria-modal="true" aria-label="Mapa">
+    <canvas id="mapa-lienzo" class="mapa-lienzo"></canvas>
+    <div class="mapa-barra">
+      <button id="mapa-vos" class="btn azul">📍 Vos</button>
+      <button id="mapa-barrio" class="btn gris">Barrio</button>
+      <button id="mapa-autodromo" class="btn gris">Autódromo</button>
+      <button id="mapa-ciudad" class="btn gris">Ciudad</button>
+      <button id="mapa-todo" class="btn gris">Todo</button>
+    </div>
+    <div class="mapa-zoom">
+      <button id="mapa-mas" class="btn gris" aria-label="Acercar">+</button>
+      <button id="mapa-menos" class="btn gris" aria-label="Alejar">−</button>
+    </div>
+    <button id="btn-cerrar-mapa" class="cerrar-x mapa-cerrar" aria-label="Cerrar el mapa">✕</button>
+    <p class="mapa-ayuda">Arrastrá para moverte · rueda o pellizco para el zoom · N o Esc para cerrar</p>
+  </div>
+
   <!-- Taller: el menú a la izquierda y, a la derecha, el auto en la escena (se gira arrastrando) -->
   <div id="taller" class="taller oculto" role="dialog" aria-modal="true" aria-labelledby="taller-titulo">
     <section class="taller-panel">

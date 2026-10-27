@@ -1219,6 +1219,10 @@ class Profe {
     nombre.sprite.position.y = 6.9;
     m.grupo.add(nombre.sprite);
     this.globo = crearEtiqueta([{ texto: ' ', tam: 50, color: '#ffffff' }], 8);
+    // Lo que dice va arriba de todo: ninguna máquina ni nadie lo tapa.
+    this.globo.sprite.material.depthTest = false;
+    this.globo.sprite.material.depthWrite = false;
+    this.globo.sprite.renderOrder = 999;
     this.globo.sprite.position.y = 8.5;
     this.globo.sprite.visible = false;
     m.grupo.add(this.globo.sprite);
@@ -1236,7 +1240,7 @@ class Profe {
     this.globo.actualizar([{ texto, tam: 50, color: '#ffffff' }]);
     this.globo.sprite.visible = true;
     this.tiempoGlobo = segundos;
-    this.gym.ui.toast(`${PROFE.nombre}: "${texto}"`, 'info');
+    this.gym.ui.toast(`${PROFE.nombre}: "${texto}"`, 'info', 4300); // 2 s más que los avisos de siempre
   }
 
   // Elige qué hacer: una máquina libre (casi siempre) o mirarse al espejo.
@@ -1357,14 +1361,14 @@ class Profe {
       this.mirarA(Math.atan2(j.x - c.pos.x, j.z - c.pos.z), dt);
       m.animar(dt, 0, true);
       // Te señala mientras te explica.
-      if (a.t < 4) {
+      if (a.t < 6) {
         m.grupo.updateMatrixWorld(true);
         brazoA(m.partes.brazoD, m.partes.cuerpo.worldToLocal(new THREE.Vector3(j.x, F + 3.6, j.z)), new THREE.Vector3(1, -1, 0));
       } else {
         m.partes.brazoD.rotation.set(0, 0, 0);
         m.partes.brazoD.codo.rotation.set(0, 0, 0);
       }
-      if (a.t > 6) this.siguiente();
+      if (a.t > 8) this.siguiente(); // se queda mientras dura lo que te dijo
     }
   }
 
@@ -1393,7 +1397,7 @@ class Profe {
       }
     } else if (a.tipo === 'corregir') {
       // Si ya dejaste de entrenar, no te dice nada.
-      if (this.gym.entrenando?.id === a.id) this.hablar(a.texto, 6);
+      if (this.gym.entrenando?.id === a.id) this.hablar(a.texto, 8);
       else this.siguiente();
     }
   }

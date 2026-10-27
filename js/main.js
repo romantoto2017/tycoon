@@ -19,11 +19,11 @@ import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
-import { Ciudad } from './ciudad.js';
+import { Ciudad, planoCiudad, RADIO_CIUDAD } from './ciudad.js';
 import { Concesionario, Flota, Taller } from './auto.js';
-import { Autodromo } from './autodromo.js';
+import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA, GYM, MANSION } from './constantes.js';
+import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA } from './constantes.js';
 import { crearAK } from './arma.js';
 import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
 import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
@@ -110,6 +110,110 @@ async function iniciar() {
   // El Taller, al lado de Vecibanda Motors: se entra manejando (la E en el portón).
   const taller = new Taller({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso, tycoon, flota });
   taller.alSalir = () => { taller.soltarCamara(camara); controles.activo = modo === 'juego'; };
+
+  // ---------- Mapa ----------
+  // Fotos desde arriba (cámara ortográfica, de día, sin cielo ni carteles flotantes) de las zonas
+  // con estructuras: el autódromo y el barrio al empezar (el barrio se vuelve a sacar si compraste
+  // cosas) y la ciudad cuando termina de armarse (antes se ve su plano dibujado). En ui.js se
+  // dibujan el minimapa y el mapa grande, arriba del plano (calles, autopista, pista, ciudad).
+  const ZONAS_MAPA = {
+    barrio: [-660, -365, 335, 190],
+    autodromo: [AUTODROMO.x - 900, AUTOPISTA.z - 30, AUTODROMO.x + 900, AUTODROMO.z + 900],
+    ciudad: [CIUDAD.x - RADIO_CIUDAD - 20, CIUDAD.z - RADIO_CIUDAD - 20, TALLER.x1 + 30, CIUDAD.z + RADIO_CIUDAD + 20],
+  };
+  const PX_MAPA = { barrio: 1.6, autodromo: 0.9, ciudad: 1.5 }; // píxeles por unidad de cada foto
+  const fotos = {};
+  const camMapa = new THREE.OrthographicCamera(-1, 1, 1, -1, 10, 2000);
+  camMapa.up.set(0, 0, -1); // el norte (−z) arriba
+  const capturarMapa = (id) => {
+    const [x0, z0, x1, z1] = ZONAS_MAPA[id];
+    const w = Math.round((x1 - x0) * PX_MAPA[id]);
+    const h = Math.round((z1 - z0) * PX_MAPA[id]);
+    const rt = new THREE.WebGLRenderTarget(w, h, { samples: 4 });
+    rt.texture.colorSpace = THREE.SRGBColorSpace;
+    Object.assign(camMapa, { left: -(x1 - x0) / 2, right: (x1 - x0) / 2, top: (z1 - z0) / 2, bottom: -(z1 - z0) / 2 });
+    camMapa.position.set((x0 + x1) / 2, 900, (z0 + z1) / 2);
+    camMapa.lookAt((x0 + x1) / 2, 0, (z0 + z1) / 2);
+    camMapa.updateProjectionMatrix();
+    // Sin carteles flotantes, con lo que está lejos a la vista y sin niebla (correrla, no
+    // sacarla: sacarla recompila todos los materiales).
+    const ocultos = [];
+    escena.traverse((o) => { if (o.isSprite && o.visible) { o.visible = false; ocultos.push(o); } });
+    const lejos = [concesionario.grupo, taller.grupo, autodromo.grupo].filter((g) => !g.visible);
+    for (const g of lejos) g.visible = true;
+    const [near, far] = [escena.fog.near, escena.fog.far];
+    mundo.paraMapa(true);
+    escena.fog.near = 1e5;
+    escena.fog.far = 1e6;
+    renderer.setRenderTarget(rt);
+    renderer.render(escena, camMapa);
+    const px = new Uint8Array(w * h * 4);
+    renderer.readRenderTargetPixels(rt, 0, 0, w, h, px);
+    renderer.setRenderTarget(null);
+    rt.dispose();
+    mundo.paraMapa(false);
+    escena.fog.near = near;
+    escena.fog.far = far;
+    for (const g of lejos) g.visible = false;
+    for (const o of ocultos) o.visible = true;
+    // WebGL lee de abajo para arriba: se da vuelta al pasarlo al canvas.
+    const c = fotos[id]?.canvas || document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const img = new ImageData(w, h);
+    for (let y = 0; y < h; y++) img.data.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+    c.getContext('2d').putImageData(img, 0, 0);
+    fotos[id] = { x0, z0, x1, z1, canvas: c, compras: estado.compras.length, cuando: performance.now() };
+  };
+  let esperaMapa = 2; // segundos hasta la próxima foto (de a una, así no se traba)
+  const fotosPendientes = () => {
+    if (!fotos.autodromo) return 'autodromo';
+    if (!fotos.barrio || (fotos.barrio.compras !== estado.compras.length && performance.now() - fotos.barrio.cuando > 90000)) return 'barrio';
+    if (ciudad.lista && !fotos.ciudad) return 'ciudad';
+    return null;
+  };
+  const centroPista = PISTA.puntos.reduce((a, q) => ({ x: a.x + q.x / PISTA.puntos.length, z: a.z + q.z / PISTA.puntos.length }), { x: 0, z: 0 });
+  const centro = (r) => ({ x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 });
+  const plano = planoCiudad();
+  const NOMBRES_CIUDAD = { plaza: 'Plaza', banco: 'Banco', futbol: 'Cancha de fútbol', basquet: 'Cancha de básquet', nafta: 'Estación de servicio', parque: 'Parque', super: 'Súper', hotel: 'Hotel', verdu: 'Verdulería', kicks: 'KICKS', drip: 'VECI DRIP', futbolera: 'LA FUTBOLERA' };
+  // nivel 0: siempre; 1: con un poco de zoom; 2: de cerca. desde: zoom mínimo (píxeles por unidad).
+  const etiqueta = (r, texto, nivel, desde) => ({ ...('x0' in r ? centro(r) : r), texto, nivel, desde });
+  UI.prepararMapa({
+    plano: {
+      calle: { x0: -650, x1: AUTOPISTA.x1 + 10, z0: CALLE_Z - 6, z1: CALLE_Z + 6 },
+      autopista: { x0: AUTOPISTA.x0 - 30, x1: AUTOPISTA.x1, z0: AUTOPISTA.z - AUTOPISTA.medioAncho, z1: AUTOPISTA.z + AUTOPISTA.medioAncho },
+      pista: { puntos: PISTA.puntos, ancho: AUTODROMO.ancho },
+      ciudad: plano,
+      edificios: [
+        { ...CONCESIONARIO, color: '#3d4045' }, { ...TALLER, color: '#d4581f' }, { ...MANSION, color: '#e8e2d6' }, { ...GYM, color: '#1e1f22' },
+        { ...GALPON, color: '#9aa1a8' }, { ...RESTO, color: '#b55239' }, { ...GARAGE, color: '#cfc9bd' },
+      ],
+      zonas: { ...ZONAS_MAPA, todo: [CIUDAD.x - 420, -380, 360, AUTODROMO.z + 920] },
+    },
+    etiquetas: [
+      etiqueta(MANSION, 'Mansión', 0, 0),
+      etiqueta(centroPista, 'Autódromo Vecibanda Ring', 0, 0),
+      etiqueta({ x: CIUDAD.x, z: CIUDAD.z - RADIO_CIUDAD - 30 }, 'Ciudad Vecibanda', 0, 0),
+      etiqueta({ x: (AUTOPISTA.x0 + AUTOPISTA.x1) / 2 - 3000, z: AUTOPISTA.z - 30 }, 'Autopista', 0, 0),
+      etiqueta(GYM, 'Power Camp (gym)', 1, 0.15),
+      etiqueta(GALPON, 'Galpón Vecibanda', 1, 0.15),
+      etiqueta(RESTO, 'Restaurante', 1, 0.15),
+      etiqueta({ x: MONTANA.x, z: MONTANA.z }, 'Montaña', 1, 0.15),
+      etiqueta({ x: (CONCESIONARIO.x0 + CONCESIONARIO.x1) / 2, z: CONCESIONARIO.z1 + 14 }, 'Vecibanda Motors', 1, 0.15),
+      etiqueta({ x: (TALLER.x0 + TALLER.x1) / 2, z: TALLER.z0 - 30 }, 'Taller', 1, 0.15),
+      etiqueta(GARAGE, 'Garage', 2, 0.6),
+      etiqueta(PISCINA, 'Piscina', 2, 0.6),
+      etiqueta(CANCHA, 'Cancha', 2, 0.6),
+      ...plano.manzanas.filter((m) => m.tipo).map((m) => etiqueta(m, NOMBRES_CIUDAD[m.tipo], 2, 0.45)),
+    ],
+    zonasDe: () => Object.values(fotos),
+    alAbrir: () => {
+      controles.activo = false;
+      if (fotos.barrio?.compras !== estado.compras.length) capturarMapa('barrio'); // con lo último que compraste
+    },
+    alCerrar: () => { controles.activo = modo === 'juego'; },
+  });
+  window.addEventListener('keydown', (e) => { if (e.code === 'KeyN' && controles.activo && modo === 'juego' && !UI.mapaAbierto()) UI.abrirMapa(); });
   concesionario.alComprar = () => misiones.revisarAutos();
   const karaoke = new Karaoke(UI); // la canción con la letra al ritmo, en la sala del karaoke
   // Choques de este cuadro: en la ciudad, solo los de alrededor (son muchos); si no, los de siempre.
@@ -813,7 +917,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, autodromo, taller, lechugas, sacarLechuga };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, concesionario, flota, karaoke, autodromo, taller, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -986,10 +1090,19 @@ async function iniciar() {
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
       UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);
+      // Mapa: la próxima foto que falte (de a una) y el minimapa con dónde estás.
+      esperaMapa -= dt;
+      if (esperaMapa <= 0 && !UI.mapaAbierto()) {
+        esperaMapa = 1.5;
+        const id = fotosPendientes();
+        if (id) capturarMapa(id);
+      }
+      UI.mapaCuadro(jugador.pos, conduciendo ? vehiculo.angulo : jugador.angulo, controles.activo && !taller.auto);
       if (taller.auto) taller.camara(camara); // adentro del taller, con el menú
       else if (!depurar.camaraLibre) camaraJuego(dt);
     } else {
       camaraMenu(dt);
+      UI.mapaCuadro(jugador.pos, 0, false); // en el menú no hay minimapa
     }
 
     renderer.render(escena, camara);

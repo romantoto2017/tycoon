@@ -39,6 +39,11 @@ export function crearMundo(escena) {
     // t: segundos jugados (para la hora del día). farolas: cuánta luz de farolas hay (0 a 1).
     // centro: dónde está la cámara (el cielo la sigue).
     // interior: 0 a 1, adentro de un lugar con luces fuertes (ver cielo.js).
+    // Foto del mapa: sin nubes ni cielo y con luz de día (cielo.js).
+    paraMapa(foto) {
+      nubes.mesh.visible = !foto;
+      cielo.paraMapa(foto);
+    },
     actualizar(dt, t = 0, farolas = false, centro = null, interior = 0) {
       nubes.actualizar(dt, centro ? centro.x : 0);
       cielo.actualizar(dt, t, farolas, nubes.material.color, centro, interior);
@@ -181,7 +186,7 @@ function crearNubes(escena) {
     mesh.instanceMatrix.needsUpdate = true;
   }
   actualizar(0);
-  return { actualizar, material: mesh.material };
+  return { actualizar, material: mesh.material, mesh };
 }
 
 // Montaña del pelado: colinas verdes redondeadas (como las de la foto) con piedras grises y,

@@ -159,6 +159,13 @@ export function crearCielo(escena) {
   };
 
   return {
+    // Para sacar la foto del mapa desde arriba: sin cielo ni dirigible, y con luz de mediodía
+    // (el cuadro siguiente vuelve a la hora de verdad).
+    paraMapa(foto) {
+      domo.visible = !foto;
+      zeppelin.visible = !foto;
+      if (foto) this.actualizar(0, DIA / 2 - ARRANQUE, 1, null, null);
+    },
     // t: segundos jugados. farolas: cuánta luz de farolas hay (0 a 1; true = compradas):
     // con luz, la noche se ve mucho más. interior: 0 a 1, adentro de un lugar con luces
     // fuertes prendidas (el gym): la luz ambiente sube a blanco parejo, de día y de noche.

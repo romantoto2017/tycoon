@@ -38,6 +38,31 @@ export function paseoCiudad() {
   return { y: PISO, puntos: [[m.x0 + d, m.z1 - d], [m.x1 - d, m.z1 - d], [m.x1 - d, m.z0 + d], [m.x0 + d, m.z0 + d]].map(([x, z]) => [C.x + x, C.z + z]) };
 }
 
+// Las manzanas que no son edificios comunes (y qué son).
+const ESPECIALES = {
+  '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel', '5,3': 'verdu', '3,4': 'kicks', '4,4': 'drip', '2,4': 'futbolera',
+};
+
+// El plano de la ciudad para el mapa (en coordenadas del mundo): las calles y cada manzana con lo
+// que es (las especiales) o qué tan céntrica es (anillo: 0 el centro, 3 las afueras con casas).
+export function planoCiudad() {
+  const calles = [];
+  for (let k = 0; k <= N; k++) {
+    const e = linea(k);
+    const h = mediaCalle(k);
+    calles.push({ x0: C.x - MEDIO - 12, x1: C.x + MEDIO + 12, z0: C.z + e - h, z1: C.z + e + h, avenida: h > 7 });
+    calles.push({ x0: C.x + e - h, x1: C.x + e + h, z0: C.z - MEDIO - 12, z1: C.z + MEDIO + 12, avenida: h > 7 });
+  }
+  const manzanas = [];
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const m = manzana(i, j);
+      manzanas.push({ x0: C.x + m.x0, x1: C.x + m.x1, z0: C.z + m.z0, z1: C.z + m.z1, tipo: ESPECIALES[`${i},${j}`] || null, anillo: Math.max(Math.abs(i - 3.5), Math.abs(j - 3.5)) });
+    }
+  }
+  return { calles, manzanas };
+}
+
 // Bordes de la manzana (i, j) (con vereda) en coordenadas de la ciudad.
 function manzana(i, j) {
   return { x0: linea(i) + mediaCalle(i), x1: linea(i + 1) - mediaCalle(i + 1), z0: linea(j) + mediaCalle(j), z1: linea(j + 1) - mediaCalle(j + 1) };
@@ -489,10 +514,7 @@ export class Ciudad {
     this.solido(m.x0, 0, m.z0, m.x1, PISO, m.z1);
     const lote = { x0: m.x0 + VEREDA, x1: m.x1 - VEREDA, z0: m.z0 + VEREDA, z1: m.z1 - VEREDA };
     const anillo = Math.max(Math.abs(i - 3.5), Math.abs(j - 3.5));
-    const clave = `${i},${j}`;
-    const especial = {
-      '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel', '5,3': 'verdu', '3,4': 'kicks', '4,4': 'drip', '2,4': 'futbolera',
-    }[clave];
+    const especial = ESPECIALES[`${i},${j}`];
     if (especial === 'plaza') this.plaza(c, lote, rnd);
     else if (especial === 'banco') this.banco(c, lote, rnd);
     else if (especial === 'futbol') this.canchaFutbol(c, lote);

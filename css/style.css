@@ -846,20 +846,26 @@ html, body {
   background: rgba(16, 18, 24, 0.94);
   border-top: 4px solid #ffd23f;
   color: #fff;
+  /* El texto y el botón uno al lado del otro: el botón nunca tapa el texto. */
+  display: flex; align-items: flex-end; gap: 18px;
 }
 .dialogo-nombre {
   position: absolute; top: -22px; right: max(4%, 16px);
   margin: 0; padding: 4px 18px; border-radius: 12px;
   background: #ffd23f; color: #1b1d20; font-size: 20px; font-weight: 800;
 }
-.dialogo-texto { margin: 6px 0 0; max-width: 1100px; font-size: 22px; line-height: 1.45; min-height: 64px; }
+.dialogo-texto { flex: 1; margin: 6px 0 0; max-width: 1100px; font-size: 22px; line-height: 1.45; min-height: 64px; }
 .dialogo-seguir {
-  position: absolute; right: calc(20px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom));
+  flex: none; margin-left: auto; white-space: nowrap;
   min-height: 44px; padding: 0 18px; border: none; border-radius: 12px;
   background: #ffd23f; color: #1b1d20; font-family: var(--fuente); font-size: 18px; font-weight: 800; cursor: pointer;
   animation: titila 1s ease-in-out infinite alternate;
 }
 @keyframes titila { to { filter: brightness(1.2); transform: translateX(3px); } }
+@media (max-width: 560px) {
+  .dialogo-caja { flex-direction: column; align-items: stretch; gap: 8px; }
+  .dialogo-seguir { align-self: flex-end; }
+}
 @media (max-height: 500px) {
   .dialogo-caja { min-height: 110px; padding-top: 12px; }
   .dialogo-texto { font-size: 17px; min-height: 48px; }
@@ -1098,3 +1104,32 @@ html, body {
 body.en-taller #hud { z-index: 25; }
 body.en-taller .hud-centro { align-items: flex-end; }
 body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
+
+/* ---------- Mapa ---------- */
+/* Minimapa arriba a la derecha (con el panel de la carrera, el panel baja). */
+.minimapa {
+  position: fixed; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); z-index: 6;
+  width: 170px; height: 170px; padding: 0; border-radius: 16px; overflow: hidden; cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.55); background: #5e8e3f; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.minimapa canvas { width: 100%; height: 100%; display: block; }
+.minimapa-n { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-family: var(--fuente); font-weight: 900; font-size: 13px; color: #fff; text-shadow: 0 1px 2px #000; }
+.minimapa-abrir { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); padding: 1px 8px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); font-family: var(--fuente); font-weight: 700; font-size: 11px; color: #fff; white-space: nowrap; }
+.minimapa:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.minimapa:not(.oculto) ~ .carrera, body:has(.minimapa:not(.oculto)) .carrera { top: calc(194px + env(safe-area-inset-top)); }
+.mapa { position: fixed; inset: 0; z-index: 30; background: #5e8e3f; }
+.mapa-lienzo { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.mapa-lienzo:active { cursor: grabbing; }
+.mapa-barra { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 8px; border-radius: 16px; background: rgba(16, 17, 21, 0.72); border: 1px solid var(--panel-borde); }
+.mapa-barra .btn { font-size: 15px; padding: 6px 12px; }
+.btn.azul { background: var(--azul); }
+.mapa-zoom { position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(60px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px; }
+.mapa-zoom .btn { width: 52px; height: 52px; font-size: 26px; padding: 0; }
+.mapa-cerrar { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); background: rgba(16, 17, 21, 0.72); }
+.mapa-ayuda { position: absolute; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; padding: 4px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 13px; white-space: nowrap; }
+@media (max-width: 700px), (max-height: 520px) {
+  .minimapa { width: 130px; height: 130px; }
+  body:has(.minimapa:not(.oculto)) .carrera { top: calc(150px + env(safe-area-inset-top)); }
+  .mapa-barra { top: calc(62px + env(safe-area-inset-top)); }
+  .mapa-ayuda { display: none; }
+}

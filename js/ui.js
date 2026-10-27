@@ -24,14 +24,15 @@ export function actualizarHUD(plata, pps, progreso) {
   if (m !== progresoMostrado) { $('progreso').textContent = m; progresoMostrado = m; }
 }
 
-export function toast(texto, tipo = 'ok') {
+export function toast(texto, tipo = 'ok', ms = 2300) {
   const cont = $('toasts');
   while (cont.children.length >= 3) cont.firstChild.remove();
   const el = document.createElement('div');
   el.className = `toast ${tipo}`;
   el.textContent = texto;
+  el.style.animationDuration = `${ms - 100}ms`; // la animación (entra, queda y se va) dura lo mismo
   cont.appendChild(el);
-  setTimeout(() => el.remove(), 2300);
+  setTimeout(() => el.remove(), ms);
 }
 
 // Cartel fijo arriba (no se va solo): para avisos que duran mientras pasa algo.
@@ -362,6 +363,7 @@ export function botonMisiones(v) { $('btn-misiones').classList.toggle('oculto', 
 // ---------- Diálogo de historia ----------
 // Escribe cada línea de a poco; Continuar / E / Espacio / clic completa la línea o pasa a la
 // siguiente. Al terminar llama a alTerminar().
+let observadorDialogo = null;
 export function dialogo({ nombre, cara, remera, lineas, alTerminar }) {
   $('dialogo-nombre').textContent = nombre;
   $('dialogo-cara').src = cara;
@@ -395,6 +397,11 @@ export function dialogo({ nombre, cara, remera, lineas, alTerminar }) {
     if (['KeyE', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) seguir(); }
   };
   $('dialogo').onclick = seguir;
+  // La foto del personaje va siempre arriba de la caja (si el texto ocupa más líneas, sube).
+  const caja = document.querySelector('.dialogo-caja');
+  const personaje = document.querySelector('.dialogo-personaje');
+  observadorDialogo ??= new ResizeObserver(() => { personaje.style.bottom = `${caja.offsetHeight}px`; });
+  observadorDialogo.observe(caja);
   window.addEventListener('keydown', teclas, true);
   mostrar('dialogo', true);
   escribir();
@@ -766,3 +773,220 @@ export function abrirTaller(d) {
   mostrarContenido(false);
   nav.querySelector('.tp')?.focus();
 }
+
+// ======================= Mapa =======================
+// Minimapa en la esquina (centrado en vos, con el norte arriba) y el mapa entero a pantalla
+// completa (se arrastra, se hace zoom con la rueda, pellizcando o con + y −, y tiene botones para
+// ir a cada zona). Abajo de todo va el plano dibujado (calles, autopista, la pista, la ciudad) y
+// arriba las fotos desde arriba de cada zona, que saca main.js (capturarMapa) con todo lo que hay.
+// mapa: { zonas: [{ x0, z0, x1, z1, canvas }], plano: { ... }, etiquetas: [{ x, z, texto, nivel }] }
+const MAPA = { zonas: [], plano: null, etiquetas: [], pos: { x: 0, z: 0 }, angulo: 0 };
+const PASTO = '#5e8e3f'; // el mismo verde que el pasto en las fotos
+
+function dibujarMapa(g, w, h, vista, chico = false) {
+  const { cx, cz, s } = vista;
+  const X = (x) => (x - cx) * s + w / 2;
+  const Z = (z) => (z - cz) * s + h / 2;
+  const rect = (x0, z0, x1, z1, color) => {
+    const a = X(x0);
+    const b = Z(z0);
+    const c = X(x1) - a;
+    const d = Z(z1) - b;
+    if (a > w || b > h || a + c < 0 || b + d < 0) return;
+    g.fillStyle = color;
+    g.fillRect(a, b, Math.max(c, 1), Math.max(d, 1));
+  };
+  g.fillStyle = PASTO;
+  g.fillRect(0, 0, w, h);
+  const p = MAPA.plano;
+  if (p) {
+    // Calle del barrio, autopista (con la línea del medio) y la pista del autódromo.
+    rect(p.calle.x0, p.calle.z0, p.calle.x1, p.calle.z1, '#55575c');
+    rect(p.autopista.x0, p.autopista.z0, p.autopista.x1, p.autopista.z1, '#4a4c52');
+    rect(p.autopista.x0, (p.autopista.z0 + p.autopista.z1) / 2 - 0.4, p.autopista.x1, (p.autopista.z0 + p.autopista.z1) / 2 + 0.4, '#ffd23f');
+    if (p.pista) {
+      g.strokeStyle = '#3b3d42';
+      g.lineWidth = Math.max(2, p.pista.ancho * s);
+      g.lineJoin = 'round';
+      g.beginPath();
+      p.pista.puntos.forEach((q, i) => (i ? g.lineTo(X(q.x), Z(q.z)) : g.moveTo(X(q.x), Z(q.z))));
+      g.closePath();
+      g.stroke();
+    }
+    // La ciudad (si todavía no hay foto): manzanas por tipo y las calles.
+    const colores = { plaza: '#5cab4c', parque: '#4f9a3f', futbol: '#3f8f3a', basquet: '#c0783a', nafta: '#e0e0e0', super: '#e8d9b0', banco: '#cfd8dc', hotel: '#9fa8b5', verdu: '#c5e1a5', kicks: '#f5f5f5', drip: '#3a3a3e', futbolera: '#90caf9' };
+    for (const m of p.ciudad.manzanas) rect(m.x0, m.z0, m.x1, m.z1, colores[m.tipo] || ['#8a8f99', '#a3a7ae', '#b8bcc2', '#d8c9b4'][Math.min(3, Math.floor(m.anillo))]);
+    for (const c of p.ciudad.calles) rect(c.x0, c.z0, c.x1, c.z1, c.avenida ? '#4a4c52' : '#5d6066');
+    for (const e of p.edificios) rect(e.x0, e.z0, e.x1, e.z1, e.color);
+  }
+  // Las fotos desde arriba de cada zona.
+  g.imageSmoothingEnabled = true;
+  for (const z of MAPA.zonas) {
+    const a = X(z.x0);
+    const b = Z(z.z0);
+    const c = (z.x1 - z.x0) * s;
+    const d = (z.z1 - z.z0) * s;
+    if (a > w || b > h || a + c < 0 || b + d < 0) continue;
+    g.drawImage(z.canvas, a, b, c, d);
+  }
+  // Nombres: los importantes siempre; los demás, cuando hay zoom para leerlos.
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineJoin = 'round';
+  for (const e of MAPA.etiquetas) {
+    if (s < e.desde || (chico && e.nivel > 0)) continue; // en el minimapa, solo los grandes
+    const x = X(e.x);
+    const y = Z(e.z);
+    if (x < -60 || x > w + 60 || y < -20 || y > h + 20) continue;
+    const tam = chico ? 11 : e.nivel === 0 ? 17 : e.nivel === 1 ? 14 : 12;
+    g.font = `800 ${tam}px Fredoka, Arial, sans-serif`;
+    g.lineWidth = 4;
+    g.strokeStyle = 'rgba(0,0,0,0.75)';
+    g.strokeText(e.texto, x, y);
+    g.fillStyle = e.nivel === 0 ? '#ffd23f' : '#ffffff';
+    g.fillText(e.texto, x, y);
+  }
+  // Vos: la flecha (para donde mirás o manejás), con un anillo para encontrarla fácil.
+  const px = X(MAPA.pos.x);
+  const pz = Z(MAPA.pos.z);
+  g.save();
+  g.translate(px, pz);
+  g.fillStyle = 'rgba(47, 140, 255, 0.25)';
+  g.beginPath(); g.arc(0, 0, chico ? 11 : 16, 0, Math.PI * 2); g.fill();
+  g.rotate(Math.PI - MAPA.angulo); // ángulo 0 = mirando a +z (para abajo en el mapa)
+  const t = chico ? 8 : 11;
+  g.fillStyle = '#2f8cff';
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(0, -t * 1.2); g.lineTo(t * 0.85, t); g.lineTo(0, t * 0.45); g.lineTo(-t * 0.85, t); g.closePath();
+  g.fill(); g.stroke();
+  g.restore();
+}
+
+let mapaGrande = null; // { vista, ... } con el mapa abierto
+let ultimoMini = 0;
+
+export function prepararMapa({ plano, etiquetas, zonasDe, alAbrir, alCerrar }) {
+  MAPA.plano = plano;
+  MAPA.etiquetas = etiquetas;
+  MAPA.zonasDe = zonasDe;
+  MAPA.alAbrir = alAbrir;
+  MAPA.alCerrar = alCerrar;
+  $('minimapa').onclick = () => abrirMapa();
+  $('btn-cerrar-mapa').onclick = () => cerrarMapa();
+}
+
+// Cada cuadro: dónde estás y para dónde mirás (el minimapa se dibuja 10 veces por segundo).
+export function mapaCuadro(pos, angulo, visible) {
+  MAPA.pos.x = pos.x;
+  MAPA.pos.z = pos.z;
+  MAPA.angulo = angulo;
+  $('minimapa').classList.toggle('oculto', !visible || !!mapaGrande);
+  const ahora = performance.now();
+  if (mapaGrande) {
+    if (ahora - ultimoMini > 200) { ultimoMini = ahora; redibujarGrande(); }
+    return;
+  }
+  if (!visible || ahora - ultimoMini < 100) return;
+  ultimoMini = ahora;
+  MAPA.zonas = MAPA.zonasDe();
+  const c = $('minimapa-lienzo');
+  const r = c.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.round(r.width * dpr);
+  const h = Math.round(r.height * dpr);
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  dibujarMapa(c.getContext('2d'), w, h, { cx: pos.x, cz: pos.z, s: 0.55 * dpr }, true);
+}
+
+function redibujarGrande() {
+  const c = $('mapa-lienzo');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.round(c.clientWidth * dpr);
+  const h = Math.round(c.clientHeight * dpr);
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  const v = mapaGrande.vista;
+  dibujarMapa(c.getContext('2d'), w, h, { cx: v.cx, cz: v.cz, s: v.s * dpr });
+}
+
+export function abrirMapa() {
+  if (mapaGrande) return;
+  MAPA.alAbrir?.();
+  MAPA.zonas = MAPA.zonasDe();
+  mapaGrande = { vista: { cx: MAPA.pos.x, cz: MAPA.pos.z, s: 0.8 } };
+  mostrar('mapa', true);
+  $('minimapa').classList.add('oculto');
+  const c = $('mapa-lienzo');
+  const v = mapaGrande.vista;
+  const limitar = () => { v.s = Math.min(6, Math.max(0.02, v.s)); };
+  const zoom = (f, sx = c.clientWidth / 2, sy = c.clientHeight / 2) => {
+    // Zoom alrededor del punto (sx, sy) de la pantalla: ese lugar queda donde está.
+    const wx = v.cx + (sx - c.clientWidth / 2) / v.s;
+    const wz = v.cz + (sy - c.clientHeight / 2) / v.s;
+    v.s *= f;
+    limitar();
+    v.cx = wx - (sx - c.clientWidth / 2) / v.s;
+    v.cz = wz - (sy - c.clientHeight / 2) / v.s;
+    redibujarGrande();
+  };
+  const ir = (x0, z0, x1, z1) => {
+    v.cx = (x0 + x1) / 2;
+    v.cz = (z0 + z1) / 2;
+    v.s = Math.min(c.clientWidth / (x1 - x0), c.clientHeight / (z1 - z0)) * 0.92;
+    limitar();
+    redibujarGrande();
+  };
+  const z = MAPA.plano.zonas;
+  const botones = {
+    'mapa-vos': () => { v.cx = MAPA.pos.x; v.cz = MAPA.pos.z; v.s = Math.max(v.s, 0.8); redibujarGrande(); },
+    'mapa-barrio': () => ir(...z.barrio),
+    'mapa-autodromo': () => ir(...z.autodromo),
+    'mapa-ciudad': () => ir(...z.ciudad),
+    'mapa-todo': () => ir(...z.todo),
+    'mapa-mas': () => zoom(1.5),
+    'mapa-menos': () => zoom(1 / 1.5),
+  };
+  for (const [id, f] of Object.entries(botones)) $(id).onclick = f;
+  // Arrastrar para moverse; con dos dedos, pellizcar para el zoom.
+  const punteros = new Map();
+  let distancia = 0;
+  c.onpointerdown = (e) => { c.setPointerCapture(e.pointerId); punteros.set(e.pointerId, { x: e.clientX, y: e.clientY }); };
+  c.onpointermove = (e) => {
+    const antes = punteros.get(e.pointerId);
+    if (!antes) return;
+    if (punteros.size === 1) {
+      v.cx -= (e.clientX - antes.x) / v.s;
+      v.cz -= (e.clientY - antes.y) / v.s;
+      punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      redibujarGrande();
+      return;
+    }
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const [a, b] = [...punteros.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (distancia) zoom(d / distancia, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    distancia = d;
+  };
+  const soltar = (e) => { punteros.delete(e.pointerId); distancia = 0; };
+  c.onpointerup = soltar;
+  c.onpointercancel = soltar;
+  c.onwheel = (e) => { e.preventDefault(); zoom(e.deltaY < 0 ? 1.2 : 1 / 1.2, e.offsetX, e.offsetY); };
+  mapaGrande.teclas = (e) => {
+    if (e.code === 'Escape' || e.code === 'KeyN') { e.preventDefault(); cerrarMapa(); }
+    else if (e.key === '+') zoom(1.5);
+    else if (e.key === '-') zoom(1 / 1.5);
+  };
+  window.addEventListener('keydown', mapaGrande.teclas);
+  redibujarGrande();
+  $('btn-cerrar-mapa').focus();
+}
+
+export function cerrarMapa() {
+  if (!mapaGrande) return;
+  window.removeEventListener('keydown', mapaGrande.teclas);
+  mapaGrande = null;
+  mostrar('mapa', false);
+  MAPA.alCerrar?.();
+}
+
+export const mapaAbierto = () => !!mapaGrande;
