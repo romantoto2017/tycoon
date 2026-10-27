@@ -409,7 +409,8 @@ export function dialogo({ nombre, cara, remera, lineas, alTerminar }) {
 
 // ---------- Tienda de ropa: catálogo ----------
 // prendas: [{ id, nombre, foto, precio, tuya }]. alComprar(id) devuelve true si se compró.
-export function abrirCatalogo({ titulo, sub, prendas, plata, alComprar, alCerrar }) {
+export function abrirCatalogo({ titulo, sub, prendas, plata, alComprar, alCerrar, tema = '' }) {
+  $('catalogo').classList.toggle('tema-lucca', tema === 'lucca'); // Lucca Bossio: blanco y negro, minimalista
   $('catalogo-titulo').textContent = titulo;
   $('catalogo-sub').textContent = sub;
   const lista = $('catalogo-lista');
@@ -813,7 +814,7 @@ function dibujarMapa(g, w, h, vista, chico = false) {
       g.stroke();
     }
     // La ciudad (si todavía no hay foto): manzanas por tipo y las calles.
-    const colores = { plaza: '#5cab4c', parque: '#4f9a3f', futbol: '#3f8f3a', basquet: '#c0783a', nafta: '#e0e0e0', super: '#e8d9b0', banco: '#cfd8dc', hotel: '#9fa8b5', verdu: '#c5e1a5', kicks: '#f5f5f5', drip: '#3a3a3e', futbolera: '#90caf9', casino: '#a3402c' };
+    const colores = { plaza: '#5cab4c', parque: '#4f9a3f', futbol: '#3f8f3a', basquet: '#c0783a', nafta: '#e0e0e0', super: '#e8d9b0', banco: '#cfd8dc', hotel: '#9fa8b5', verdu: '#c5e1a5', kicks: '#f5f5f5', drip: '#3a3a3e', futbolera: '#90caf9', casino: '#a3402c', lucca: '#16171c' };
     for (const m of p.ciudad.manzanas) rect(m.x0, m.z0, m.x1, m.z1, colores[m.tipo] || ['#8a8f99', '#a3a7ae', '#b8bcc2', '#d8c9b4'][Math.min(3, Math.floor(m.anillo))]);
     for (const c of p.ciudad.calles) rect(c.x0, c.z0, c.x1, c.z1, c.avenida ? '#4a4c52' : '#5d6066');
     for (const e of p.edificios) rect(e.x0, e.z0, e.x1, e.z1, e.color);

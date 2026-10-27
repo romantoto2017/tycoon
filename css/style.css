@@ -1195,3 +1195,25 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
   .cas-cartas { min-height: 46px; }
   .cas-botones button { padding: 7px 14px; font-size: 15px; }
 }
+
+/* ---------- Catálogo de LUCCABOSSIO™: monocromo y minimalista, como su web (fondo hueso, negro
+   cálido, mayúsculas espaciadas, sin colores; el único acento es el precio) ---------- */
+.catalogo.tema-lucca { --lb-fondo: #fafaf9; --lb-tinta: #1c1917; --lb-suave: #57534e; --lb-borde: #d6d3d1; --lb-carta: #ffffff; }
+.tema-lucca .catalogo-caja { background: var(--lb-fondo); color: var(--lb-tinta); border: 1px solid var(--lb-borde); border-radius: 4px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); font-family: 'Helvetica Neue', Arial, sans-serif; }
+.tema-lucca .catalogo-caja header { border-bottom: 1px solid var(--lb-tinta); padding: 18px 64px 14px 22px; }
+.tema-lucca .catalogo-caja h2 { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 26px; letter-spacing: 6px; }
+.tema-lucca .catalogo-caja header p { color: var(--lb-suave); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+.tema-lucca .cat-cerrar { border-radius: 2px; border: 1px solid var(--lb-tinta); background: transparent; color: var(--lb-tinta); transition: background 0.2s ease, color 0.2s ease; }
+.tema-lucca .cat-cerrar:hover { background: var(--lb-tinta); color: var(--lb-fondo); }
+.tema-lucca .catalogo-lista { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; padding: 20px 22px 24px; }
+.tema-lucca .prenda { background: var(--lb-carta); border: 1px solid transparent; border-radius: 2px; padding: 0 0 12px; gap: 8px; font-family: 'Helvetica Neue', Arial, sans-serif; transition: border-color 0.2s ease, transform 0.2s ease; }
+.tema-lucca .prenda:hover { border-color: var(--lb-tinta); transform: translateY(-2px); }
+.tema-lucca .prenda .foto { background: #f2f1ef; border-radius: 0; }
+.tema-lucca .prenda .foto img { transition: transform 0.25s ease; }
+.tema-lucca .prenda:hover .foto img { transform: scale(1.05); }
+.tema-lucca .prenda b { padding: 0 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.3; }
+.tema-lucca .prenda .precio { padding: 0 10px; color: var(--lb-tinta); font-size: 15px; font-weight: 400; }
+.tema-lucca .prenda .precio.caro { color: #b91c1c; }
+.tema-lucca .prenda .estado { padding: 0 10px; color: var(--lb-suave); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+.tema-lucca .cat-cerrar:focus-visible, .tema-lucca .prenda:focus-visible { outline: 2px solid var(--lb-tinta); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .tema-lucca .prenda, .tema-lucca .prenda .foto img { transition: none; } .tema-lucca .prenda:hover .foto img { transform: none; } }

@@ -3,6 +3,7 @@ texturas que usa el personaje (js/vestir.js) y las fotos recortadas del catálog
 Todo se hace acá (rembg local + PIL), sin mandar las fotos a ningún servicio.
 
     python3 herramientas/ropa.py
+    python3 herramientas/ropa.py lb_    (solo las prendas cuyo id empieza así; el resto queda como está)
     (después, herramientas/rellenar_ropa.py arregla el conjunto Corteiz celeste y el jogging Jordan)
 
 Salida:
@@ -62,6 +63,21 @@ PRENDAS = [
     dict(id='nikeshoxr4', foto='nikeshoxr4.jpeg', slot='pies'),
     dict(id='niketn', foto='niketn.jpeg', slot='pies'),
     dict(id='f50', foto='f50.webp', slot='pies'),
+    # ---- Lucca Bossio (fotos de luccabossio.com, en assets/ropa/luccabossio/) ----
+    dict(id='lb_knox', foto='luccabossio/lb_knox.jpg', slot='torso', torso=(0.3, 0.2, 0.71, 0.85), tela=(0.36, 0.5, 0.5, 0.66), estampado=True, manga=((0.27, 0.36), (0.13, 0.9), 0.1)),
+    dict(id='lb_nudos', foto='luccabossio/lb_nudos.jpg', slot='torso', torso=(0.3, 0.22, 0.7, 0.88), tela=(0.44, 0.8, 0.56, 0.86), manga=((0.28, 0.34), (0.2, 0.86), 0.1)),
+    dict(id='lb_pasamontanas', foto='luccabossio/lb_pasamontanas.jpg', slot='torso', torso=(0.3, 0.3, 0.7, 0.9), tela=(0.36, 0.63, 0.46, 0.73), manga=((0.26, 0.38), (0.13, 0.92), 0.1)),
+    dict(id='lb_bigrama', foto='luccabossio/lb_bigrama.jpg', slot='torso', torso=(0.27, 0.1, 0.73, 0.8), tela=(0.3, 0.6, 0.45, 0.75)),
+    dict(id='lb_tranca', foto='luccabossio/lb_tranca.jpg', slot='torso', torso=(0.27, 0.08, 0.73, 0.83), tela=(0.3, 0.6, 0.45, 0.75)),
+    dict(id='lb_escrituras', foto='luccabossio/lb_escrituras.jpg', slot='torso', torso=(0.23, 0.12, 0.77, 0.85), tela=(0.72, 0.76, 0.76, 0.82)),
+    dict(id='lb_monograma', foto='luccabossio/lb_monograma.jpg', slot='torso', torso=(0.28, 0.12, 0.72, 0.9), tela=(0.3, 0.72, 0.45, 0.85)),
+    dict(id='lb_oriental', foto='luccabossio/lb_oriental.jpg', slot='torso', torso=(0.23, 0.1, 0.77, 0.9), tela=(0.26, 0.72, 0.4, 0.85)),
+    dict(id='lb_puntocom', foto='luccabossio/lb_puntocom.jpg', slot='torso', torso=(0.13, 0.37, 0.5, 0.91), tela=(0.2, 0.72, 0.3, 0.85)),
+    dict(id='lb_trigrama', foto='luccabossio/lb_trigrama.jpg', slot='torso', torso=(0.23, 0.12, 0.77, 0.88), tela=(0.3, 0.4, 0.45, 0.55)),
+    dict(id='lb_voynich', foto='luccabossio/lb_voynich.jpg', slot='torso', torso=(0.1, 0.42, 0.48, 0.92), tela=(0.12, 0.76, 0.2, 0.86), manga='lisa'),
+    dict(id='lb_jean', foto='luccabossio/lb_jean.jpg', slot='piernas', piernas=[(0.18, 0.03, 0.5, 0.98), (0.5, 0.03, 0.78, 0.98)], tela=(0.25, 0.5, 0.35, 0.7), estampado=True),
+    dict(id='lb_jogbigrama', foto='luccabossio/lb_jogbigrama.jpg', slot='piernas', piernas=[(0.15, 0.05, 0.5, 0.95), (0.5, 0.05, 0.85, 0.95)], tela=(0.2, 0.5, 0.3, 0.7)),
+    dict(id='lb_acanto', foto='luccabossio/lb_acanto.jpg', slot='piernas', piernas=[(0.15, 0.05, 0.5, 0.95), (0.5, 0.05, 0.85, 0.95)], tela=(0.2, 0.5, 0.3, 0.7)),
     # ---- gorra ----
     dict(id='tiffosigorra', foto='tiffosigorra.webp', slot='cabeza', torso=(0.26, 0.32, 0.62, 0.6), tela=(0.4, 0.62, 0.5, 0.7)),
 ]
@@ -153,8 +169,17 @@ def achicar(im, lado):
     return im
 
 
+import re
+import sys
+solo = sys.argv[1] if len(sys.argv) > 1 else ''
 colores = {}
+if solo:
+    # Se conservan los colores de las prendas que no se vuelven a procesar.
+    viejo = open('data/ropa_colores.js').read()
+    colores = json.loads(re.search(r'= (\{.*\});', viejo, re.S).group(1))
 for p in PRENDAS:
+    if not p['id'].startswith(solo):
+        continue
     im = abrir(p['foto'])
     if p.get('arreglo'):
         im = globals()[p['arreglo']](im)

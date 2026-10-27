@@ -84,7 +84,7 @@ Solo Bauti cambia de cuerpo: cada repetición le suma puntos (`estado.bautiGym`)
 
 ## Casino Vecibanda
 
-En la Ciudad Vecibanda, sobre la avenida de la entrada (al lado del hotel), está el casino, inspirado en el del Schedule 1: edificio de ladrillo con la marquesina redonda, la escalinata y las letras CASINO de neón arriba (de día rosas; de noche cambian de colores y titilan, igual que las lamparitas de la marquesina). Todo está en `js/casino.js`; la manzana la marca `ESPECIALES` en `js/ciudad.js`.
+En la Ciudad Vecibanda, sobre la avenida de la entrada (al lado del hotel), está el casino (se ve desde el principio pero abre cuando la mansión llega al 25%, `CASINO_DESDE`; antes la puerta tiene el cartel de CERRADO), inspirado en el del Schedule 1: edificio de ladrillo con la marquesina redonda, la escalinata y las letras CASINO de neón arriba (de día rosas; de noche cambian de colores y titilan, igual que las lamparitas de la marquesina). Todo está en `js/casino.js`; la manzana la marca `ESPECIALES` en `js/ciudad.js`.
 
 Adentro, un casino de verdad: alfombra roja con firuletes, boiserie de madera y tapiz bordó con columnas doradas y apliques, cielorraso artesonado dorado, arañas rosas, neón fucsia alrededor, la pantalla del JACKPOT en el fondo, la barra con botellas iluminadas y charcos de luz en la alfombra. Hay 36 tragamonedas como las de las fotos y tres mesas. Se juega con "Jugar al ... (E)" parado en la banqueta; se abre un panel abajo (la cámara mira la mesa o la máquina) con la apuesta (escalera 1-2-5, ÷10, ×10 y Máx) y los botones. Espacio o Enter hacen la acción principal y E o Esc te levantan (no mientras gira o se reparte). **Máximo por apuesta: 100 B** (`LIMITE`). Las chances son las de verdad (la casa gana un poquito en promedio):
 
@@ -96,6 +96,14 @@ Adentro, un casino de verdad: alfombra roja con firuletes, boiserie de madera y 
 El crupier de las tres mesas es **Astrojorge**: alto y flaco, pelo blanco con dos entradas y la "piscina" en la coronilla, camisa blanca, chaleco, moño rojo y la plaquita con el nombre. Camina a la mesa donde te sentás y te habla. La cara sale de `assets/caras/astrojorge.jpeg` y la ropa se dibuja con `herramientas/casino.py` (acá en el contenedor); la calva es `calva: true` en `js/texturas.js`.
 
 Afuera hay un estacionamiento y siempre está el **auto de Astrojorge** (un sedán viejo celeste con óxido, "Auto de Astrojorge" pintado en las puertas, el lugar reservado y una papa metida en el caño de escape).
+
+## LUCCABOSSIO™
+
+Sobre la misma avenida que las tiendas de ropa (al lado de La Futbolera) está el local de Lucca Bossio, armado lo más parecido al de verdad (`assets/especiales/luccabossiolocal.jpeg` y `localluccabossio2.jpeg`): planta baja de un edificio blanco, la banda negra con el logo blanco de la viborita, todo el frente de vidrio con LUCCABOSSIO™ y el texto de la marca pegados, la puerta de vidrio abierta, el 3174 en la columna, el domo de la cámara y la maceta de granito afuera. Adentro: paredes blancas, piso de madera clara, rieles negros con spots, el perchero con la ropa colgada y dos prendas de frente, el mueble blanco con remeras dobladas y un estante arriba con una planta, el cubo blanco de la vidriera, el perchero de jeans, el banco de madera, el espejo, un cuadro con la mascota y el mostrador de madera al fondo con el posnet y las bolsas (atrás, el logo negro y la puerta al depósito). La mascota (el bichito) flota dando vueltas por el local. Todo está en `js/lucca.js`; los logos y la mascota se recortan con `herramientas/lucca.py` (acá en el contenedor).
+
+- **Shaggy** (el cuñado de Lucca, cara de `assets/caras/shaggy.jpeg`) atiende el mostrador: "Ver la ropa (E)" abre el catálogo, en blanco y negro como la web de la marca.
+- **Lucca Bossio** (cara de `assets/caras/luccabossio.jpeg`, con su hoodie Knox y el jean Nudos de Archibald) a veces está en el local y si no anda caminando por las veredas de alguna manzana de la ciudad (cambia cada uno o dos minutos, nunca delante tuyo). Cuando te acercás te tira una de las suyas ("Tengo la mejor marca de nicho de Uruguay", "Qué onda mano", "De hecho, mi ropa sí vale los 5000 pesos 🤓👆"...); con "Hablar con Lucca Bossio (E)" te dice otra.
+- **La ropa** sale de luccabossio.com (las fotos de producto están en `assets/ropa/luccabossio/` y se recortan con `python3 herramientas/ropa.py lb_`): 7 remeras, 2 hoodies, el full zip Knox, la campera reversible Voynich, 2 joggings y el jean. Se compra y se usa como la de las otras tiendas, pero es bastante más cara (12 B las remeras y hasta 38 B la campera).
 
 ## Misiones
 

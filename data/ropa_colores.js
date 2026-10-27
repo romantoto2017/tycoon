@@ -88,5 +88,62 @@ export const COLORES_ROPA = {
   "tiffosigorra": {
     "tela": "#e9e8ef",
     "aspecto": 1.925
+  },
+  "lb_knox": {
+    "tela": "#21455f",
+    "aspecto": 0.631,
+    "manga": true
+  },
+  "lb_nudos": {
+    "tela": "#f0efed",
+    "aspecto": 0.606,
+    "manga": true
+  },
+  "lb_pasamontanas": {
+    "tela": "#dee2fa",
+    "aspecto": 0.636,
+    "manga": true
+  },
+  "lb_bigrama": {
+    "tela": "#2e3f63",
+    "aspecto": 0.657
+  },
+  "lb_tranca": {
+    "tela": "#151515",
+    "aspecto": 0.613
+  },
+  "lb_escrituras": {
+    "tela": "#fefefe",
+    "aspecto": 0.74
+  },
+  "lb_monograma": {
+    "tela": "#202020",
+    "aspecto": 0.564
+  },
+  "lb_oriental": {
+    "tela": "#1c1c1c",
+    "aspecto": 0.675
+  },
+  "lb_puntocom": {
+    "tela": "#141414",
+    "aspecto": 0.685
+  },
+  "lb_trigrama": {
+    "tela": "#1d1d1d",
+    "aspecto": 0.711
+  },
+  "lb_voynich": {
+    "tela": "#191a1e",
+    "aspecto": 0.76,
+    "manga": true
+  },
+  "lb_jean": {
+    "tela": "#3b3c40"
+  },
+  "lb_jogbigrama": {
+    "tela": "#313139"
+  },
+  "lb_acanto": {
+    "tela": "#cbccd1"
   }
 };

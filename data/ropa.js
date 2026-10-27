@@ -45,6 +45,21 @@ const LISTA = [
   { id: 'joggingjordan', nombre: 'Jogging Jordan', slot: 'piernas', precio: 1.5 * B, tienda: 'kicks' },
   { id: 'jeanscammo', nombre: 'Jean Camuflado', slot: 'piernas', precio: 1.1 * B, tienda: 'kicks' },
   { id: 'tiffosigorra', nombre: 'Gorra Tiffosi', slot: 'cabeza', precio: 800 * M, tienda: 'kicks' },
+  // ---- Lucca Bossio (de luccabossio.com): marca de nicho, cara a propósito ----
+  { id: 'lb_monograma', nombre: 'Remera "Monograma" Negra', slot: 'torso', precio: 12 * B, tienda: 'lucca' },
+  { id: 'lb_bigrama', nombre: 'Remera "Bigrama" Azul', slot: 'torso', precio: 12 * B, tienda: 'lucca' },
+  { id: 'lb_trigrama', nombre: 'Remera "Trigrama" Negra', slot: 'torso', precio: 13 * B, tienda: 'lucca' },
+  { id: 'lb_puntocom', nombre: 'Remera "Punto Com 17"', slot: 'torso', precio: 12 * B, tienda: 'lucca' },
+  { id: 'lb_oriental', nombre: 'Remera "Oriental" (Manya)', slot: 'torso', precio: 12 * B, tienda: 'lucca' },
+  { id: 'lb_tranca', nombre: 'Remera Bossio x Tranca', slot: 'torso', precio: 14 * B, tienda: 'lucca' },
+  { id: 'lb_escrituras', nombre: 'Remera Full Print "Escrituras"', slot: 'torso', precio: 14 * B, tienda: 'lucca' },
+  { id: 'lb_pasamontanas', nombre: 'Hoodie + Pasamontañas x TussiWarriors', slot: 'torso', precio: 30 * B, tienda: 'lucca', largas: true, capucha: true },
+  { id: 'lb_nudos', nombre: 'Hoodie "Nudos de Archibald"', slot: 'torso', precio: 32 * B, tienda: 'lucca', largas: true, capucha: true },
+  { id: 'lb_knox', nombre: 'Full Zip Hoodie Tejido "Knox"', slot: 'torso', precio: 36 * B, tienda: 'lucca', largas: true, capucha: true },
+  { id: 'lb_voynich', nombre: 'Campera Reversible Fur "Voynich"', slot: 'torso', precio: 38 * B, tienda: 'lucca', largas: true, capucha: true },
+  { id: 'lb_jogbigrama', nombre: 'Jogging "Bigrama" Negro', slot: 'piernas', precio: 26 * B, tienda: 'lucca' },
+  { id: 'lb_acanto', nombre: 'Jogging "De Acanto" Gris', slot: 'piernas', precio: 28 * B, tienda: 'lucca' },
+  { id: 'lb_jean', nombre: 'Jean "Nudos de Archibald" Acid Wash', slot: 'piernas', precio: 30 * B, tienda: 'lucca' },
 ];
 
 export const PRENDAS = LISTA.map((p) => ({ ...COLORES_ROPA[p.id], ...p, foto: `assets/ropa/tienda/${p.id}.webp` }));
@@ -69,3 +84,9 @@ export const TIENDAS = [
     vendedor: { nombre: 'Tincho', piel: '#c68642', pelo: '#1b1411', peinado: 'liso', remera: '#0d47a1', pantalon: '#1e3a8a', ropa: { torso: 'camperamilan', pies: 'f50' } },
   },
 ];
+
+// Lucca Bossio: su propio local (js/lucca.js, armado como el de verdad). Atiende Shaggy.
+export const LUCCA = {
+  id: 'lucca', nombre: 'LUCCABOSSIO™', fondo: '#111111', letras: '#ffffff',
+  vendedor: { nombre: 'Shaggy', remera: '#c9d6cf' },
+};

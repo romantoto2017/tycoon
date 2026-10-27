@@ -19,7 +19,8 @@ import { sfx } from './sfx.js';
 
 export const LIMITE = 1e11; // 100 B por apuesta
 const MINIMO = 10;
-const ALTO = 12; // del piso al techo, adentro
+const ALTO = 16; // del piso al techo, adentro (alto, así saltando no se llega)
+export const CASINO_DESDE = 0.25; // abre cuando la mansión llega al 25%
 const PALOS = ['♠', '♥', '♦', '♣'];
 const RANGOS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
@@ -600,7 +601,9 @@ const FRASES = {
 const una = (l) => l[Math.floor(Math.random() * l.length)];
 
 export class Casino {
-  constructor({ ciudad, escena, estado, ui, guardar }) {
+  constructor({ ciudad, escena, estado, ui, guardar, progreso }) {
+    this.progreso = progreso;
+    this.abierto = null;
     this.ciudad = ciudad;
     this.escena = escena;
     this.estado = estado;
@@ -687,6 +690,13 @@ export class Casino {
       c.caja(x - 0.18, F, b.z0 - 0.05, x + 0.18, F + 7.2, b.z0 + 0.65, '#d4a93a');
     }
     c.caja(xm - puerta, F + 7, b.z0 - 0.05, xm + puerta, F + 7.3, b.z0 + 0.65, '#d4a93a');
+    // Hasta el 25%: la puerta tiene un choque (se corre lejos al abrir) y el cartel de CERRADO.
+    this.cierre = s(xm - puerta, 0, b.z0 - 0.4, xm + puerta, F + 7, b.z0 + 0.6);
+    this.cierreCaja = this.cierre.clone();
+    this.avisoCerrado = crearEtiqueta([{ texto: `CERRADO · ABRE AL ${Math.round(CASINO_DESDE * 100)}%`, tam: 60, color: '#ffd23f' }], 9);
+    this.avisoCerrado.sprite.position.set(xm, F + 5, b.z0 - 1.5);
+    this.ciudad.grupo.add(this.avisoCerrado.sprite);
+    this.puertaX = xm;
     // Marquesina redonda (medio cilindro contra la fachada), con dos columnas y lamparitas abajo.
     const R = 7.4;
     const mq = new THREE.CylinderGeometry(R, R, 1.1, 32, 1, false, Math.PI / 2, Math.PI);
@@ -835,7 +845,7 @@ export class Casino {
     for (const mq of this.maquinas) this.halos.push([mq.x + mq.dir * 3, F + 0.05, mq.z, 2.6, ['#ffd23f', '#ff4fd1', '#2fe0ff'][mq.i % 3], 'piso']);
     this.armarHalos();
     // ----- Pantalla del JACKPOT en la pared del fondo -----
-    this.pantalla = { x: this.xu(17), y: F + 7.5, z: z1 - 0.1 };
+    this.pantalla = { x: this.xu(17), y: F + 9.5, z: z1 - 0.1 };
   }
 
   // Araña de caireles rosas: aro dorado, brazos con pantallitas rosas encendidas y gotas de
@@ -1254,6 +1264,10 @@ export class Casino {
 
   accion(jugador) {
     if (this.jugando) return '';
+    if (this.listo && !this.abierto) {
+      const l = this.local(jugador.pos);
+      return Math.hypot(l.x - this.puertaX, l.z - this.b.z0) < 6 ? `Casino cerrado: abre al ${Math.round(CASINO_DESDE * 100)}%` : '';
+    }
     const c = this.cercano(jugador);
     if (!c) return '';
     return { blackjack: 'Jugar al blackjack (E)', poker: 'Jugar al póker (E)', ruleta: 'Jugar a la ruleta (E)', tragamonedas: 'Jugar al tragamonedas (E)' }[c.tipo];
@@ -1261,6 +1275,10 @@ export class Casino {
 
   // Se sienta a jugar: abre el panel del juego. Devuelve true si empezó.
   hacer(jugador) {
+    if (!this.abierto) {
+      this.ui.toast(`El casino abre cuando la mansión llegue al ${Math.round(CASINO_DESDE * 100)}%`, 'error');
+      return false;
+    }
     const c = this.cercano(jugador);
     if (!c) return false;
     this.jugador = jugador;
@@ -1881,6 +1899,13 @@ export class Casino {
   // ---------- Cada cuadro ----------
   actualizar(dt, jugador, noche) {
     if (!this.listo) return;
+    const abierto = !this.progreso || this.progreso() >= CASINO_DESDE;
+    if (abierto !== this.abierto) {
+      this.abierto = abierto;
+      if (abierto) this.cierre.set(new THREE.Vector3(1e6, -10, 1e6), new THREE.Vector3(1e6, -9, 1e6));
+      else this.cierre.copy(this.cierreCaja);
+      this.avisoCerrado.sprite.visible = !abierto;
+    }
     this.reloj += dt;
     const t = this.reloj;
     const l = this.local(jugador.pos);

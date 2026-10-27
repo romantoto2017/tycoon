@@ -21,6 +21,7 @@ import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD } from './ciudad.js';
 import { Casino } from './casino.js';
+import { Lucca } from './lucca.js';
 import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
@@ -109,8 +110,10 @@ async function iniciar() {
   const ottati = new Ottati(escena, UI);
   const ciudad = new Ciudad(escena, UI);
   // El casino de la ciudad (se arma con su manzana): tragamonedas, blackjack, póker y ruleta.
-  const casino = new Casino({ ciudad, escena, estado, ui: UI, guardar: guardarAhora });
+  const casino = new Casino({ ciudad, escena, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
   casino.alSalir = () => { controles.activo = modo === 'juego'; };
+  // Lucca Bossio: su local (atiende Shaggy), él caminando por la ciudad y su ropa.
+  const lucca = new Lucca({ ciudad, escena, estado, ui: UI });
   const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
   const autodromo = new Autodromo({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso, tycoon, flota });
@@ -182,7 +185,7 @@ async function iniciar() {
   const centroPista = PISTA.puntos.reduce((a, q) => ({ x: a.x + q.x / PISTA.puntos.length, z: a.z + q.z / PISTA.puntos.length }), { x: 0, z: 0 });
   const centro = (r) => ({ x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 });
   const plano = planoCiudad();
-  const NOMBRES_CIUDAD = { plaza: 'Plaza', banco: 'Banco', futbol: 'Cancha de fútbol', basquet: 'Cancha de básquet', nafta: 'Estación de servicio', parque: 'Parque', super: 'Súper', hotel: 'Hotel', verdu: 'Verdulería', kicks: 'KICKS', drip: 'VECI DRIP', futbolera: 'LA FUTBOLERA', casino: 'Casino' };
+  const NOMBRES_CIUDAD = { plaza: 'Plaza', banco: 'Banco', futbol: 'Cancha de fútbol', basquet: 'Cancha de básquet', nafta: 'Estación de servicio', parque: 'Parque', super: 'Súper', hotel: 'Hotel', verdu: 'Verdulería', kicks: 'KICKS', drip: 'VECI DRIP', futbolera: 'LA FUTBOLERA', casino: 'Casino', lucca: 'LUCCABOSSIO™' };
   // nivel 0: siempre; 1: con un poco de zoom; 2: de cerca. desde: zoom mínimo (píxeles por unidad).
   const etiqueta = (r, texto, nivel, desde) => ({ ...('x0' in r ? centro(r) : r), texto, nivel, desde });
   UI.prepararMapa({
@@ -358,6 +361,10 @@ async function iniciar() {
     }
     if (!conduciendo && casino.accion(jugador)) {
       if (casino.hacer(jugador)) controles.activo = false;
+      return;
+    }
+    if (!conduciendo && lucca.accion(jugador)) {
+      lucca.hacer(jugador);
       return;
     }
     if (!conduciendo && ciudad.accion(jugador)) {
@@ -689,6 +696,7 @@ async function iniciar() {
       sub: `${v.nombre} te muestra lo que hay`,
       plata: () => estado.plata,
       prendas: PRENDAS.filter((p) => p.tienda === t.T.id).map((p) => ({ ...p, tuya: estado.ropa.includes(p.id) })),
+      tema: t.T.id,
       alComprar: (id) => {
         const p = PRENDA[id];
         if (estado.plata < p.precio) {
@@ -718,6 +726,8 @@ async function iniciar() {
       },
     });
   };
+  lucca.alTienda = ciudad.alTienda;
+
 
   // Ropero: a la izquierda tu personaje (en 3D, girando) y a la derecha tus prendas.
   const probador = new Probador(document.getElementById('ropero-vista'));
@@ -933,7 +943,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, casino, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, casino, lucca, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1064,7 +1074,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : casino.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1102,6 +1112,7 @@ async function iniciar() {
     flota.actualizar();
     ciudad.actualizar(dt, jugador, modo === 'juego');
     casino.actualizar(dt, jugador, momento(hora()).noche);
+    lucca.actualizar(dt, jugador);
     actualizarArma(dt);
     actualizarLechugas();
     brillos.actualizar(dt);
