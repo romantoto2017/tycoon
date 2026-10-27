@@ -1237,7 +1237,7 @@ export class Taller {
     neon.colorSpace = THREE.SRGBColorSpace;
     neon.anisotropy = 4;
     const cartel = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), new THREE.MeshBasicMaterial({ map: neon }));
-    cartel.position.set(PORTON.x, alto - 0.2, z0 - 0.5);
+    cartel.position.set(PORTON.x, alto + 0.1, z0 - 2.7); // adelante del alero y de la tira de neón
     cartel.rotation.y = Math.PI;
     g.add(k.noSolido(cartel));
     // Cartel alto al costado de la autopista (se ve de lejos, de los dos lados).

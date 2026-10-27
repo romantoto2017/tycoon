@@ -5,43 +5,44 @@
 // - efecto: cuánto mejora el stat ese nivel, en total (no se suma al anterior): 0.1 = +10%.
 //   Motor: velocidad máxima. Turbo: aceleración (el 0 a 100 baja en esa proporción). Gomas:
 //   agarre en las curvas. Frenos: frenada.
-// - precio: fracción del precio del auto (los baratos mejoran barato y la Ferrari, caro).
+// - precio: fracción del precio del auto (los baratos mejoran barato y la Ferrari, caro). Todo al
+//   máximo sale 0,54 veces el auto.
 // - icono: el dibujito de la tarjeta.
 export const CATEGORIAS = [
   {
     id: 'motor', nombre: 'Motor', icono: '⚙️', stat: 'velocidad',
     niveles: [
-      { nombre: 'Admisión deportiva', icono: '🌀', efecto: 0.04, precio: 0.01 },
-      { nombre: 'Escape libre', icono: '💨', efecto: 0.08, precio: 0.02 },
-      { nombre: 'Pistones de competición', icono: '🔩', efecto: 0.13, precio: 0.03 },
-      { nombre: 'Motor preparado', icono: '🏁', efecto: 0.2, precio: 0.045 },
+      { nombre: 'Admisión deportiva', icono: '🌀', efecto: 0.04, precio: 0.0135 },
+      { nombre: 'Escape libre', icono: '💨', efecto: 0.08, precio: 0.027 },
+      { nombre: 'Pistones de competición', icono: '🔩', efecto: 0.13, precio: 0.0405 },
+      { nombre: 'Motor preparado', icono: '🏁', efecto: 0.2, precio: 0.06075 },
     ],
   },
   {
     id: 'turbo', nombre: 'Turbo', icono: '🐌', stat: 'aceleracion',
     niveles: [
-      { nombre: 'Turbo chico', icono: '🐌', efecto: 0.08, precio: 0.01 },
-      { nombre: 'Turbo grande', icono: '🌪️', efecto: 0.16, precio: 0.02 },
-      { nombre: 'Intercooler', icono: '❄️', efecto: 0.26, precio: 0.03 },
-      { nombre: 'Biturbo', icono: '🚀', efecto: 0.38, precio: 0.045 },
+      { nombre: 'Turbo chico', icono: '🐌', efecto: 0.08, precio: 0.0135 },
+      { nombre: 'Turbo grande', icono: '🌪️', efecto: 0.16, precio: 0.027 },
+      { nombre: 'Intercooler', icono: '❄️', efecto: 0.26, precio: 0.0405 },
+      { nombre: 'Biturbo', icono: '🚀', efecto: 0.38, precio: 0.06075 },
     ],
   },
   {
     id: 'gomas', nombre: 'Gomas', icono: '🛞', stat: 'manejo',
     niveles: [
-      { nombre: 'Gomas deportivas', icono: '🛞', efecto: 0.06, precio: 0.01 },
-      { nombre: 'Semi-slick', icono: '〰️', efecto: 0.12, precio: 0.02 },
-      { nombre: 'Slick', icono: '⭕', efecto: 0.19, precio: 0.03 },
-      { nombre: 'Slick de competición', icono: '🏆', efecto: 0.28, precio: 0.045 },
+      { nombre: 'Gomas deportivas', icono: '🛞', efecto: 0.06, precio: 0.0135 },
+      { nombre: 'Semi-slick', icono: '〰️', efecto: 0.12, precio: 0.027 },
+      { nombre: 'Slick', icono: '⭕', efecto: 0.19, precio: 0.0405 },
+      { nombre: 'Slick de competición', icono: '🏆', efecto: 0.28, precio: 0.06075 },
     ],
   },
   {
     id: 'frenos', nombre: 'Frenos', icono: '🛑', stat: 'frenado',
     niveles: [
-      { nombre: 'Pastillas deportivas', icono: '🟫', efecto: 0.08, precio: 0.01 },
-      { nombre: 'Discos ventilados', icono: '💿', efecto: 0.16, precio: 0.02 },
-      { nombre: 'Cálipers de 6 pistones', icono: '🔴', efecto: 0.25, precio: 0.03 },
-      { nombre: 'Carbono-cerámicos', icono: '🔥', efecto: 0.35, precio: 0.045 },
+      { nombre: 'Pastillas deportivas', icono: '🟫', efecto: 0.08, precio: 0.0135 },
+      { nombre: 'Discos ventilados', icono: '💿', efecto: 0.16, precio: 0.027 },
+      { nombre: 'Cálipers de 6 pistones', icono: '🔴', efecto: 0.25, precio: 0.0405 },
+      { nombre: 'Carbono-cerámicos', icono: '🔥', efecto: 0.35, precio: 0.06075 },
     ],
   },
 ];
