@@ -353,22 +353,15 @@ function crearPerro(d) {
   cabeza.add(caja3(C * 0.3, C * 0.2, 0.1, mat('#0b0b0c'), 0, -C * 0.05, C / 2 + d.hocico + 0.03));
   if (d.lengua) cabeza.add(caja3(C * 0.22, 0.05, C * 0.3, mat('#e2687a'), 0, -C * 0.46, C / 2 + d.hocico * 0.75));
   const ojos = new THREE.Group();
-  const cruces = new THREE.Group(); // los ojos de muerto (X)
   for (const s of [-1, 1]) {
     ojos.add(caja3(C * 0.17, C * 0.17, 0.05, mat(d.ojos), s * C * 0.24, C * 0.12, C / 2 + 0.02));
     ojos.add(caja3(C * 0.06, C * 0.06, 0.02, mat('#ffffff'), s * C * 0.24 + C * 0.04, C * 0.16, C / 2 + 0.05));
     if (fuego) ojos.add(caja3(C * 0.14, C * 0.08, 0.04, fuego, s * C * 0.24, C * 0.3, C / 2 + 0.02)); // las cejitas marrones
-    for (const r of [0.8, -0.8]) {
-      const x = caja3(C * 0.24, C * 0.05, 0.05, mat('#0b0b0c'), s * C * 0.24, C * 0.12, C / 2 + 0.03);
-      x.rotation.z = r;
-      cruces.add(x);
-    }
     const oreja = caja3(C * 0.14, d.orejas * C * 1.3, C * 0.5, pelo, s * (C / 2 + 0.06), -C * 0.12, -C * 0.02);
     oreja.rotation.z = s * 0.15;
     cabeza.add(oreja);
   }
-  cruces.visible = false;
-  cabeza.add(ojos, cruces);
+  cabeza.add(ojos);
   g.add(cabeza);
   // Cola (se mueve): sale de la cadera, apoyada atrás.
   const cola = new THREE.Group();
@@ -389,7 +382,84 @@ function crearPerro(d) {
     g.add(oso);
     g.userData.oso = oso;
   }
-  return { grupo: g, cabeza, cola, ojos, cruces, oso: g.userData.oso || null };
+  return { grupo: g, cabeza, cola, ojos, oso: g.userData.oso || null };
+}
+
+// Perro muerto: desplomado de costado (la cabeza hacia +x y la panza hacia +z), las patas flojas
+// tiradas en el piso, la cabeza caída con la lengua afuera, los ojos en X y un charco de sangre.
+function crearPerroMuerto(d, semilla) {
+  const g = new THREE.Group();
+  const pelo = mat(d.pelo);
+  const fuego = d.fuego ? mat(d.fuego) : null;
+  const negro = mat('#0b0b0c');
+  const caja3 = (w, h, l, m, x, y, z, ry = 0) => { const c = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), m); c.position.set(x, y, z); c.rotation.y = ry; return c; };
+  const { largo: L, ancho: W } = d;
+  const C = d.cabeza;
+  const H = W * 0.78; // de costado y aplastado contra el piso
+  const P = W * (0.75 + 0.15 * d.gordura); // lo que antes era el alto del lomo, ahora hacia la panza
+  // Pecho y cadera, un poco quebrados (no queda derecho como un mueble).
+  g.add(caja3(L * 0.45, H, P, pelo, L * 0.2, H / 2, 0, 0.08));
+  g.add(caja3(L * 0.42, H * 0.95, P, pelo, -L * 0.2, H * 0.475, 0.06, -0.18));
+  if (d.gordura) g.add(caja3(L * 0.55, H * 0.7, P * 0.4, mat(d.panza), 0, H * 0.35, P * 0.6)); // la panza desparramada
+  if (fuego) g.add(caja3(W * 0.5, W * 0.4, 0.06, fuego, L * 0.36, H * 0.5, P / 2 + 0.03));
+  // Patas tiradas hacia la panza: la de abajo apoyada, la de arriba encima y abierta.
+  const pata = Math.max(0.35, d.alto * 0.75);
+  for (const [x, ry] of [[L * 0.3, 0.15], [-L * 0.32, -0.25]]) {
+    for (const [y, abre] of [[W * 0.13, 0], [W * 0.38, 0.45]]) {
+      const giro = ry + (x > 0 ? abre : -abre);
+      const z = P / 2 + pata / 2 - 0.05;
+      const dx = Math.sin(giro) * pata / 2;
+      g.add(caja3(W * 0.26, W * 0.24, pata, pelo, x + dx, y, z, giro));
+      g.add(caja3(W * 0.3, W * 0.26, W * 0.3, fuego || pelo, x + dx * 2, y, z + pata / 2, giro));
+    }
+  }
+  // Cuello y cabeza caída (apoyada en el piso, girada hacia la panza).
+  g.add(caja3(C * 0.6, H * 0.6, C * 0.55, pelo, L * 0.45, H * 0.3, 0.08, 0.3));
+  const cabeza = new THREE.Group();
+  cabeza.position.set(L * 0.45 + C * 0.55, 0, 0.25);
+  cabeza.rotation.y = -0.45;
+  cabeza.add(caja3(C, C, C * 0.9, pelo, 0, C / 2, 0));
+  cabeza.add(caja3(d.hocico, C * 0.6, C * 0.45, fuego || pelo, C / 2 + d.hocico / 2, C * 0.32, C * 0.2));
+  cabeza.add(caja3(0.1, C * 0.3, C * 0.2, negro, C / 2 + d.hocico + 0.03, C * 0.32, C * 0.08));
+  cabeza.add(caja3(d.hocico * 0.6, 0.04, C * 0.3, mat('#d9566c'), C / 2 + d.hocico * 0.7, 0.03, C * 0.45 + 0.12)); // la lengua en el piso
+  for (const s of [-1, 1]) {
+    for (const r of [0.8, -0.8]) {
+      const x = caja3(0.05, C * 0.05, C * 0.24, negro, C / 2 + 0.03, C / 2 + s * C * 0.24, -C * 0.12);
+      x.rotation.x = r;
+      cabeza.add(x);
+    }
+  }
+  const oreja = caja3(C * 0.5, C * 0.12, d.orejas * C * 1.2, pelo, -C * 0.05, C + 0.06, -C * 0.15);
+  oreja.rotation.x = 0.25;
+  cabeza.add(oreja); // la de arriba, caída sobre la cabeza
+  g.add(cabeza);
+  g.add(caja3(d.cola, W * 0.15, W * 0.15, pelo, -L * 0.42 - d.cola / 2, W * 0.08, 0.2, -0.35)); // la cola, quieta en el piso
+  // Charco de sangre: manchas planas encimadas, más grande debajo del pecho y la cabeza.
+  const sangre = new THREE.MeshStandardMaterial({ color: '#4a0306', roughness: 0.18, metalness: 0.15, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const borde = new THREE.MeshStandardMaterial({ color: '#2a0103', roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+  let r = semilla;
+  const azar = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+  const disco = new THREE.CircleGeometry(1, 18).rotateX(-Math.PI / 2);
+  const manchas = [[L * 0.35, P * 0.6, L * 0.55], [L * 0.05, P * 0.7, L * 0.45], [L * 0.55, P * 1.1, L * 0.35], [-L * 0.25, P * 0.5, L * 0.3]];
+  for (let i = 0; i < 9; i++) {
+    const [x, z, t] = manchas[i % manchas.length];
+    const k = i < manchas.length ? 1 : 0.35 + azar() * 0.3;
+    const m = new THREE.Mesh(disco, i < manchas.length ? sangre : borde);
+    m.position.set(x + (azar() - 0.5) * L * (i < manchas.length ? 0.2 : 0.9), 0.012 + i * 0.002, z + (azar() - 0.5) * P * (i < manchas.length ? 0.4 : 1.6));
+    m.scale.set(t * k * (0.8 + azar() * 0.5), 1, t * k * (0.6 + azar() * 0.5));
+    m.rotation.y = azar() * Math.PI;
+    g.add(m);
+  }
+  // Unas gotas sueltas alrededor.
+  for (let i = 0; i < 6; i++) {
+    const m = new THREE.Mesh(disco, borde);
+    const a = azar() * Math.PI * 2;
+    const dist = L * (0.7 + azar() * 0.4);
+    m.position.set(Math.cos(a) * dist * 0.8 + L * 0.1, 0.011, Math.sin(a) * dist * 0.6 + P * 0.6);
+    m.scale.setScalar(0.05 + azar() * 0.08);
+    g.add(m);
+  }
+  return g;
 }
 
 export class Perros {
@@ -495,18 +565,22 @@ export class Perros {
         this.escena.add(m.grupo);
       }
       if (!this.vivo(p.id)) {
-        // Tirado de costado, con los ojos en X.
-        m.grupo.rotation.set(0, 0, Math.PI / 2);
-        m.grupo.position.y = DEF_PERROS[p.id].ancho * 0.5;
-        if (m.oso && m.oso.parent === m.grupo) {
-          // El osito queda en el piso, al lado.
-          m.grupo.remove(m.oso);
-          m.oso.position.set(p.x + 1.4, 0, p.z + 0.8);
-          this.escena.add(m.oso);
+        if (!m.muerto) {
+          // Se cambia por el perro desplomado en su charco; el osito queda tirado al lado.
+          if (m.oso) {
+            m.grupo.remove(m.oso);
+            m.oso.position.set(p.x - 2.6, 0, p.z + 1.2);
+            m.oso.rotation.set(0, 0.9, Math.PI / 2);
+            m.oso.position.y = 0.21;
+            this.escena.add(m.oso);
+          }
+          this.escena.remove(m.grupo);
+          m.grupo = crearPerroMuerto(DEF_PERROS[p.id], p.x * 131);
+          m.grupo.position.set(p.x - 0.5, 0, p.z - 0.6);
+          m.grupo.rotation.y = 0.35;
+          this.escena.add(m.grupo);
+          m.muerto = true;
         }
-        m.ojos.visible = false;
-        m.cruces.visible = true;
-        m.etiqueta.sprite.visible = false;
         continue;
       }
       // Vivo: mueve la cola (más rápido con mimos) y te mira si estás cerca.
