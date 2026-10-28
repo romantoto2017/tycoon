@@ -12,7 +12,7 @@ export function slotCuadro(i) {
 }
 
 const FORMAS = [trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete];
-const FORMAS_PROPIAS = { lapiz, papa, stm, boxer, flauta };
+const FORMAS_PROPIAS = { lapiz, papa, stm, boxer, flauta, laser: laserTepho, tele: teleChica, prepucio: prepucioVal };
 
 // Lápiz Staedtler azul, hexagonal, con punta de madera y mina negra, inclinado.
 function lapiz(k, p) {
@@ -90,6 +90,140 @@ function stm(k, p) {
   }
 }
 
+// Láser de Tepho: lapicera láser negra con la cabeza plateada (etiqueta con raya roja), el
+// botón, el clip y el rayo rojo saliendo de la punta, inclinada como en la foto.
+function laserTepho(k, p) {
+  const l = k.grupo();
+  const negro = '#141416';
+  const plata = '#c9ccd1';
+  l.add(k.cilindro(0.17, 0.17, 2.6, negro, 0, 0, 0, 14)); // cuerpo
+  l.add(k.esfera(0.17, negro, 0, -1.3, 0)); // la cola redondeada
+  l.add(k.cilindro(0.176, 0.176, 0.08, plata, 0, -0.35, 0, 14)); // anillo
+  l.add(k.cilindro(0.17, 0.19, 0.95, plata, 0, 1.77, 0, 14)); // cabeza
+  l.add(k.cilindro(0.193, 0.193, 0.3, '#e9e9ea', 0, 1.62, 0, 14)); // etiqueta
+  l.add(k.cilindro(0.195, 0.195, 0.06, '#c62828', 0, 1.6, 0, 14));
+  l.add(k.cilindro(0.13, 0.19, 0.12, '#a8abb0', 0, 2.3, 0, 14)); // punta
+  l.add(k.cilindro(0.06, 0.06, 0.02, '#1a0505', 0, 2.365, 0, 10));
+  l.add(k.caja(0.12, 0.16, 0.08, '#8a8d92', 0, 0.45, 0.17)); // botón
+  l.add(k.caja(0.09, 1.2, 0.05, plata, 0, -0.85, 0.2)); // clip
+  l.add(k.caja(0.09, 0.08, 0.1, plata, 0, -0.27, 0.18));
+  // El rayo (no le da la luz: siempre rojo fuerte) y el puntito en la punta.
+  l.add(k.cilindro(0.025, 0.025, 4.5, k.brillo('#ff1f1f'), 0, 2.37 + 2.25, 0, 6));
+  l.add(k.esfera(0.07, k.brillo('#ff5a5a'), 0, 2.38, 0));
+  l.position.y = 1.8;
+  l.rotation.z = -0.6;
+  p.add(l);
+}
+
+// Tele chica: la Futura de la cocina. Pantalla LCD negra brillante, el borde de abajo más
+// ancho con FUTURA, la línea bordó abajo de todo, el sticker azul de las especificaciones
+// arriba a la izquierda y el pie redondo.
+function teleChica(k, p) {
+  const t = k.grupo();
+  const negro = '#0d0d0f';
+  const W = 3.4, H = 2.5, Y = 2.05;
+  const pie = k.cilindro(0.95, 1.05, 0.1, negro, 0, 0.05, 0, 24);
+  pie.scale.z = 0.62;
+  t.add(pie);
+  t.add(k.caja(0.55, 0.75, 0.22, negro, 0, 0.45, 0)); // cuello
+  t.add(k.caja(W, H, 0.2, negro, 0, Y, 0)); // marco
+  t.add(k.caja(W * 0.62, H * 0.6, 0.3, '#18191c', 0, Y + 0.05, -0.2)); // la panza de atrás
+  // Pantalla apagada con un reflejo suave.
+  const pantalla = k.imagenCanvas((g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, h);
+    gr.addColorStop(0, '#1d2128');
+    gr.addColorStop(0.45, '#0b0d10');
+    gr.addColorStop(1, '#14171c');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,0.05)';
+    g.beginPath(); g.moveTo(w * 0.55, 0); g.lineTo(w * 0.8, 0); g.lineTo(w * 0.45, h); g.lineTo(w * 0.2, h); g.fill();
+  }, 128, 96);
+  pantalla.scale.set(W - 0.3, H - 0.55, 1);
+  pantalla.position.set(0, Y + 0.08, 0.101);
+  t.add(pantalla);
+  const marca = k.imagenCanvas((g, w, h) => {
+    g.fillStyle = negro;
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#d9d9d9';
+    g.font = `700 ${h * 0.62}px Arial, sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('FUTURA', w / 2, h * 0.55);
+    g.beginPath(); g.moveTo(w * 0.86, h * 0.78); g.lineTo(w * 0.92, h * 0.3); g.lineTo(w * 0.98, h * 0.78); g.fill();
+  }, 256, 48);
+  marca.scale.set(0.95, 0.18, 1);
+  marca.position.set(0, Y - H / 2 + 0.13, 0.102);
+  t.add(marca);
+  t.add(k.caja(W - 0.1, 0.035, 0.03, '#7a1626', 0, Y - H / 2 + 0.02, 0.1)); // línea bordó
+  const sticker = k.imagenCanvas((g, w, h) => {
+    g.fillStyle = '#1f6fd1';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ffffff';
+    g.font = `700 ${w * 0.2}px Arial, sans-serif`;
+    g.textAlign = 'center';
+    ['HD', 'LCD', 'USB', 'HDMI', 'TV', 'DIGITAL'].forEach((x, i) => g.fillText(x, w / 2, h * (0.12 + i * 0.15)));
+  }, 64, 256);
+  sticker.scale.set(0.16, 0.85, 1);
+  sticker.position.set(-W / 2 + 0.18, Y + H / 2 - 0.7, 0.103);
+  t.add(sticker);
+  p.add(t);
+}
+
+// Prepucio de Val: un cacho de piel como una manguita corta, abierta de un lado (no es un
+// anillo entero), con el borde de arriba enrollado, bultos irregulares, pliegues y arrugas
+// finas; adentro, más rosado.
+function prepucioVal(k, p) {
+  const T = k.THREE;
+  // Perfil (radio, alto) de la pared: afuera sube angostándose, el borde de arriba enrollado
+  // hacia afuera, y baja por adentro hasta el borde de abajo (redondeado).
+  const perfil = [];
+  const N = 40;
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const y = 0.5 * Math.sin(a - Math.PI / 2) * -1; // de abajo (-0.5) a arriba (0.5) y vuelta
+    const sube = Math.cos(a) * 0.5 + 0.5; // 1 abajo, 0 arriba
+    const grosor = 0.11 + 0.07 * suavePiel((y - 0.25) / 0.25); // más gordo en el borde enrollado
+    const r = 0.42 + 0.14 * (1 - (y + 0.5)) + Math.sin(a) * grosor;
+    perfil.push(new T.Vector2(r * (0.9 + 0.1 * sube), y * 0.9));
+  }
+  const geo = new T.LatheGeometry(perfil, 72, 0, Math.PI * 1.55);
+  const pos = geo.attributes.position;
+  const v = new T.Vector3();
+  const colores = [];
+  const piel = new T.Color('#e3ad94');
+  const rosado = new T.Color('#d4827a');
+  const sombra = new T.Color('#9c6553');
+  const c = new T.Color();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const th = Math.atan2(v.z, v.x);
+    const r = Math.hypot(v.x, v.z);
+    const ref = 0.42 + 0.14 * (0.5 - v.y / 0.9);
+    const adentro = suavePiel((ref - r) / 0.12);
+    // Bultos grandes, pliegues a lo largo y arrugas finas cruzadas.
+    const bulto = Math.sin(th * 2 + 0.4) * 0.07 + Math.sin(th * 3 - v.y * 3 + 1.7) * 0.05;
+    const pliegue = Math.sin(th * 9 + v.y * 4) * 0.025;
+    const arruga = Math.sin(th * 26 + v.y * 10) * 0.006 + Math.sin(v.y * 22 - th * 4) * 0.007;
+    const d = bulto + pliegue + arruga;
+    const s = 1 + d / Math.max(0.3, r);
+    v.x *= s * 1.1;
+    v.z *= s * 0.9;
+    v.y += 0.12 * Math.sin(th * 1.5 + 0.8) + 0.05 * Math.sin(th * 4); // el borde no queda parejo
+    pos.setXYZ(i, v.x, v.y, v.z);
+    c.copy(piel).lerp(rosado, adentro * 0.85).lerp(sombra, Math.min(0.6, Math.max(0, -(pliegue + arruga)) * 12));
+    colores.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new T.Float32BufferAttribute(colores, 3));
+  geo.computeVertexNormals();
+  const m = new T.Mesh(geo, new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide }));
+  m.position.y = 0.95;
+  m.rotation.set(0.35, 0.6, 0.2);
+  m.scale.setScalar(1.5);
+  p.add(m);
+}
+const suavePiel = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+
 export function objetoEspecial(k, g, i, obj) {
   const [x, z] = SLOTS_ESPECIALES[i % SLOTS_ESPECIALES.length];
   g.add(k.cajaDe(x - 1.6, 0, z - 1.6, x + 1.6, 1.4, z + 1.6, '#f5f5f5'));
@@ -100,10 +234,9 @@ export function objetoEspecial(k, g, i, obj) {
   pieza.userData.girar = 0.6;
   pieza.userData.dinamico = true;
   g.add(pieza);
-  const et = k.etiqueta([
-    { texto: obj.nombre, tam: 52, color: '#ffd23f' },
-    { texto: obj.descripcion || '', tam: 34 },
-  ], 6);
+  const lineas = [{ texto: obj.nombre, tam: 52, color: '#ffd23f' }];
+  if (obj.descripcion) lineas.push({ texto: obj.descripcion, tam: 34 });
+  const et = k.etiqueta(lineas, 6);
   et.position.set(x, 7.4, z);
   g.add(et);
 }

@@ -413,7 +413,7 @@ export class Tycoon {
     } else {
       sfx.comprar();
       this.alComprar?.(item);
-      this.ui.toast(`¡${item.nombre}!`, 'ok');
+      this.ui.toast(`¡${item.revela || item.nombre}!`, 'ok');
       if (item.descripcion) this.ui.toast(item.descripcion, 'plata');
     }
     this.guardar();

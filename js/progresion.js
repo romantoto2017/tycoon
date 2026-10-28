@@ -255,7 +255,8 @@ OBJETOS_VECIBANDA.forEach((obj, i) => {
   const etapa = Math.min(10, Math.max(1, Math.round(obj.etapa) || 1));
   const [x, z] = Es.SLOTS_ESPECIALES[i % Es.SLOTS_ESPECIALES.length];
   insertarDespues(ETAPAS[etapa], {
-    id: `especial${i + 1}`, nombre: obj.nombre, descripcion: obj.descripcion, precio: obj.precio,
+    // Sorpresa: hasta comprarlo no se sabe qué es (al comprarlo se dice el nombre de verdad).
+    id: `especial${i + 1}`, nombre: `Objeto Vecibanda ${i + 1}`, revela: obj.nombre, descripcion: obj.descripcion, precio: obj.precio,
     tipo: 'construccion', especial: true, opcional: true, requiere: [ETAPAS[etapa]],
     boton: suelo(x < 0 ? x - 4.5 : x + 4.5, z),
     construir: (k, g) => Es.objetoEspecial(k, g, i, obj),

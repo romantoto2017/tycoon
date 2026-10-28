@@ -38,7 +38,7 @@ Todo en `data/objetos.js`:
 
 - `DROPPERS`: nombres y colores de las 10 máquinas.
 - `MEJORAS_VALOR` / `MEJORAS_VELOCIDAD`: nombres de las mejoras.
-- `OBJETOS_VECIBANDA`: los 8 objetos especiales (nombre, precio, etapa, descripción, forma). Aparecen en pedestales en el camino de entrada. Son caros a propósito (10 a 30 minutos juntando plata) y no hacen falta para el cartel final.
+- `OBJETOS_VECIBANDA`: los 8 objetos especiales (nombre, precio, etapa, descripción, forma). Aparecen en pedestales en el camino de entrada. Son caros a propósito (10 a 30 minutos juntando plata) y no hacen falta para el cartel final. Hasta comprarlo, el botón dice solo "Objeto Vecibanda N": qué es se ve al comprarlo. Los últimos tres: el Láser de Tepho, la Tele Chica (la Futura) y el Prepucio de Val.
 - `CUADROS`: nombre, precio y archivo de imagen (en `assets/cuadros/`). Toman la forma de la foto. Un `.mp4` se ve animado (conviene subir también la versión `.webm` con el mismo nombre). Las fotos originales que se subieron quedan en `assets/cuadros/originales/`; `herramientas/especiales.py` las recorta y achica.
 - `LUJOS`: objetos de rico con lugar fijo (estatuas, piano, T-Rex, Nico de cartón, bóveda, piscina infinita, helicóptero).
 
@@ -118,7 +118,7 @@ Cuando ya tenés algún perro, "Hablar con Francis Jeremy (E)" abre una charla c
 
 ## TP a la ciudad
 
-A la salida de la mansión (al lado del portón, del lado izquierdo) se compra el **TP a la Ciudad Vecibanda** por 10 T (precio fijo y opcional, aparece con el auto). Es un portal con aro celeste: "Ir a la Ciudad Vecibanda (E)" te deja en la avenida de la entrada de la ciudad, donde está el portal de vuelta ("Volver a la mansión (E)"). Solo a pie. Lugar y precio en `TP_CIUDAD` (`js/constantes.js`); el portal es `crearPortal` en `js/ciudad.js` y lo usa `main.js`.
+A la salida de la mansión (al lado del portón, del lado izquierdo) se compra el **TP a la Ciudad Vecibanda** por 5 T (precio fijo y opcional, aparece con el auto). Es un portal con aro celeste: "Ir a la Ciudad Vecibanda (E)" te deja en la avenida de la entrada de la ciudad, donde está el portal de vuelta ("Volver a la mansión (E)"). Solo a pie. Lugar y precio en `TP_CIUDAD` (`js/constantes.js`); el portal es `crearPortal` en `js/ciudad.js` y lo usa `main.js`.
 
 ## Misiones
 

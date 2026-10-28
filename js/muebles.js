@@ -2,7 +2,7 @@
 // x de -8 a 8, z de -6.6 a 6.6, y desde el piso terminado.
 import { nivel, ALTO_PISO, LOSA, PASILLO, NUCLEO, COLUMNA, MANSION } from './constantes.js';
 import { colgante, GROSOR_INT } from './arquitectura.js';
-import { liberarAlSubir } from './texturas.js';
+import { liberarAlSubir } from './liberar.js';
 
 // Habitaciones: W/E = ala oeste/este, I/O = columna interior/exterior, F/B = adelante/atrás.
 const LUGARES = {

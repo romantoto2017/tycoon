@@ -86,7 +86,7 @@ export const CIUDAD = { x: -20000, z: CALLE_Z };
 export const PLAYA = { x0: -380, x1: 620, z0: CALLE_Z + 8.5, orilla: CALLE_Z + 58, vadeo: 6.5, mar: { x0: -2600, x1: 2600, z1: 2600 }, muelle: { x: 46, largo: 40, ancho: 5 } };
 // TP a la ciudad: el portal a la salida de la mansión (se compra, 10 T) y donde aparecés en la
 // ciudad (en la avenida de la entrada, con el portal de vuelta).
-export const TP_CIUDAD = { x: -18, z: 47, precio: 1e13, llegada: { x: CIUDAD.x + 296, z: CALLE_Z + 18 } };
+export const TP_CIUDAD = { x: -18, z: 47, precio: 5e12, llegada: { x: CIUDAD.x + 296, z: CALLE_Z + 18 } };
 // La autopista va desde donde termina la calle del barrio hasta la entrada de la ciudad.
 export const AUTOPISTA = { x0: CIUDAD.x + 340, x1: -640, z: CALLE_Z, medioAncho: 12 };
 // Vecibanda Motors, el Galpón Vecibanda y las misiones de los autos abren a este progreso.

@@ -35,16 +35,17 @@ export const MEJORAS_VELOCIDAD = ['Cinta Turbo', 'Droppers Rápidos', 'Motor Vec
 // (trofeo, estatua, guitarra, pelota, gnomo, heladera, tele, cohete).
 // Son caros a propósito (más o menos 20 veces lo que se gana en ese momento, unos 10 a 25
 // minutos juntando) y no hacen falta para el cartel final: son los trofeos difíciles.
-// forma (opcional): 'lapiz', 'papa', 'stm', 'boxer' o 'flauta' usan su modelo; sin forma, una figura de relleno.
+// forma (opcional): 'lapiz', 'papa', 'stm', 'boxer', 'flauta', 'laser', 'tele' o 'prepucio' usan su modelo;
+// sin forma, una figura de relleno. Antes de comprarlo, el botón dice solo "Objeto Vecibanda N".
 export const OBJETOS_VECIBANDA = [
   { nombre: 'Lápiz de Nico', precio: 5000, etapa: 4, descripcion: 'Staedtler Mars Lumograph 9B', forma: 'lapiz' },
   { nombre: 'Papa Podrida', precio: 25000, etapa: 5, descripcion: 'Nadie sabe hace cuánto está', forma: 'papa' },
   { nombre: 'STM de la Schwepa', precio: 60000, etapa: 6, descripcion: 'Boleto estudiante', forma: 'stm' },
   { nombre: 'Boxer Supreme', precio: 900000, etapa: 7, descripcion: 'Original, sin estrenar', forma: 'boxer' },
   { nombre: 'Flauta del Pelado', precio: 1.2e6, etapa: 7, descripcion: 'La que sonó en la cancha', forma: 'flauta' },
-  { nombre: 'Objeto Vecibanda 6', precio: 8e7,      etapa: 8,  descripcion: 'Descripción corta 6' },
-  { nombre: 'Objeto Vecibanda 7', precio: 4e9,     etapa: 9,  descripcion: 'Descripción corta 7' },
-  { nombre: 'Objeto Vecibanda 8', precio: 4.5e10,    etapa: 10, descripcion: 'Descripción corta 8' },
+  { nombre: 'Láser de Tepho', precio: 8e7, etapa: 8, forma: 'laser' },
+  { nombre: 'Tele Chica', precio: 4e9, etapa: 9, descripcion: 'La del rocket', forma: 'tele' },
+  { nombre: 'Prepucio de Val', precio: 4.5e10, etapa: 10, descripcion: 'Guardado con cariño', forma: 'prepucio' },
 ];
 
 // Cuadros: la imagen se busca en assets/cuadros/<archivo> (un .mp4 se ve animado).
