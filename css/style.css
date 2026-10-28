@@ -257,6 +257,17 @@ html, body {
 .modal p { margin: 0 0 18px; font-size: 17px; color: #333; }
 .fila { display: flex; gap: 12px; justify-content: center; }
 
+/* ---------- Caja fuerte (bóveda del garage) ---------- */
+.modal.caja-fuerte { width: min(420px, 100%); max-width: 420px; }
+.modal.caja-fuerte h2 { color: #a16207; }
+.caja-montos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.caja-montos div { background: #fff8e1; border: 3px solid #f2c94c; border-radius: 14px; padding: 8px 6px; }
+.caja-montos small { display: block; font-size: 14px; font-weight: 700; color: #7a5b12; }
+.caja-montos b { font-size: 24px; color: #1b5e20; font-variant-numeric: tabular-nums; }
+.caja-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.caja-botones .btn { min-height: 48px; font-size: 17px; padding: 8px 10px; }
+.caja-botones .btn:disabled { opacity: 0.45; cursor: default; }
+
 /* ---------- Aviso fijo (Schwepa) ---------- */
 .aviso {
   position: fixed;

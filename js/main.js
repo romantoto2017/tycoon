@@ -388,6 +388,49 @@ async function iniciar() {
     controles.activo = modo === 'juego';
     UI.toast('¡Buen día!', 'info');
   };
+  // Caja fuerte: en la bóveda del garage (con la bóveda comprada) se guarda la plata y se saca
+  // cuando quieras. Lo de la caja no lo roba nadie (ni la Schwepa ni Manu).
+  const $c = (id) => document.getElementById(id);
+  const CAJA = { x: GARAGE.x0 + 7.5, z: GARAGE.z0 + 4 }; // en la puerta de la cámara de la bóveda
+  const cercaCaja = () => !conduciendo && estado.compras.includes('lujo_boveda') && Math.hypot(jugador.pos.x - CAJA.x, jugador.pos.z - CAJA.z) < 4.5 && jugador.pos.y < 3;
+  const verCaja = () => {
+    estado.cajaFuerte ??= 0;
+    $c('caja-guardada').textContent = `$${formato(estado.cajaFuerte)}`;
+    $c('caja-bolsillo').textContent = `$${formato(estado.plata)}`;
+    $c('caja-guardar-todo').disabled = $c('caja-guardar-mitad').disabled = estado.plata < 1;
+    $c('caja-sacar-todo').disabled = $c('caja-sacar-mitad').disabled = estado.cajaFuerte < 1;
+  };
+  const abrirCaja = () => {
+    controles.activo = false;
+    verCaja();
+    UI.mostrar('caja', true);
+    $c('caja-guardar-todo').focus({ preventScroll: true });
+  };
+  const cerrarCaja = () => {
+    UI.mostrar('caja', false);
+    controles.activo = modo === 'juego';
+  };
+  const moverCaja = (guardar, parte) => {
+    estado.cajaFuerte ??= 0;
+    const monto = Math.floor((guardar ? estado.plata : estado.cajaFuerte) * parte);
+    if (monto < 1) return;
+    estado.plata += guardar ? -monto : monto;
+    estado.cajaFuerte += guardar ? monto : -monto;
+    sfx.comprar();
+    UI.toast(guardar ? `Guardaste $${formato(monto)} en la caja fuerte` : `Sacaste $${formato(monto)} de la caja fuerte`, 'plata');
+    guardarAhora();
+    verCaja();
+  };
+  $c('caja-guardar-todo').addEventListener('click', () => moverCaja(true, 1));
+  $c('caja-guardar-mitad').addEventListener('click', () => moverCaja(true, 0.5));
+  $c('caja-sacar-todo').addEventListener('click', () => moverCaja(false, 1));
+  $c('caja-sacar-mitad').addEventListener('click', () => moverCaja(false, 0.5));
+  $c('caja-cerrar').addEventListener('click', cerrarCaja);
+  window.addEventListener('keydown', (e) => {
+    if (!UI.visible('caja')) return;
+    if (e.code === 'Escape' || e.code === 'KeyE') { e.stopImmediatePropagation(); e.preventDefault(); cerrarCaja(); }
+  }, true);
+
   // TP a la ciudad (se compra a la salida de la mansión): el portal de la mansión te lleva a la
   // entrada de la ciudad, donde está el de vuelta. Solo a pie.
   const tpComprado = () => estado.compras.includes('tp_ciudad');
@@ -431,6 +474,10 @@ async function iniciar() {
   const accion = () => {
     if (conduciendo && !enHeli() && !autodromo.corriendo && taller.accion(jugador, vehiculo)) {
       if (taller.hacer(vehiculo)) controles.activo = false;
+      return;
+    }
+    if (cercaCaja()) {
+      abrirCaja();
       return;
     }
     if (cercaTP()) {
@@ -1018,7 +1065,7 @@ async function iniciar() {
     if (e.code !== 'Escape' || modo !== 'juego') return;
     if (UI.visible('config')) cerrarConfig();
     else if (gym.entrenando) gym.dejar(jugador);
-    else if (!UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto') && !UI.visible('misiones') && !UI.visible('dialogo') && !UI.visible('catalogo') && !UI.visible('ropero')) abrirConfig();
+    else if (!UI.visible('caja') && !UI.visible('confirmar') && !UI.visible('final') && !UI.visible('menu-resto') && !UI.visible('misiones') && !UI.visible('dialogo') && !UI.visible('catalogo') && !UI.visible('ropero')) abrirConfig();
   });
 
   // Personaje de fondo mientras se ve el menú.
@@ -1170,7 +1217,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : textoTP() || playa.accion(jugador) || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;

@@ -169,6 +169,7 @@ Si subís `assets/moneda.png`, reemplaza a la moneda "VB" dibujada por código (
 - **Piscina infinita:** ahora va del pabellón hasta el helipuerto y llega al borde de atrás de la terraza; el agua queda al ras del vidrio y se derrama por afuera a una canaleta. Tiene escalones, luces abajo del agua y un deck de madera adelante.
 - **Jacuzzi y reposeras:** deck de madera, jacuzzi redondo de piedra con asiento, luz abajo del agua y burbujas (se puede meter uno), escalones, toallas y champagne; tres reposeras con almohadón a rayas y respaldo reclinado, mesitas con jugo, sombrilla grande cuadrada y macetas redondas.
 - **Bóveda de oro** (garage): cámara de acero con la puerta redonda gigante abierta (volante, pernos, bisagra), estantes llenos de lingotes, pilas de monedas, una montaña de oro y bolsas de plata con luz dorada adentro, el teclado de la clave, el cartel "BÓVEDA VECIBANDA" y afuera una tarima con la pirámide de lingotes.
+- **Caja fuerte** (en la puerta de la bóveda, con la bóveda comprada): "Abrir la caja fuerte (E)" muestra lo guardado y lo que tenés en el bolsillo, con Guardar todo / la mitad y Sacar todo / la mitad. Lo de la caja no lo roba nadie (ni la Schwepa ni Manu Mendez). Se guarda en `estado.cajaFuerte` (`js/main.js`).
 - **Fuegos artificiales** del final: 20 segundos al terminar la mansión, y nada más (ya no arrancan al cargar la partida).
 
 ## Muebles
