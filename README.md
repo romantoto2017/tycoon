@@ -58,6 +58,10 @@ Morocho, pelo corto con rulos, alto y medio gordito, con la remera gris de rayas
 - **Con la Schwepa, a la mansión:** 0,5% por minuto, solo si estás en la casa. Entran caminando por el portón, cada uno con un AK-47, y se llevan TODO (lo del cobrador y la plata que tenés). No se los puede parar: el cartel queda hasta que se van.
 - **Con la Schwepa, asaltando un local:** 5% por minuto mientras andás por la ciudad, en el local que te quede más cerca (la ropa de LUCCABOSSIO™, la verdulería o un auto de Vecibanda Motors). Apuntan, gritan y tiran al aire un par de minutos; después se van con la ropa, el cajón de verdura o manejando el auto (el de la vidriera vuelve al rato).
 
+## Amarishuow
+
+Un cuerpo normal todo amarillo (cabeza incluida): sin cara, sin pelo y sin ropa. Cada tanto cambia de lugar: a veces pasea por la vereda de la mansión o por la plaza de la ciudad (como Dufre) y a veces está parado en el Power Camp, cerca de la entrada, mirando el celu. Si te acercás en el gym, guarda el celu y te ofrece la mano: "Chocar la mano con el Amarishuow (E)" (el mismo choque que Kelvin y Ottati). Todo en `js/amarishuow.js`.
+
 ## Día y noche
 
 Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. De noche, al lado de una cama comprada aparece "Dormir (E)": se funde a negro y te despertás a la mañana. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.

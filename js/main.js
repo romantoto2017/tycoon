@@ -20,6 +20,7 @@ import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
 import { Manu, Banda } from './manu.js';
+import { Amarishuow } from './amarishuow.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
@@ -121,6 +122,7 @@ async function iniciar() {
   const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
   // Manu Mendez: solo, de paseo; con la Schwepa, robando (la mansión o un local de la ciudad).
   const manu = new Manu(escena, UI);
+  const amarishuow = new Amarishuow(escena, UI);
   const banda = new Banda({ escena, tycoon, ui: UI, ciudad, lucca, concesionario });
   ladron.ocupado = () => banda.enCasa;
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
@@ -460,6 +462,10 @@ async function iniciar() {
     }
     if (!conduciendo && perros.accion(jugador)) {
       perros.hacer(jugador);
+      return;
+    }
+    if (!conduciendo && amarishuow.accion(jugador)) {
+      amarishuow.hacer(jugador);
       return;
     }
     if (!conduciendo && ottati.accion(jugador)) {
@@ -1018,7 +1024,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1149,7 +1155,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : textoTP() || playa.accion(jugador) || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : textoTP() || playa.accion(jugador) || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1181,6 +1187,7 @@ async function iniciar() {
     misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
     dufre.actualizar(dt, jugador, modo === 'juego');
     ottati.actualizar(dt, jugador, modo === 'juego');
+    amarishuow.actualizar(dt, jugador, modo === 'juego');
     banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);
     manu.actualizar(dt, jugador, modo === 'juego', banda.activa);
     concesionario.actualizar(dt, jugador);
