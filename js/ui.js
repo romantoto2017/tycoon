@@ -860,6 +860,21 @@ function dibujarMapa(g, w, h, vista, chico = false) {
     for (const m of p.ciudad.manzanas) rect(m.x0, m.z0, m.x1, m.z1, colores[m.tipo] || ['#8a8f99', '#a3a7ae', '#b8bcc2', '#d8c9b4'][Math.min(3, Math.floor(m.anillo))]);
     for (const c of p.ciudad.calles) rect(c.x0, c.z0, c.x1, c.z1, c.avenida ? '#4a4c52' : '#5d6066');
     for (const e of p.edificios) rect(e.x0, e.z0, e.x1, e.z1, e.color);
+    // La playa: el mar (turquesa en la orilla, azul profundo hacia el horizonte), la arena, la
+    // espuma de la orilla y el muelle.
+    if (p.playa) {
+      const { mar, arena, muelle } = p.playa;
+      const z0 = Z(mar.z0);
+      const agua = g.createLinearGradient(0, z0, 0, z0 + Math.max(40, 320 * s));
+      agua.addColorStop(0, '#5fd6cf');
+      agua.addColorStop(0.35, '#1793c4');
+      agua.addColorStop(1, '#0d4a86');
+      rect(mar.x0, mar.z0, mar.x1, mar.z1, agua);
+      rect(arena.x0, arena.z0, arena.x1, arena.z1, '#f1e1bb');
+      rect(arena.x0, arena.z1 - 4, arena.x1, arena.z1, '#d9c08f');
+      rect(mar.x0, mar.z0 - 0.8, mar.x1, mar.z0 + 1.2, 'rgba(255,255,255,0.85)');
+      rect(muelle.x0, muelle.z0, muelle.x1, muelle.z1, '#a8784a');
+    }
   }
   // Las fotos desde arriba de cada zona.
   g.imageSmoothingEnabled = true;
@@ -870,6 +885,25 @@ function dibujarMapa(g, w, h, vista, chico = false) {
     const d = (z.z1 - z.z0) * s;
     if (a > w || b > h || a + c < 0 || b + d < 0) continue;
     g.drawImage(z.canvas, a, b, c, d);
+  }
+  // Lo que no desbloqueaste: tapado, con un "?" grande.
+  for (const e of MAPA.etiquetas) {
+    if (!e.area || !e.bloqueado?.()) continue;
+    const a = X(e.area.x0);
+    const b = Z(e.area.z0);
+    const c = (e.area.x1 - e.area.x0) * s;
+    const d = (e.area.z1 - e.area.z0) * s;
+    if (a > w || b > h || a + c < 0 || b + d < 0) continue;
+    g.fillStyle = 'rgba(38,41,48,0.94)';
+    g.fillRect(a, b, Math.max(c, 3), Math.max(d, 3));
+    const tam = Math.min(c, d) * 0.7;
+    if (tam > 8) {
+      g.font = `900 ${Math.round(tam)}px Fredoka, Arial, sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillStyle = 'rgba(255,255,255,0.35)';
+      g.fillText('?', a + c / 2, b + d / 2);
+    }
   }
   // Nombres: los importantes siempre; los demás, cuando hay zoom para leerlos.
   g.textAlign = 'center';
@@ -884,9 +918,10 @@ function dibujarMapa(g, w, h, vista, chico = false) {
     g.font = `800 ${tam}px Fredoka, Arial, sans-serif`;
     g.lineWidth = 4;
     g.strokeStyle = 'rgba(0,0,0,0.75)';
-    g.strokeText(e.texto, x, y);
+    const texto = e.bloqueado?.() ? '?' : e.texto;
+    g.strokeText(texto, x, y);
     g.fillStyle = e.nivel === 0 ? '#ffd23f' : '#ffffff';
-    g.fillText(e.texto, x, y);
+    g.fillText(texto, x, y);
   }
   // Vos: la flecha (para donde mirás o manejás), con un anillo para encontrarla fácil.
   const px = X(MAPA.pos.x);

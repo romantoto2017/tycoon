@@ -20,13 +20,13 @@ import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
-import { Casino } from './casino.js';
+import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
 import { Playa } from './playa.js';
 import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD } from './constantes.js';
+import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD, PLAYA, AUTOS_DESDE } from './constantes.js';
 import { crearAK } from './arma.js';
 import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
 import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
@@ -191,6 +191,11 @@ async function iniciar() {
   const NOMBRES_CIUDAD = { plaza: 'Plaza', banco: 'Banco', futbol: 'Cancha de fútbol', basquet: 'Cancha de básquet', nafta: 'Estación de servicio', parque: 'Parque', super: 'Súper', hotel: 'Hotel', verdu: 'Verdulería', kicks: 'KICKS', drip: 'VECI DRIP', futbolera: 'LA FUTBOLERA', casino: 'Casino', lucca: 'LUCCABOSSIO™' };
   // nivel 0: siempre; 1: con un poco de zoom; 2: de cerca. desde: zoom mínimo (píxeles por unidad).
   const etiqueta = (r, texto, nivel, desde) => ({ ...('x0' in r ? centro(r) : r), texto, nivel, desde });
+  // Lo que todavía no desbloqueaste: en el mapa se tapa con un "?" (y el nombre también es "?").
+  const oculto = (e, area, bloqueado) => Object.assign(e, { area, bloqueado });
+  const progreso = () => tycoon.progreso;
+  const margen = (r, m) => ({ x0: r.x0 - m, z0: r.z0 - m, x1: r.x1 + m, z1: r.z1 + m });
+  const cajaPista = PISTA.puntos.reduce((a, q) => ({ x0: Math.min(a.x0, q.x), z0: Math.min(a.z0, q.z), x1: Math.max(a.x1, q.x), z1: Math.max(a.z1, q.z) }), { x0: Infinity, z0: Infinity, x1: -Infinity, z1: -Infinity });
   UI.prepararMapa({
     plano: {
       calle: { x0: -650, x1: AUTOPISTA.x1 + 10, z0: CALLE_Z - 6, z1: CALLE_Z + 6 },
@@ -202,22 +207,27 @@ async function iniciar() {
         { ...GALPON, color: '#9aa1a8' }, { ...RESTO, color: '#b55239' }, { ...GARAGE, color: '#cfc9bd' },
       ],
       zonas: { ...ZONAS_MAPA, todo: [CIUDAD.x - 420, -380, 360, AUTODROMO.z + 920] },
+      playa: { arena: { x0: PLAYA.x0, z0: PLAYA.z0, x1: PLAYA.x1, z1: PLAYA.orilla }, mar: { x0: PLAYA.mar.x0, z0: PLAYA.orilla, x1: PLAYA.mar.x1, z1: PLAYA.mar.z1 }, muelle: { x0: PLAYA.muelle.x - PLAYA.muelle.ancho / 2, z0: PLAYA.orilla - 9, x1: PLAYA.muelle.x + PLAYA.muelle.ancho / 2, z1: PLAYA.orilla + PLAYA.muelle.largo } },
     },
     etiquetas: [
       etiqueta(MANSION, 'Mansión', 0, 0),
-      etiqueta(centroPista, 'Autódromo Vecibanda Ring', 0, 0),
+      oculto(etiqueta(centroPista, 'Autódromo Vecibanda Ring', 0, 0), margen(cajaPista, 70), () => progreso() < AUTOS_DESDE),
       etiqueta({ x: CIUDAD.x, z: CIUDAD.z - RADIO_CIUDAD - 30 }, 'Ciudad Vecibanda', 0, 0),
       etiqueta({ x: (AUTOPISTA.x0 + AUTOPISTA.x1) / 2 - 3000, z: AUTOPISTA.z - 30 }, 'Autopista', 0, 0),
       etiqueta(GYM, 'Power Camp (gym)', 1, 0.15),
-      etiqueta(GALPON, 'Galpón Vecibanda', 1, 0.15),
-      etiqueta(RESTO, 'Restaurante', 1, 0.15),
+      oculto(etiqueta(GALPON, 'Galpón Vecibanda', 1, 0.15), margen(GALPON, 4), () => !estado.compras.includes('galpon')),
+      oculto(etiqueta(RESTO, 'Restaurante', 1, 0.15), margen(RESTO, 4), () => !tycoon.restoAbierto),
+      etiqueta({ x: (PLAYA.x0 + PLAYA.x1) / 2, z: (PLAYA.z0 + PLAYA.orilla) / 2 }, 'Playa', 1, 0.15),
+      etiqueta({ x: PLAYA.muelle.x, z: PLAYA.orilla + PLAYA.muelle.largo + 8 }, 'Muelle', 2, 0.6),
       etiqueta({ x: MONTANA.x, z: MONTANA.z }, 'Montaña', 1, 0.15),
-      etiqueta({ x: (CONCESIONARIO.x0 + CONCESIONARIO.x1) / 2, z: CONCESIONARIO.z1 + 14 }, 'Vecibanda Motors', 1, 0.15),
-      etiqueta({ x: (TALLER.x0 + TALLER.x1) / 2, z: TALLER.z0 - 30 }, 'Taller', 1, 0.15),
+      oculto(etiqueta({ x: (CONCESIONARIO.x0 + CONCESIONARIO.x1) / 2, z: CONCESIONARIO.z1 + 14 }, 'Vecibanda Motors', 1, 0.15), margen(CONCESIONARIO, 6), () => progreso() < AUTOS_DESDE),
+      oculto(etiqueta({ x: (TALLER.x0 + TALLER.x1) / 2, z: TALLER.z0 - 30 }, 'Taller', 1, 0.15), margen(TALLER, 6), () => progreso() < AUTOS_DESDE),
       etiqueta(GARAGE, 'Garage', 2, 0.6),
       etiqueta(PISCINA, 'Piscina', 2, 0.6),
       etiqueta(CANCHA, 'Cancha', 2, 0.6),
-      ...plano.manzanas.filter((m) => m.tipo).map((m) => etiqueta(m, NOMBRES_CIUDAD[m.tipo], 2, 0.45)),
+      ...plano.manzanas.filter((m) => m.tipo).map((m) => (m.tipo === 'casino'
+        ? oculto(etiqueta(m, NOMBRES_CIUDAD[m.tipo], 2, 0.45), m, () => progreso() < CASINO_DESDE)
+        : etiqueta(m, NOMBRES_CIUDAD[m.tipo], 2, 0.45))),
     ],
     zonasDe: () => Object.values(fotos),
     alAbrir: () => {
