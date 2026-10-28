@@ -312,6 +312,8 @@ html, body {
 }
 .secreta.visible { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 .secreta p { margin: 0; }
+.secreta-cara { display: block; width: 84px; height: 84px; margin: 0 auto 8px; border-radius: 16px; border: 3px solid #ffd23f; object-fit: cover; box-shadow: 0 0 18px rgba(255, 210, 63, 0.5); }
+.secreta-cara[hidden] { display: none; }
 .secreta-chico { color: #c9b8ff; font-size: 15px; font-weight: 700; letter-spacing: 0.18em; }
 .secreta-titulo { color: #ffd23f; font-size: 34px; font-weight: 700; line-height: 1.1; margin: 6px 0 !important; text-shadow: 0 3px 0 #000; }
 .secreta-premio { color: #8dff6a; font-size: 22px; font-weight: 700; text-shadow: 0 2px 0 #000; }

@@ -63,7 +63,7 @@ export const MISIONES = [
   { id: 'verstappen', personaje: null, desde: AUTOS_DESDE, titulo: 'Verstappen', texto: 'Sacá la medalla de oro con todos los autos', premio: { fijo: 1e12 } },
   // Secretas: no aparecen en ningún lado hasta que se cumplen (sin querer). Ahí salta el cartel
   // grande y recién entonces se ven en la lista, ya cumplidas.
-  { id: 'amistad', personaje: null, secreta: true, titulo: 'Restaurando la amistad', texto: 'Dormiste en la cama de Val con Mateo y en la de Mateo con Val', premio: { fijo: 2e7 } },
+  { id: 'amistad', personaje: null, caras: ['val', 'mateo'], secreta: true, titulo: 'Restaurando la amistad', texto: 'Dormiste en la cama de Val con Mateo y en la de Mateo con Val', premio: { fijo: 2e7 } },
   { id: 'isa_bonanni', personaje: 'negro', secreta: true, titulo: 'Isa Bonanni', texto: 'Le pegaste 3 tiros a la Schwepa con el Negro', premio: { fijo: 5e7 } },
 ];
 const TIROS_ISA = 3;
@@ -142,7 +142,7 @@ export class Misiones {
     this.estado[id] = true;
     sfx.final();
     const plata = this.cobrar(id);
-    this.ui.secreta?.(m.titulo, `+$${formato(plata)}`);
+    this.ui.secreta?.(m.titulo, `+$${formato(plata)}`, m.caras || [m.personaje]);
     this.ui.puntoMisiones?.(true);
     this.tycoon.guardar?.();
   }
@@ -192,6 +192,7 @@ export class Misiones {
         else if (c === 'perdido' || c === 'llevando') { avance = c === 'llevando' ? 0.75 : 0.4; detalle = c === 'llevando' ? 'Llevalo hasta la mansión' : 'Todavía no lo encontraste... ¡buscalo!'; }
         else { avance = 0; detalle = `Jugá con ${d.nombreDueno} para empezarla`; }
       }
+      if (this.hecha(m.id)) avance = 1; // cumplida: la barra llena
       const bloqueada = progreso < (m.desde || 0);
       const cobrado = this.tycoon.estado.premios?.[m.id];
       return { ...m, premioPlata: cobrado || this.premio(m.id), hecha: this.hecha(m.id), bloqueada, avance, detalle, tuya: !m.personaje || jugador.personaje?.id === m.personaje };

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { liberarAlSubir } from './liberar.js';
 
 const FUENTE = "Fredoka, 'Arial Black', Arial, sans-serif";
 
@@ -28,7 +29,7 @@ export function cargarImagen(url) {
 }
 
 // liberarAlSubir vive en liberar.js (sin three, así lo usan los módulos que corre balance.mjs).
-export { liberarAlSubir } from './liberar.js';
+export { liberarAlSubir };
 
 function nuevoCanvas(w, h = w) {
   const c = document.createElement('canvas');
@@ -379,14 +380,8 @@ export function cargarCabeza(p) {
           p.remeraFotos.espalda ? cargarImagen(`assets/${p.remeraFotos.espalda}`) : null,
           p.remeraFotos.manga ? cargarImagen(`assets/${p.remeraFotos.manga}`) : null,
         ]);
-        if (imgFrente && imgTela) {
-          const aCanvas = (img) => {
-            const c = nuevoCanvas(img.naturalWidth, img.naturalHeight);
-            c.getContext('2d').drawImage(img, 0, 0);
-            return c;
-          };
-          ropa = { frente: aCanvas(imgFrente), tela: aCanvas(imgTela), espalda: imgEspalda ? aCanvas(imgEspalda) : null, manga: imgManga ? aCanvas(imgManga) : null };
-        }
+        // Las imágenes tal cual (no cuentan para el tope de memoria de canvas del iPhone).
+        if (imgFrente && imgTela) ropa = { frente: imgFrente, tela: imgTela, espalda: imgEspalda, manga: imgManga };
       }
       if (p.barba) {
         const b = p.barba;
@@ -474,15 +469,19 @@ function dibujarEtiqueta(c, lineas) {
 }
 
 // Cartel que siempre mira a la cámara. Devuelve { sprite, actualizar(lineas) }.
+// Cada cambio dibuja en un canvas nuevo que se vacía apenas se sube a la placa de video
+// (liberarAlSubir): con decenas de carteles, tenerlos todos llenos pasaba el tope del iPhone.
 export function crearEtiqueta(lineas, ancho = 5) {
-  const c = nuevoCanvas(512, 256);
-  const tex = texturaDeCanvas(c);
+  const tex = texturaDeCanvas(nuevoCanvas(1, 1));
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
   sprite.scale.set(ancho, ancho / 2, 1);
   const etiqueta = {
     sprite,
     actualizar(nuevas) {
+      const c = nuevoCanvas(512, 256);
       dibujarEtiqueta(c, nuevas);
+      tex.image = c;
+      liberarAlSubir(tex);
       tex.needsUpdate = true;
     },
   };

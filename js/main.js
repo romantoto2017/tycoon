@@ -21,6 +21,7 @@ import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
 import { Manu, Banda } from './manu.js';
 import { Amarishuow } from './amarishuow.js';
+import { subirPendientes } from './liberar.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
@@ -159,6 +160,13 @@ async function iniciar() {
   const fotos = {};
   const camMapa = new THREE.OrthographicCamera(-1, 1, 1, -1, 10, 2000);
   camMapa.up.set(0, 0, -1); // el norte (−z) arriba
+  const enCanvas = (img) => {
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    c.getContext('2d').putImageData(img, 0, 0);
+    return c;
+  };
   const capturarMapa = (id) => {
     const [x0, z0, x1, z1] = ZONAS_MAPA[id];
     const w = Math.round((x1 - x0) * PX_MAPA[id]);
@@ -190,14 +198,21 @@ async function iniciar() {
     escena.fog.far = far;
     for (const g of lejos) g.visible = false;
     for (const o of ocultos) o.visible = true;
-    // WebGL lee de abajo para arriba: se da vuelta al pasarlo al canvas.
-    const c = fotos[id]?.canvas || document.createElement('canvas');
-    c.width = w;
-    c.height = h;
+    // WebGL lee de abajo para arriba: se da vuelta al pasarlo a la imagen.
     const img = new ImageData(w, h);
     for (let y = 0; y < h; y++) img.data.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
-    c.getContext('2d').putImageData(img, 0, 0);
-    fotos[id] = { x0, z0, x1, z1, canvas: c, compras: estado.compras.length, cuando: performance.now() };
+    // Hasta que la imagen nueva esté lista se sigue viendo la anterior (si había).
+    const vieja = fotos[id]?.canvas || null;
+    const foto = { x0, z0, x1, z1, canvas: vieja, compras: estado.compras.length, cuando: performance.now() };
+    fotos[id] = foto;
+    const poner = (imagen) => {
+      if (vieja?.close) vieja.close();
+      foto.canvas = imagen;
+    };
+    // Como ImageBitmap (no cuenta para el tope de memoria de canvas del iPhone: las fotos del
+    // mapa son de las más grandes); si el navegador no puede, en un canvas.
+    if (window.createImageBitmap) createImageBitmap(img).then(poner, () => poner(enCanvas(img)));
+    else poner(enCanvas(img));
   };
   let esperaMapa = 2; // segundos hasta la próxima foto (de a una, así no se traba)
   const fotosPendientes = () => {
@@ -1022,14 +1037,36 @@ async function iniciar() {
     if (!caras[id]) caras[id] = (await cargarCabeza(PERSONAJES.find((p) => p.id === id))).frente.toDataURL();
     return caras[id];
   };
+  // Cara partida al medio: la mitad izquierda de uno y la derecha del otro (Restaurando la amistad).
+  const mitades = {};
+  const caraMitades = async ([a, b]) => {
+    const k = `${a}|${b}`;
+    if (!mitades[k]) {
+      const [ca, cb] = await Promise.all([a, b].map((id) => cargarCabeza(PERSONAJES.find((p) => p.id === id))));
+      const s = ca.frente.width;
+      const c = document.createElement('canvas');
+      c.width = c.height = s;
+      const g = c.getContext('2d');
+      g.drawImage(ca.frente, 0, 0, s / 2, s, 0, 0, s / 2, s);
+      g.drawImage(cb.frente, s / 2, 0, s / 2, s, s / 2, 0, s / 2, s);
+      g.fillStyle = '#ffffff';
+      g.fillRect(s / 2 - 2, 0, 4, s);
+      mitades[k] = c.toDataURL();
+      c.width = c.height = 1;
+    }
+    return mitades[k];
+  };
+  UI.onCaraSecreta((ids) => (ids.length > 1 ? caraMitades(ids) : ids[0] ? caraDe(ids[0]) : null));
   const abrirMisiones = async () => {
     if (modo !== 'juego' || !misiones.abiertas || UI.visible('misiones') || UI.visible('dialogo')) return;
     if (gym.entrenando) gym.dejar(jugador);
     controles.activo = false;
     // Las misiones de cualquiera (personaje: null) llevan el ícono de la banda, no una cara.
-    const lista = await Promise.all(misiones.lista(jugador).map(async (m) => (m.personaje
-      ? { ...m, cara: await caraDe(m.personaje), nombre: PERSONAJES.find((p) => p.id === m.personaje).nombre }
-      : { ...m, cara: iconoBanda(), nombre: 'Todos' })));
+    const lista = await Promise.all(misiones.lista(jugador).map(async (m) => (m.caras
+      ? { ...m, cara: await caraMitades(m.caras), nombre: m.caras.map((id) => PERSONAJES.find((p) => p.id === id).nombre).join(' y ') }
+      : m.personaje
+        ? { ...m, cara: await caraDe(m.personaje), nombre: PERSONAJES.find((p) => p.id === m.personaje).nombre }
+        : { ...m, cara: iconoBanda(), nombre: 'Todos' })));
     UI.puntoMisiones(false);
     UI.abrirMisiones(lista, () => { controles.activo = modo === 'juego'; });
   };
@@ -1286,6 +1323,8 @@ async function iniciar() {
       UI.mapaCuadro(jugador.pos, 0, false); // en el menú no hay minimapa
     }
 
+    // Canvas de un solo dibujo: se suben ya a la placa de video y se vacían (js/liberar.js).
+    subirPendientes((t) => renderer.initTexture(t));
     renderer.render(escena, camara);
   };
   bucle();

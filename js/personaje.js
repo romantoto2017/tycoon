@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { caja, GEO_CAJA } from './util.js';
 import { texturaDeCanvas, recorteCanvas, liberarAlSubir } from './texturas.js';
 import { crearZapatilla, LARGO as LARGO_ZAPA } from './zapatillas.js';
+import { PERSONAJES } from '../data/personajes.js';
 
 const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
 
@@ -289,7 +290,15 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     [cabezaTex.der, '#dddddd'], [cabezaTex.izq, '#dddddd'], [cabezaTex.arriba, '#ffffff'],
     [cabezaTex.abajo, '#bbbbbb'], [cabezaTex.frente, '#ffffff'], [cabezaTex.atras, '#cccccc'],
   ];
-  const texturas = lados.map(([c]) => texturaDeCanvas(c));
+  // La gente que no se elige para jugar (los de la ciudad, Kelvin, la Schwepa...) comparte las
+  // texturas de su cabeza entre todos sus muñecos, y los costados se vacían al subirse a la
+  // placa de video (tope de canvas del iPhone). El frente queda: lo usan los diálogos.
+  const propia = PERSONAJES.some((x) => x.id === p.id);
+  let texturas = !propia && cabezaTex.texCompartidas;
+  if (!texturas) {
+    texturas = lados.map(([c], i) => (propia || i === 4 ? texturaDeCanvas(c) : liberarAlSubir(texturaDeCanvas(c))));
+    if (!propia) cabezaTex.texCompartidas = texturas;
+  }
   const materiales = lados.map(([, tono], i) => new THREE.MeshBasicMaterial({ map: texturas[i], color: tono }));
   const cabeza = new THREE.Mesh(GEO_CABEZA, materiales);
   cabeza.position.y = 4.7 - CADERA;
@@ -477,7 +486,7 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
       }
     },
     liberar() {
-      texturas.forEach((t) => t.dispose());
+      if (propia) texturas.forEach((t) => t.dispose());
       materiales.forEach((m) => m.dispose());
       matPiel.dispose();
       extras.forEach((e) => e.dispose());

@@ -47,8 +47,13 @@ export function aviso(texto, tipo = 'error') {
 
 // Cartel grande de misión secreta (aparece de golpe en el medio y se va solo).
 let tSecreta = null;
-export function secreta(titulo, premio) {
+let caraSecreta = null;
+export function onCaraSecreta(fn) { caraSecreta = fn; }
+export function secreta(titulo, premio, ids = []) {
   const el = $('secreta');
+  const img = $('secreta-cara');
+  img.hidden = true;
+  caraSecreta?.(ids.filter(Boolean))?.then?.((src) => { if (src) { img.src = src; img.hidden = false; } });
   $('secreta-titulo').textContent = titulo;
   $('secreta-premio').textContent = premio;
   el.classList.remove('oculto');
@@ -898,7 +903,7 @@ function dibujarMapa(g, w, h, vista, chico = false) {
     const b = Z(z.z0);
     const c = (z.x1 - z.x0) * s;
     const d = (z.z1 - z.z0) * s;
-    if (a > w || b > h || a + c < 0 || b + d < 0) continue;
+    if (!z.canvas || a > w || b > h || a + c < 0 || b + d < 0) continue;
     g.drawImage(z.canvas, a, b, c, d);
   }
   // Lo que no desbloqueaste: tapado, con un "?" grande.

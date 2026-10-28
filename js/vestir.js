@@ -6,17 +6,10 @@ import { cargarImagen } from './texturas.js';
 const DIR = 'assets/ropa/prendas';
 const cache = new Map();
 
-function aCanvas(img) {
-  const c = document.createElement('canvas');
-  c.width = img.naturalWidth;
-  c.height = img.naturalHeight;
-  c.getContext('2d').drawImage(img, 0, 0);
-  return c;
-}
-
+// La imagen tal cual, sin pasarla a un canvas: drawImage, createPattern y las texturas la
+// aceptan igual, y las imágenes no cuentan para el tope de memoria de canvas del iPhone.
 async function canvas(nombre) {
-  const img = await cargarImagen(`${DIR}/${nombre}`);
-  return img ? aCanvas(img) : null;
+  return cargarImagen(`${DIR}/${nombre}`);
 }
 
 export function cargarPrenda(id) {
