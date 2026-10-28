@@ -1301,6 +1301,7 @@ export class Casino {
     if (!this.jugando || (this.ocupado() && !forzar)) return;
     if (this.jugando.tipo === 'blackjack' || this.jugando.tipo === 'poker') this.limpiarCartas3d();
     this.jugando = null;
+    this.soltarCamara();
     this.el.raiz.classList.add('oculto');
     if (this.jugador?.modelo) this.jugador.modelo.grupo.visible = true;
     this.alSalir?.();
@@ -1328,6 +1329,19 @@ export class Casino {
       camara.position.set(C.x + k.x, k.y, C.z + k.z);
       camara.lookAt(C.x + k.mx, k.my, C.z + k.mz);
     }
+    // En pantallas bajas (celu acostado) el panel tapa media pantalla: la imagen se corre para
+    // arriba, así la mesa queda en el medio de lo que se ve (si no, la ruleta quedaba tapada).
+    const H = window.innerHeight;
+    const panel = H < 520 ? this.el.raiz.querySelector('.cas-panel')?.offsetHeight || 0 : 0;
+    if (panel) {
+      camara.setViewOffset(window.innerWidth, H, 0, Math.min(panel, H * 0.7) / 2, window.innerWidth, H);
+      this.camaraCorrida = camara;
+    } else this.soltarCamara();
+  }
+
+  soltarCamara() {
+    this.camaraCorrida?.clearViewOffset();
+    this.camaraCorrida = null;
   }
 
   // ---------- Plata ----------

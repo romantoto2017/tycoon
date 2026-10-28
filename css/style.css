@@ -1230,6 +1230,17 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
   .cas-carta { width: 34px; height: 46px; }
   .cas-cartas { min-height: 46px; }
   .cas-botones button { padding: 7px 14px; font-size: 15px; }
+  /* Celu acostado: la ruleta entera sin scrollear (el botón de girar a la vista). */
+  .cas-dealer { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+  .cas-titulo { font-size: 18px; }
+  .cas-salir { padding: 4px 10px; }
+  .cas-mesa .cas-historial { display: none; }
+  .cas-pano { grid-template-rows: repeat(5, 19px); grid-template-columns: 28px repeat(12, minmax(0, 1fr)) 34px; padding: 3px; }
+  .rc { font-size: 11px; }
+  .ficha { min-width: 20px; height: 20px; line-height: 16px; font-size: 8px; }
+  .cas-msj { min-height: 18px; font-size: 14px; }
+  .cas-apuesta button { padding: 4px 7px; min-width: 32px; }
+  .cas-monto { font-size: 16px; min-width: 70px; padding: 2px 6px; }
 }
 
 /* ---------- Catálogo de LUCCABOSSIO™: monocromo y minimalista, como su web (fondo hueso, negro
