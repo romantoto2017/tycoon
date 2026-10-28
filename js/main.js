@@ -22,6 +22,7 @@ import { Dufre, Ottati } from './dufre.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino } from './casino.js';
 import { Lucca } from './lucca.js';
+import { Playa } from './playa.js';
 import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
@@ -114,6 +115,8 @@ async function iniciar() {
   casino.alSalir = () => { controles.activo = modo === 'juego'; };
   // Lucca Bossio: su local (atiende Shaggy), él caminando por la ciudad y su ropa.
   const lucca = new Lucca({ ciudad, escena, estado, ui: UI });
+  // La playa frente a la mansión (con Francis Jeremy surfeando y su pócima para los perros).
+  const playa = new Playa({ escena, colisiones, estado, ui: UI, guardar: guardarAhora });
   const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
   const autodromo = new Autodromo({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso, tycoon, flota });
@@ -400,6 +403,10 @@ async function iniciar() {
     }
     if (cercaTP()) {
       usarTP(cercaTP());
+      return;
+    }
+    if (!conduciendo && playa.accion(jugador)) {
+      if (playa.hacer(jugador, () => { controles.activo = modo === 'juego'; })) controles.activo = false;
       return;
     }
     if (!conduciendo && casino.accion(jugador)) {
@@ -986,7 +993,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, casino, lucca, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1117,7 +1124,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : textoTP() || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : textoTP() || playa.accion(jugador) || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1157,6 +1164,7 @@ async function iniciar() {
     casino.actualizar(dt, jugador, momento(hora()).noche);
     lucca.actualizar(dt, jugador);
     actualizarTP(dt);
+    playa.actualizar(dt, jugador, momento(hora()).noche, !conduciendo);
     actualizarArma(dt);
     actualizarLechugas();
     brillos.actualizar(dt);

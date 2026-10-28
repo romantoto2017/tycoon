@@ -1217,3 +1217,14 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
 .tema-lucca .prenda .estado { padding: 0 10px; color: var(--lb-suave); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
 .tema-lucca .cat-cerrar:focus-visible, .tema-lucca .prenda:focus-visible { outline: 2px solid var(--lb-tinta); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .tema-lucca .prenda, .tema-lucca .prenda .foto img { transition: none; } .tema-lucca .prenda:hover .foto img { transform: none; } }
+
+/* Respuestas del diálogo (la charla con Francis en la playa): botones grandes con número,
+   celeste de playa con el número naranja; foco bien visible. */
+.dialogo-opciones { display: flex; flex-direction: column; gap: 8px; min-width: min(460px, 100%); }
+.dialogo-opciones[hidden] { display: none; }
+.dialogo-opcion { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 14px; border: 2px solid #38bdf8; border-radius: 12px; background: #f0f9ff; color: #0c4a6e; font-family: var(--fuente); font-size: 18px; font-weight: 700; text-align: left; cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; }
+.dialogo-opcion:hover { background: #e0f2fe; transform: translateX(3px); }
+.dialogo-opcion:focus-visible { outline: 3px solid #ea580c; outline-offset: 2px; }
+.dialogo-num { flex: 0 0 26px; height: 26px; border-radius: 50%; background: #ea580c; color: #fff; display: grid; place-items: center; font-size: 15px; }
+@media (max-height: 500px) { .dialogo-opcion { min-height: 38px; font-size: 15px; padding: 5px 10px; } .dialogo-opciones { gap: 5px; } }
+@media (prefers-reduced-motion: reduce) { .dialogo-opcion { transition: none; } .dialogo-opcion:hover { transform: none; } }

@@ -364,39 +364,81 @@ export function botonMisiones(v) { $('btn-misiones').classList.toggle('oculto', 
 // Escribe cada línea de a poco; Continuar / E / Espacio / clic completa la línea o pasa a la
 // siguiente. Al terminar llama a alTerminar().
 let observadorDialogo = null;
-export function dialogo({ nombre, cara, remera, lineas, alTerminar }) {
+// opciones: (opcional) textos para elegir al terminar la última línea; alElegir(i) recibe la
+// elegida (con el mouse, tocando o con las teclas 1, 2, 3...). Sin opciones, alTerminar al final.
+export function dialogo({ nombre, cara, remera, lineas, alTerminar, opciones = null, alElegir = null }) {
   $('dialogo-nombre').textContent = nombre;
   $('dialogo-cara').src = cara;
   $('dialogo-cuerpo').style.background = remera;
   const texto = $('dialogo-texto');
   const boton = $('dialogo-seguir');
+  const lista = $('dialogo-opciones');
+  lista.innerHTML = '';
+  lista.hidden = true;
+  boton.hidden = false;
   let i = 0;
   let letras = 0;
   let timer = null;
+  const ultima = () => i === lineas.length - 1;
+  const cerrar = () => {
+    clearInterval(timer);
+    window.removeEventListener('keydown', teclas, true);
+    lista.hidden = true;
+    boton.hidden = false;
+    mostrar('dialogo', false);
+  };
+  const mostrarOpciones = () => {
+    if (!lista.hidden) return;
+    boton.hidden = true;
+    lista.hidden = false;
+    opciones.forEach((t, n) => {
+      const b = document.createElement('button');
+      b.className = 'dialogo-opcion';
+      b.type = 'button';
+      b.innerHTML = `<span class="dialogo-num">${n + 1}</span>${t}`;
+      b.addEventListener('click', (e) => { e.stopPropagation(); cerrar(); alElegir(n); });
+      lista.appendChild(b);
+    });
+    lista.firstChild?.focus({ preventScroll: true });
+  };
   const escribir = () => {
     const linea = lineas[i];
     letras = 0;
-    boton.textContent = i === lineas.length - 1 ? 'Vamos ▸' : 'Continuar ▸';
+    boton.textContent = ultima() ? 'Vamos ▸' : 'Continuar ▸';
     clearInterval(timer);
     timer = setInterval(() => {
       letras++;
       texto.textContent = linea.slice(0, letras);
-      if (letras >= linea.length) clearInterval(timer);
+      if (letras >= linea.length) {
+        clearInterval(timer);
+        if (ultima() && opciones) mostrarOpciones();
+      }
     }, 24);
   };
   const seguir = () => {
-    if (letras < lineas[i].length) { clearInterval(timer); letras = lineas[i].length; texto.textContent = lineas[i]; return; }
+    if (letras < lineas[i].length) {
+      clearInterval(timer);
+      letras = lineas[i].length;
+      texto.textContent = lineas[i];
+      if (ultima() && opciones) mostrarOpciones();
+      return;
+    }
+    if (ultima() && opciones) { mostrarOpciones(); return; }
     i++;
     if (i < lineas.length) { escribir(); return; }
-    clearInterval(timer);
-    window.removeEventListener('keydown', teclas, true);
-    mostrar('dialogo', false);
-    alTerminar();
+    cerrar();
+    alTerminar?.();
   };
   const teclas = (e) => {
+    if (!lista.hidden) {
+      const n = Number(e.key) - 1;
+      if (n >= 0 && n < opciones.length) { e.preventDefault(); e.stopPropagation(); lista.children[n].click(); }
+      else if (['KeyE', 'Space'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); }
+      return; // Enter elige la que tiene el foco (el botón)
+    }
     if (['KeyE', 'Space', 'Enter'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) seguir(); }
   };
-  $('dialogo').onclick = seguir;
+  $('dialogo').onclick = () => { if (lista.hidden) seguir(); };
   // La foto del personaje va siempre arriba de la caja (si el texto ocupa más líneas, sube).
   const caja = document.querySelector('.dialogo-caja');
   const personaje = document.querySelector('.dialogo-personaje');

@@ -1026,6 +1026,13 @@ export class Concesionario {
         cargarAuto(e.def).then((m) => e.soporte.add(m)).catch(() => {});
       }
     }
+    // Si cambiaron tus autos (o es la primera vez que se ve), se redibujan todas las etiquetas:
+    // precio o "¡Es tuyo!".
+    const clave = (this.estado.autos || []).join();
+    if (this.grupo.visible && clave !== this.autosDibujados) {
+      this.autosDibujados = clave;
+      for (const e of this.exhibidos) e.etiqueta.actualizar(this.lineas(e.def));
+    }
     if (this.grupo.visible) {
       this.disco.rotation.y += dt * 0.3;
       if (this.plataforma) this.plataforma.soporte.rotation.y += dt * 0.3;

@@ -121,6 +121,7 @@ export class Jugador {
     p.z = THREE.MathUtils.clamp(p.z + this.vel.z * dt, LIMITE_MAPA.z0, LIMITE_MAPA.z1);
     this.trabado = 0;
     for (const b of colisiones) {
+      if (b.soloAutos) continue; // la orilla del mar: frena al auto, no a vos
       if (b.max.y <= p.y + PASO || b.min.y >= p.y + this.alto) continue;
       const ox1 = p.x + RADIO - b.min.x;
       const ox2 = b.max.x - (p.x - RADIO);
@@ -147,6 +148,7 @@ export class Jugador {
     let suelo = 0;
     const r = RADIO * 0.8;
     for (const b of colisiones) {
+      if (b.soloAutos) continue;
       if (p.x + r <= b.min.x || p.x - r >= b.max.x || p.z + r <= b.min.z || p.z - r >= b.max.z) continue;
       if (b.max.y <= yAntes + PASO + 0.001) {
         if (b.max.y > suelo) suelo = b.max.y;

@@ -80,6 +80,10 @@ export const CUSI_ESCONDIDO = { x: 94.5, z: -124.5 };
 // misma calle de la mansión). Centro de la ciudad en el mundo; la avenida principal es la
 // autopista que entra por el este.
 export const CIUDAD = { x: -20000, z: CALLE_Z };
+// Playa frente a la mansión (cruzando la calle): la arena va de la vereda a la orilla y el mar sigue
+// hasta el horizonte. Se camina por el agua solo cerca de la orilla (hasta orilla + vadeo); el auto
+// no entra al agua. El muelle sale de la arena hacia el mar.
+export const PLAYA = { x0: -380, x1: 620, z0: CALLE_Z + 8.5, orilla: CALLE_Z + 58, vadeo: 6.5, mar: { x0: -2600, x1: 2600, z1: 2600 }, muelle: { x: 46, largo: 40, ancho: 5 } };
 // TP a la ciudad: el portal a la salida de la mansión (se compra, 10 T) y donde aparecés en la
 // ciudad (en la avenida de la entrada, con el portal de vuelta).
 export const TP_CIUDAD = { x: -18, z: 47, precio: 1e13, llegada: { x: CIUDAD.x + 296, z: CALLE_Z + 18 } };

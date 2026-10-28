@@ -314,7 +314,7 @@ const DEF_PERROS = {
   olivia: { pelo: '#e7cf9f', panza: '#f1dfba', ojos: '#3b2414', largo: 2.3, alto: 1.15, ancho: 1.5, cabeza: 1.0, hocico: 0.55, orejas: 0.55, cola: 1.1, gordura: 1, ladrido: 0.8, lengua: true },
   pancho: { pelo: '#141210', panza: '#b5651d', ojos: '#2b1a10', largo: 2.1, alto: 0.4, ancho: 0.6, cabeza: 0.6, hocico: 0.42, orejas: 0.6, cola: 0.85, gordura: 0, ladrido: 1.5, fuego: '#b5651d' },
 };
-const UN_DIA = 1440; // segundos de juego (un día y su noche, ver cielo.js)
+const CADAVER = 900; // el cuerpo queda 15 minutos de juego; después ya no está (y no se puede revivir)
 
 // Perro de bloques, sentado, mirando a +z. Devuelve el grupo y lo que se mueve.
 function crearPerro(d) {
@@ -487,7 +487,7 @@ export class Perros {
   // Comprado y todavía no enterrado (vivo o tirado).
   visible(id) {
     const d = this.datos(id);
-    return this.tiene(id) && !(d.muerto != null && this.tycoon.estado.tiempoJugado - d.muerto > UN_DIA);
+    return this.tiene(id) && !(d.muerto != null && this.tycoon.estado.tiempoJugado - d.muerto > CADAVER);
   }
 
   vivo(id) {
@@ -519,11 +519,16 @@ export class Perros {
     return false;
   }
 
-  cercano(jugador) {
+  // Muerto pero todavía tirado (se puede revivir con la pócima de Francis, playa.js).
+  tirado(id) {
+    return this.visible(id) && !this.vivo(id);
+  }
+
+  cercano(jugador, muertos = false) {
     let mejor = null;
     let dm = 3.6;
     for (const p of PERROS) {
-      if (!this.vivo(p.id) || !this.modelos[p.id]) continue;
+      if (!(muertos ? this.tirado(p.id) : this.vivo(p.id)) || !this.modelos[p.id]) continue;
       const d = Math.hypot(jugador.pos.x - p.x, jugador.pos.z - p.z);
       if (d < dm && jugador.pos.y < 3) { dm = d; mejor = p; }
     }
@@ -531,11 +536,24 @@ export class Perros {
   }
 
   accion(jugador) {
+    const muerto = this.tycoon.estado.pocion && this.cercano(jugador, true);
+    if (muerto) return `Darle la pócima de Francis a ${muerto.nombre} (E)`;
     const p = this.cercano(jugador);
     return p ? `Hacerle mimos a ${p.nombre} (E)` : '';
   }
 
   hacer(jugador) {
+    const muerto = this.tycoon.estado.pocion && this.cercano(jugador, true);
+    if (muerto) {
+      // Revive: vuelve a estar sentado cuidando la casa (la Schwepa lo puede volver a matar).
+      this.tycoon.estado.pocion = false;
+      this.datos(muerto.id).muerto = null;
+      this.ui.toast(`¡${muerto.nombre} revivió! La pócima de Francis funcionó`, 'plata', 4500);
+      sfx.brillo();
+      this.revividos = [...(this.revividos || []), muerto.id];
+      this.guardar?.();
+      return;
+    }
     const p = this.cercano(jugador);
     if (!p) return;
     const m = this.modelos[p.id];
@@ -563,6 +581,20 @@ export class Perros {
         m.etiqueta.sprite.visible = false;
         m.grupo.add(m.etiqueta.sprite);
         this.escena.add(m.grupo);
+        if (this.revividos?.includes(p.id)) {
+          // Recién revivido: corazones y ladra contento.
+          this.revividos = this.revividos.filter((id) => id !== p.id);
+          m.mimos = 3;
+          m.etiqueta.sprite.visible = true;
+          sfx.ladrido(DEF_PERROS[p.id].ladrido);
+        }
+      }
+      if (this.vivo(p.id) && m.muerto) {
+        // Revivió (pócima): se saca el cuerpo y el osito, y el cuadro que viene lo arma vivo.
+        this.escena.remove(m.grupo);
+        if (m.oso) this.escena.remove(m.oso);
+        delete this.modelos[p.id];
+        continue;
       }
       if (!this.vivo(p.id)) {
         if (!m.muerto) {

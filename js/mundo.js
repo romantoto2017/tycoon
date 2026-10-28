@@ -76,8 +76,8 @@ function crearCasasVecinas(escena) {
   const colores = ['#f4a261', '#90caf9', '#f48fb1', '#fff59d', '#a5d6a7', '#ce93d8'];
   const techos = ['#8d3b2f', '#455a64', '#6d4c41'];
   const z = CALLE_Z + 22;
-  // Seis frente a la mansión y algunas más por la cuadra del gym.
-  const xs = [-75, -45, -15, 15, 45, 75, -395, -425, -455, -485];
+  // Por la cuadra del gym (frente a la mansión, cruzando la calle, está la playa: playa.js).
+  const xs = [-395, -425, -455, -485];
   for (let i = 0; i < xs.length; i++) {
     const x = xs[i];
     const g = new THREE.Group();
@@ -104,7 +104,7 @@ function crearArboles(escena, altura = () => 0) {
       const x = (rnd() - 0.5) * anchoX;
       const z = (rnd() - 0.5) * 360;
       if (x > T.x0 - 6 && x < T.x1 + 6 && z > T.z0 - 6 && z < T.z1 + 6) continue; // terreno
-      if (z > CALLE_Z - 10 && z < CALLE_Z + 34) continue;                          // calle y casas
+      if (z > CALLE_Z - 10) continue;                                               // calle, playa y mar
       if (x > R.x0 - 8 && x < PA.x + 14 && z > R.z0 - 8 && z < CALLE_Z) continue;    // restaurante y parrilla
       if (x > GYM.x0 - 8 && x < GYM.x1 + 8 && z > GYM.z0 - 8 && z < CALLE_Z) continue; // gym
       if (x > GA.x0 - 18 && x < GA.x1 + 8 && z > GA.z0 - 8 && z < CALLE_Z) continue;  // lote del galpón
