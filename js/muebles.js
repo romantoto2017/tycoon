@@ -2,6 +2,7 @@
 // x de -8 a 8, z de -6.6 a 6.6, y desde el piso terminado.
 import { nivel, ALTO_PISO, LOSA, PASILLO, NUCLEO, COLUMNA, MANSION } from './constantes.js';
 import { colgante, GROSOR_INT } from './arquitectura.js';
+import { liberarAlSubir } from './texturas.js';
 
 // Habitaciones: W/E = ala oeste/este, I/O = columna interior/exterior, F/B = adelante/atrás.
 const LUGARES = {
@@ -1299,6 +1300,9 @@ function lamina(k, dibujar, pw, ph, ancho, alto, { transparente = false, aditivo
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   dibujar(c.getContext('2d'), pw, ph, () => { tex.needsUpdate = true; });
+  // Las que se dibujan de una (no esperan una imagen para redibujarse) se vacían al subirse
+  // (ver liberarAlSubir: el tope de memoria de canvas del iPhone).
+  if (dibujar.length < 4) liberarAlSubir(tex);
   // mate: le afecta la luz (libros, cortinas); si no, brilla sola (pantallas, neones).
   const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), mate ? new THREE.MeshLambertMaterial({ map: tex }) : new THREE.MeshBasicMaterial({
     map: tex, transparent: transparente || aditivo, depthWrite: !(transparente || aditivo),

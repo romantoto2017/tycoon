@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CIUDAD as C } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
-import { cargarCabeza, crearEtiqueta } from './texturas.js';
+import { cargarCabeza, crearEtiqueta, liberarAlSubir } from './texturas.js';
 import { formato } from './util.js';
 import { sfx } from './sfx.js';
 
@@ -113,8 +113,10 @@ function lienzo(w, h, dibujar) {
   dibujar(c.getContext('2d'), w, h);
   return c;
 }
-function textura(c, repetir = false) {
+// liberar: el canvas se vacía al subirse (las que no se redibujan; ver texturas.js).
+function textura(c, repetir = false, liberar = true) {
   const t = new THREE.CanvasTexture(c);
+  if (liberar) liberarAlSubir(t);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repetir) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 4;
@@ -403,7 +405,7 @@ const texPared = () => textura(lienzo(256, 768, (g, w, h) => {
   // Cornisa arriba.
   g.fillStyle = oro;
   g.fillRect(0, 0, w, 18);
-}), true);
+}), true, false); // se clona para cada pared: no se puede vaciar
 
 // Cielorraso artesonado dorado (como el de la foto del casino de lujo), con una luz en cada casetón.
 const texTecho = () => textura(lienzo(256, 256, (g, w) => {
@@ -1173,7 +1175,7 @@ export class Casino {
     // La pantalla del JACKPOT (adentro, en la pared del fondo).
     const P = this.pantalla;
     this.canvasJackpot = lienzo(1024, 256, () => {});
-    this.texJackpot = textura(this.canvasJackpot);
+    this.texJackpot = textura(this.canvasJackpot, false, false); // se redibuja
     const pj = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), new THREE.MeshBasicMaterial({ map: this.texJackpot }));
     pj.position.set(P.x, P.y, P.z);
     pj.rotation.y = Math.PI;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { caja, GEO_CAJA } from './util.js';
-import { texturaDeCanvas, recorteCanvas } from './texturas.js';
+import { texturaDeCanvas, recorteCanvas, liberarAlSubir } from './texturas.js';
 import { crearZapatilla, LARGO as LARGO_ZAPA } from './zapatillas.js';
 
 const GEO_CABEZA = new THREE.BoxGeometry(1.3, 1.3, 1.3);
@@ -123,6 +123,8 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
   const extras = []; // texturas y materiales propios, para liberar al cambiar de personaje
 
   const tex = (c) => { const t = texturaDeCanvas(c); extras.push(t); return t; };
+  // Canvas armados solo para este muñeco (recortes de la ropa): se vacían al subirse (texturas.js).
+  const texUnica = (c) => liberarAlSubir(tex(c));
   const lambert = (t) => { const m = new THREE.MeshLambertMaterial(t.isTexture ? { map: t } : { color: t }); extras.push(m); return m; };
   // Remera con foto: frente con el diseño y el resto (costados, mangas y la espalda, si no
   // tiene foto propia) con la tela.
@@ -153,15 +155,15 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     const w = Math.min(ancho, alto * (pr.aspecto || 0.7) * 1.45);
     g.drawImage(vt.frente, (ancho - w) / 2, 0, w, alto);
     const u0 = (anchoTorso / 2 - anchoPanza / 2) / anchoTorso;
-    torso = [tela, tela, tela, tela, lambert(tex(c)), tela];
-    panzaFrente = [tela, tela, tela, tela, lambert(tex(recorteCanvas(c, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2))), tela];
+    torso = [tela, tela, tela, tela, lambert(texUnica(c)), tela];
+    panzaFrente = [tela, tela, tela, tela, lambert(texUnica(recorteCanvas(c, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2))), tela];
     remera = tela;
     mangasLargas = !!pr.largas;
     if (vt.manga && mangasLargas) {
       // Manga larga sacada de la foto, del hombro al puño: cada pedazo del brazo lleva su parte
       // (así el dibujo sigue continuo) y abajo asoma la mano. Con rayas (rayas: true), solo
       // del lado de afuera del brazo.
-      const corte = (v0, v1) => lambert(tex(recorteCanvas(vt.manga, 0, v0, 1, v1)));
+      const corte = (v0, v1) => lambert(texUnica(recorteCanvas(vt.manga, 0, v0, 1, v1)));
       const cara = (m) => (lado) => (pr.rayas
         ? (lado < 0 ? [tela, m, tela, tela, tela, tela] : [m, tela, tela, tela, tela, tela])
         : [m, m, tela, tela, m, m]);
@@ -178,7 +180,7 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
     if (cabezaTex.ropa.manga) mangaArriba = lambert(tex(cabezaTex.ropa.manga));
     // La panza muestra la parte del frente que tapa, así el diseño sigue continuo.
     const u0 = (anchoTorso / 2 - anchoPanza / 2) / anchoTorso;
-    const frentePanza = lambert(tex(recorteCanvas(cabezaTex.ropa.frente, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2)));
+    const frentePanza = lambert(texUnica(recorteCanvas(cabezaTex.ropa.frente, u0, 1 - (3.45 - 2) / 2, 1 - u0, 1 - (2.05 - 2) / 2)));
     panzaFrente = [tela, tela, tela, tela, frentePanza, tela];
     remera = tela;
   }
@@ -224,7 +226,7 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
   const frentePierna = (x, arriba) => {
     if (!vp) return p.pantalon;
     const u0 = x < 0 ? 0 : 0.5;
-    const f = lambert(tex(recorteCanvas(vp.piernas, u0, arriba ? 0 : 0.5, u0 + 0.5, arriba ? 0.5 : 1)));
+    const f = lambert(texUnica(recorteCanvas(vp.piernas, u0, arriba ? 0 : 0.5, u0 + 0.5, arriba ? 0.5 : 1)));
     return [telaPantalon, telaPantalon, telaPantalon, telaPantalon, f, telaPantalon];
   };
   // Zapatillas de la tienda: modelos 3D (zapatillas.js) a la medida del pie.

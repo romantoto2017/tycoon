@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CIUDAD as C, AUTOPISTA as AU, CONCESIONARIO as CO, AUTODROMO as AD, TALLER as TA } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
-import { cargarCabeza, cargarImagen, crearEtiqueta } from './texturas.js';
+import { cargarCabeza, cargarImagen, crearEtiqueta, liberarAlSubir } from './texturas.js';
 import { TIENDAS } from '../data/ropa.js';
 import { vestido, cabezaManiqui, MANIQUI } from './vestir.js';
 import { crearZapatilla } from './zapatillas.js';
@@ -75,7 +75,7 @@ function lienzo(w, h, dibujar) {
   c.width = w;
   c.height = h;
   dibujar(c.getContext('2d'), w, h);
-  const t = new THREE.CanvasTexture(c);
+  const t = liberarAlSubir(new THREE.CanvasTexture(c));
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 4;
@@ -413,7 +413,7 @@ export class Ciudad {
       g.textAlign = 'center';
       g.textBaseline = 'middle';
       lineas.forEach((t, i) => { g.font = `800 ${i ? 52 : 46}px Arial, sans-serif`; g.fillText(t, 256, 60 + i * 72); });
-      const tex = new THREE.CanvasTexture(c);
+      const tex = liberarAlSubir(new THREE.CanvasTexture(c));
       tex.colorSpace = THREE.SRGBColorSpace;
       const placa = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
       placa.position.set(x, 13, AU.z);
@@ -1112,7 +1112,7 @@ export class Ciudad {
       g.textBaseline = 'middle';
       g.fillText(T.nombre, 512, 136, 960);
     }
-    const tex = new THREE.CanvasTexture(c);
+    const tex = liberarAlSubir(new THREE.CanvasTexture(c));
     tex.colorSpace = THREE.SRGBColorSpace;
     const cartel = new THREE.Mesh(new THREE.PlaneGeometry(24, 6), new THREE.MeshBasicMaterial({ map: tex }));
     cartel.position.set(xm, PISO + 7.5, zf - 0.12);
@@ -1505,7 +1505,7 @@ export function crearPortal(destino) {
   x.textAlign = 'center';
   x.textBaseline = 'middle';
   x.fillText(`TP · ${destino}`, 256, 50, 490);
-  const t = new THREE.CanvasTexture(c);
+  const t = liberarAlSubir(new THREE.CanvasTexture(c));
   t.colorSpace = THREE.SRGBColorSpace;
   for (const lado of [1, -1]) {
     const cartel = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.3), new THREE.MeshBasicMaterial({ map: t }));

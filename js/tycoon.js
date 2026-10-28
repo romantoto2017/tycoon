@@ -14,7 +14,7 @@ import { crearModelo, medidaModelo } from './modelos.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   crearEtiqueta, canvasMoneda, texturaDeCanvas, texturaCinta, canvasCartel,
-  texturaCascada, obtenerCara, cargarImagen,
+  texturaCascada, obtenerCara, cargarImagen, liberarAlSubir,
 } from './texturas.js';
 import { sfx } from './sfx.js';
 
@@ -110,7 +110,7 @@ function crearKit() {
     // Cartel con su chapa: el plano con el dibujo y atrás una placa con canto, así no
     // parece una calcomanía pegada.
     cartel(texto, ancho, alto, color, fondo) {
-      const tex = texturaDeCanvas(canvasCartel(texto, ancho, alto, color, fondo));
+      const tex = liberarAlSubir(texturaDeCanvas(canvasCartel(texto, ancho, alto, color, fondo)));
       tex.anisotropy = 4;
       const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: tex }));
       const placa = new THREE.Mesh(GEO_CAJA, mat('#1d1f22'));
@@ -203,7 +203,7 @@ function crearKit() {
       c.width = w;
       c.height = h;
       dibujar(c.getContext('2d'), w, h);
-      const tex = new THREE.CanvasTexture(c);
+      const tex = liberarAlSubir(new THREE.CanvasTexture(c));
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = 4;
       return kit.noSolido(new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ map: tex })));

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CIUDAD as C } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
-import { cargarCabeza, cargarImagen, crearEtiqueta } from './texturas.js';
+import { cargarCabeza, cargarImagen, crearEtiqueta, liberarAlSubir } from './texturas.js';
 import { vestido } from './vestir.js';
 import { LUCCA } from '../data/ropa.js';
 
@@ -45,7 +45,7 @@ function lienzo(w, h, dibujar) {
   return c;
 }
 function textura(c, repetir = false) {
-  const t = new THREE.CanvasTexture(c);
+  const t = liberarAlSubir(new THREE.CanvasTexture(c)); // se dibujan una vez (ver texturas.js)
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
   if (repetir) t.wrapS = t.wrapT = THREE.RepeatWrapping;
