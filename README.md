@@ -50,6 +50,14 @@ Cada minuto de juego hay un 5% de chance de que la Schwepa llegue en su Zanella 
 
 Alrededor del 20% de la partida, en el garage, se compra el **AK-47** (y después el auto, que es bastante caro): aparece un slot abajo (tecla `1`) para sacarla. Con el arma en la mano se dispara con clic izquierdo (la cámara gira con el derecho) o con el botón rojo en el celu. Cuando a la Schwepa se le acaba la vida sale rajando, te devuelve lo que robó y no vuelve por 15 minutos de juego.
 
+## Manu Mendez
+
+Morocho, pelo corto con rulos, alto y medio gordito, con la remera gris de rayas (cara y remera con `herramientas/manu.py`, en el contenedor). Todo en `js/manu.js`.
+
+- **Solo:** el 30% de las veces anda paseando (vereda de la mansión o plaza de la ciudad, como Dufre). Si te ve te dice "¿Me estás mirando de pesado mano?", "Vamo a robar al shopin gil" o "Te voy a llenar de plomo pero pa buena".
+- **Con la Schwepa, a la mansión:** 0,5% por minuto, solo si estás en la casa. Entran caminando por el portón, cada uno con un AK-47, y se llevan TODO (lo del cobrador y la plata que tenés). No se los puede parar: el cartel queda hasta que se van.
+- **Con la Schwepa, asaltando un local:** 5% por minuto mientras andás por la ciudad, en el local que te quede más cerca (la ropa de LUCCABOSSIO™, la verdulería o un auto de Vecibanda Motors). Apuntan, gritan y tiran al aire un par de minutos; después se van con la ropa, el cajón de verdura o manejando el auto (el de la vidriera vuelve al rato).
+
 ## Día y noche
 
 Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. De noche, al lado de una cama comprada aparece "Dormir (E)": se funde a negro y te despertás a la mañana. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.

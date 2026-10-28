@@ -88,7 +88,7 @@ function sala(k, g, lugar, piso, nativo) {
     // Mueble 3D (ver kit.modelo) con el frente hacia rotY.
     modelo(nombre, x, y0, z, rotY = 0, opts = {}) {
       const m = s.plano(k.modelo(nombre, opts), x, y0, z, rotY);
-      if (opts.cama) k.alCama?.(m.position.clone()); // para poder dormir (main.js)
+      if (opts.cama) k.alCama?.(m.position.clone(), opts.dueno); // para poder dormir (main.js); dueno: de quién es el cuarto
       if (opts.ropero) k.alRopero?.(m.position.clone()); // para cambiarse la ropa (main.js)
       return m;
     },
@@ -134,8 +134,8 @@ function pieza(s, X, Z, mira) {
 }
 
 // Los muebles son modelos 3D; acá solo se eligen, se miden y se acomodan.
-function cama(k, p, ancho, largo, color) {
-  p.modelo(ancho > 3.2 ? 'bedDouble' : 'bedSingle', 0, 0, { ancho: ancho + 0.3, atras: -largo / 2 - 0.35, tela: color, cama: true });
+function cama(k, p, ancho, largo, color, dueno) {
+  p.modelo(ancho > 3.2 ? 'bedDouble' : 'bedSingle', 0, 0, { ancho: ancho + 0.3, atras: -largo / 2 - 0.35, tela: color, cama: true, dueno });
 }
 
 function mesaLuz(k, p, u, v) {
@@ -741,7 +741,7 @@ const cuarto = [
     s.d(-8.68, 3.95, -1.55, -8.6, 7.05, 1.55, '#24282c');
     s.plano(k.retrato(p, 2.8, 2.8), -8.55, 5.5, 0, Math.PI / 2);
   }),
-  M('cama', 'Cama', -5.5, 0.5, (k, s, p) => cama(k, pieza(s, -6.05, 0, '+x'), 3.6, 4.6, p.remera)),
+  M('cama', 'Cama', -5.5, 0.5, (k, s, p) => cama(k, pieza(s, -6.05, 0, '+x'), 3.6, 4.6, p.remera, p.id)),
   M('mesas_luz', 'Mesas de luz', -6.6, 4.4, (k, s) => {
     mesaLuz(k, pieza(s, -7.9, 2.9, '+x'), 0, 0);
     mesaLuz(k, pieza(s, -7.9, -2.9, '+x'), 0, 0);

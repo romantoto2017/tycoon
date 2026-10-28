@@ -281,6 +281,31 @@ html, body {
 .aviso.amor { background: #ec407a; }
 @keyframes latido { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.04); } }
 
+/* ---------- Misión secreta: cartel grande en el medio ---------- */
+.secreta {
+  position: fixed;
+  top: 32%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  z-index: 60;
+  pointer-events: none;
+  min-width: min(86vw, 420px);
+  padding: 18px 28px 16px;
+  border-radius: 20px;
+  border: 4px solid #ffd23f;
+  background: radial-gradient(circle at 50% 0%, #3a2a6b 0%, #14101f 75%);
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.45), 0 0 48px rgba(255, 210, 63, 0.55);
+  text-align: center;
+  transition: transform 0.45s cubic-bezier(0.2, 1.6, 0.4, 1), opacity 0.3s;
+}
+.secreta.visible { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.secreta p { margin: 0; }
+.secreta-chico { color: #c9b8ff; font-size: 15px; font-weight: 700; letter-spacing: 0.18em; }
+.secreta-titulo { color: #ffd23f; font-size: 34px; font-weight: 700; line-height: 1.1; margin: 6px 0 !important; text-shadow: 0 3px 0 #000; }
+.secreta-premio { color: #8dff6a; font-size: 22px; font-weight: 700; text-shadow: 0 2px 0 #000; }
+@media (prefers-reduced-motion: reduce) { .secreta { transition: opacity 0.3s; } }
+
 /* ---------- Dormir: fundido a negro ---------- */
 .sueno {
   position: fixed;

@@ -11,7 +11,7 @@ import { sfx } from './sfx.js';
 // y se lleva todo: lo que está esperando ahí y la plata que tenés. Con el AK-47 se la echa: cuando se le
 // acaba la vida sale rajando en la moto, devuelve lo robado y no vuelve por 15 minutos. Mientras está en el terreno el cobrador
 // automático no anda (si no, nunca habría nada para robar).
-const SCHWEPA = {
+export const SCHWEPA = {
   id: 'schwepa', nombre: 'Schwepa', foto: 'schwepa.png', recorte: [0.52, 0.44, 0.46],
   piel: '#f2dccd', pelo: '#15110e', peinado: 'liso', remera: '#263238', pantalon: '#1b1b1b',
 };
@@ -153,7 +153,7 @@ export class Ladron {
   actualizar(dt, jugando) {
     if (this.estado === 'fuera') {
       const e = this.tycoon.estado;
-      if (!jugando || !e.compras.includes('piso_pb') || (e.schwepaVuelve || 0) > e.tiempoJugado) return;
+      if (!jugando || !e.compras.includes('piso_pb') || (e.schwepaVuelve || 0) > e.tiempoJugado || this.ocupado?.()) return;
       this.reloj += dt;
       if (this.reloj >= CADA) {
         this.reloj = 0;

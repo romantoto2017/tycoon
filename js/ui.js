@@ -45,6 +45,21 @@ export function aviso(texto, tipo = 'error') {
   el.className = `aviso ${tipo}`;
 }
 
+// Cartel grande de misión secreta (aparece de golpe en el medio y se va solo).
+let tSecreta = null;
+export function secreta(titulo, premio) {
+  const el = $('secreta');
+  $('secreta-titulo').textContent = titulo;
+  $('secreta-premio').textContent = premio;
+  el.classList.remove('oculto');
+  requestAnimationFrame(() => el.classList.add('visible'));
+  clearTimeout(tSecreta);
+  tSecreta = setTimeout(() => {
+    el.classList.remove('visible');
+    tSecreta = setTimeout(() => el.classList.add('oculto'), 500);
+  }, 5500);
+}
+
 export function mostrar(id, visible) {
   $(id).classList.toggle('oculto', !visible);
 }

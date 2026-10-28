@@ -61,7 +61,12 @@ export const MISIONES = [
   // Autódromo (abre con los autos): oro con un auto y oro con todos (el Auto Deportivo incluido).
   { id: 'hotwheels', personaje: null, desde: AUTOS_DESDE, titulo: 'Hot-Wheels', texto: 'Sacá la medalla de oro en el autódromo con algún auto', premio: { fijo: 1e10 } },
   { id: 'verstappen', personaje: null, desde: AUTOS_DESDE, titulo: 'Verstappen', texto: 'Sacá la medalla de oro con todos los autos', premio: { fijo: 1e12 } },
+  // Secretas: no aparecen en ningún lado hasta que se cumplen (sin querer). Ahí salta el cartel
+  // grande y recién entonces se ven en la lista, ya cumplidas.
+  { id: 'amistad', personaje: null, secreta: true, titulo: 'Restaurando la amistad', texto: 'Dormiste en la cama de Val con Mateo y en la de Mateo con Val', premio: { fijo: 2e7 } },
+  { id: 'isa_bonanni', personaje: 'negro', secreta: true, titulo: 'Isa Bonanni', texto: 'Le pegaste 3 tiros a la Schwepa con el Negro', premio: { fijo: 5e7 } },
 ];
+const TIROS_ISA = 3;
 // Los autos del autódromo (los del concesionario y el Auto Deportivo).
 const AUTOS_CARRERA = ['deportivo', ...AUTOS.map((a) => a.id)];
 export const PILCHAS = 5;
@@ -130,11 +135,40 @@ export class Misiones {
     this.tycoon.guardar?.();
   }
 
+  // Misión secreta: la cumple y salta el cartel grande.
+  completarSecreta(id) {
+    if (this.hecha(id)) return;
+    const m = MISIONES.find((x) => x.id === id);
+    this.estado[id] = true;
+    sfx.final();
+    const plata = this.cobrar(id);
+    this.ui.secreta?.(m.titulo, `+$${formato(plata)}`);
+    this.ui.puntoMisiones?.(true);
+    this.tycoon.guardar?.();
+  }
+
+  // Al dormir (main.js): dueno es de quién es el cuarto de esa cama.
+  durmio(personaje, dueno) {
+    if (this.hecha('amistad')) return;
+    const s = (this.tycoon.estado.secretas ??= {});
+    if (personaje === 'mateo' && dueno === 'val') s.mateoEnVal = true;
+    if (personaje === 'val' && dueno === 'mateo') s.valEnMateo = true;
+    if (s.mateoEnVal && s.valEnMateo) this.completarSecreta('amistad');
+  }
+
+  // Un tiro que le pegó a la Schwepa (main.js).
+  tiroSchwepa(personaje) {
+    if (personaje !== 'negro' || this.hecha('isa_bonanni')) return;
+    const s = (this.tycoon.estado.secretas ??= {});
+    s.tirosSchwepa = (s.tirosSchwepa || 0) + 1;
+    if (s.tirosSchwepa >= TIROS_ISA) this.completarSecreta('isa_bonanni');
+  }
+
   // Lo que muestra el panel de misiones.
   lista(jugador) {
     const e = this.tycoon.estado;
     const progreso = this.tycoon.progreso;
-    return MISIONES.map((m) => {
+    return MISIONES.filter((m) => !m.secreta || this.hecha(m.id)).map((m) => {
       let avance = 0;
       let detalle = '';
       if (m.id === 'empilchado') {

@@ -19,6 +19,7 @@ import { Restaurante } from './restaurante.js';
 import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
+import { Manu, Banda } from './manu.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
@@ -118,6 +119,10 @@ async function iniciar() {
   // La playa frente a la mansión (con Francis Jeremy surfeando y su pócima para los perros).
   const playa = new Playa({ escena, colisiones, estado, ui: UI, guardar: guardarAhora });
   const concesionario = new Concesionario({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso });
+  // Manu Mendez: solo, de paseo; con la Schwepa, robando (la mansión o un local de la ciudad).
+  const manu = new Manu(escena, UI);
+  const banda = new Banda({ escena, tycoon, ui: UI, ciudad, lucca, concesionario });
+  ladron.ocupado = () => banda.enCasa;
   const flota = new Flota(escena, colisiones, estado); // los autos comprados, en el galpón
   const autodromo = new Autodromo({ escena, colisiones, kit: tycoon.kit, estado, ui: UI, guardar: guardarAhora, progreso: () => tycoon.progreso, tycoon, flota });
   // El Taller, al lado de Vecibanda Motors: se entra manejando (la E en el portón).
@@ -354,6 +359,7 @@ async function iniciar() {
     if (!cama) return;
     durmiendo = true;
     controles.activo = false;
+    if (cama.dueno) misiones.durmio(estado.personaje, cama.dueno);
     cartelSueno.classList.remove('oculto');
     requestAnimationFrame(() => cartelSueno.classList.add('visible'));
     await new Promise((r) => setTimeout(r, 1800));
@@ -628,6 +634,15 @@ async function iniciar() {
         pego = ladron.herir(20);
       }
     }
+    // La Schwepa con Manu: no se la puede parar, pero el tiro le pega igual.
+    if (!pego && banda.posicionSchwepa(blanco)) {
+      const t = blanco.clone().sub(rayo.origin).dot(rayo.direction);
+      if (t > 0 && t < dist && rayo.distanceSqToPoint(blanco) < 2.6 * 2.6) {
+        dist = t;
+        pego = true;
+      }
+    }
+    if (pego) misiones.tiroSchwepa(estado.personaje);
     const fin = rayo.at(dist, tmpPunto);
     ak.userData.boca.getWorldPosition(boca);
     const tr = trazadoras[proxima++ % trazadoras.length];
@@ -1003,7 +1018,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1166,6 +1181,8 @@ async function iniciar() {
     misiones.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta && controles.activo);
     dufre.actualizar(dt, jugador, modo === 'juego');
     ottati.actualizar(dt, jugador, modo === 'juego');
+    banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);
+    manu.actualizar(dt, jugador, modo === 'juego', banda.activa);
     concesionario.actualizar(dt, jugador);
     karaoke.actualizar(dt, jugador);
     autodromo.actualizar(dt, jugador);
