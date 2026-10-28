@@ -65,7 +65,21 @@ async function iniciar() {
   // que llega el resize y asoma el fondo abajo). Acá solo se ajusta la resolución a lo que mide.
   let anchoCanvas = 0;
   let altoCanvas = 0;
+  // iPhone: a veces el 100% del CSS queda corto (la barra de Safari que se esconde, la de estado
+  // en la app de inicio) y abajo asoma una franja negra. El canvas toma el alto más grande que
+  // diga el navegador.
+  const altoPantalla = () => {
+    const vv = window.visualViewport;
+    let h = Math.max(window.innerHeight, document.documentElement.clientHeight, vv ? vv.height + vv.offsetTop : 0);
+    if (navigator.standalone) h = Math.max(h, window.innerWidth > window.innerHeight ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height));
+    return Math.round(h);
+  };
+  const corregirAlto = () => {
+    const h = altoPantalla();
+    if (Math.abs(canvas.clientHeight - h) > 1) canvas.style.height = `${h}px`;
+  };
   const ajustar = () => {
+    corregirAlto();
     anchoCanvas = canvas.clientWidth || window.innerWidth;
     altoCanvas = canvas.clientHeight || window.innerHeight;
     renderer.setSize(anchoCanvas, altoCanvas, false);
@@ -1111,6 +1125,7 @@ async function iniciar() {
   const bucle = () => {
     requestAnimationFrame(bucle);
     // Por si el aviso de cambio de tamaño tarda (pasa en el celu): se mira cada cuadro.
+    corregirAlto();
     if (canvas.clientWidth !== anchoCanvas || canvas.clientHeight !== altoCanvas) ajustar();
     const real = reloj.getDelta();
     const dt = Math.min(real, 0.05);
