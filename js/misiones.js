@@ -64,7 +64,7 @@ export const MISIONES = [
   // Secretas: no aparecen en ningún lado hasta que se cumplen (sin querer). Ahí salta el cartel
   // grande y recién entonces se ven en la lista, ya cumplidas.
   { id: 'amistad', personaje: null, caras: ['val', 'mateo'], secreta: true, titulo: 'Restaurando la amistad', texto: 'Dormiste en la cama de Val con Mateo y en la de Mateo con Val', premio: { fijo: 2e7 } },
-  { id: 'isa_bonanni', personaje: 'negro', secreta: true, titulo: 'Isa Bonanni', texto: 'Le pegaste 3 tiros a la Schwepa con el Negro', premio: { fijo: 5e7 } },
+  { id: 'isa_bonanni', personaje: 'negro', secreta: true, titulo: 'Isa Bonnani', texto: 'Le pegaste 3 tiros a la Schwepa con el Negro', premio: { fijo: 5e7 } },
 ];
 const TIROS_ISA = 3;
 // Los autos del autódromo (los del concesionario y el Auto Deportivo).

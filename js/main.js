@@ -898,7 +898,7 @@ async function iniciar() {
     controles.activo = false;
     const pf = fisico(p, estado);
     const cab = await cargarCabeza(p);
-    const probar = async (ropa) => probador.mostrar(crearPersonaje(pf, cab, await vestido(ropa)));
+    const probar = async (ropa) => probador.mostrar(crearPersonaje(pf, cab, await vestido(ropa), { otraVista: true }));
     const puedo = puedeVestirse(p.id);
     probador.abrir();
     UI.abrirRopero({

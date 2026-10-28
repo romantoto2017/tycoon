@@ -106,7 +106,9 @@ function canvasPasamontanas(p, c = canvasTejido(256)) {
 // cabeza: lo que devuelve cargarCabeza() (las 6 texturas y el color de piel de la foto).
 // vestido: (opcional) la ropa de las tiendas puesta, como la arma vestir.js:
 // { torso, piernas, pies, cabeza } con los canvas de cada prenda.
-export function crearPersonaje(p, cabezaTex, vestido = null) {
+// opciones.otraVista: el muñeco se muestra en otro renderer (la vista del ropero): sus canvas no se
+// vacían (la vista principal sube y vacía los pendientes, y el ropero los vería negros).
+export function crearPersonaje(p, cabezaTex, vestido = null, opciones = {}) {
   const grupo = new THREE.Group();
   // Manos sin iluminación, igual que la cabeza, para que el tono de piel coincida.
   const matPiel = new THREE.MeshBasicMaterial({ color: cabezaTex.piel || p.piel || '#f1c27d' });
@@ -125,7 +127,7 @@ export function crearPersonaje(p, cabezaTex, vestido = null) {
 
   const tex = (c) => { const t = texturaDeCanvas(c); extras.push(t); return t; };
   // Canvas armados solo para este muñeco (recortes de la ropa): se vacían al subirse (texturas.js).
-  const texUnica = (c) => liberarAlSubir(tex(c));
+  const texUnica = (c) => (opciones.otraVista ? tex(c) : liberarAlSubir(tex(c)));
   const lambert = (t) => { const m = new THREE.MeshLambertMaterial(t.isTexture ? { map: t } : { color: t }); extras.push(m); return m; };
   // Remera con foto: frente con el diseño y el resto (costados, mangas y la espalda, si no
   // tiene foto propia) con la tela.
