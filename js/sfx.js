@@ -92,15 +92,21 @@ async function cargarCancion() {
   try {
     const datos = await (await fetch(CANCION)).arrayBuffer();
     const buffer = await ctx.decodeAudioData(datos);
+    // El mp3 ya viene armado para dar la vuelta (herramientas/musica.py): el golpe final y, un
+    // tiempo después, otra vez la intro, con el eco del golpe sonando encima. Se saltean el
+    // silencio que agrega el mp3 al principio y el relleno del final.
     const canal = buffer.getChannelData(0);
+    let ini = 0;
+    while (ini < canal.length - 1 && Math.abs(canal[ini]) < 0.001) ini++;
     let fin = canal.length - 1;
-    while (fin > 0 && Math.abs(canal[fin]) < 0.001) fin--;
+    while (fin > ini && Math.abs(canal[fin]) < 0.001) fin--;
     const fuente = ctx.createBufferSource();
     fuente.buffer = buffer;
     fuente.loop = true;
+    fuente.loopStart = ini / buffer.sampleRate;
     fuente.loopEnd = (fin + 1) / buffer.sampleRate;
     fuente.connect(ganCancion);
-    fuente.start();
+    fuente.start(0, fuente.loopStart);
   } catch {
     // Sin canción (sin red o archivo roto): el juego sigue con los efectos.
   }
