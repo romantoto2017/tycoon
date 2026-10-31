@@ -25,6 +25,7 @@ import { subirPendientes } from './liberar.js';
 import { Pony, PRECIO_PAJA } from './pony.js';
 import { Estatua } from './estatua.js';
 import { Multijugador } from './multijugador.js';
+import { Chat } from './chat.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
@@ -331,6 +332,7 @@ async function iniciar() {
       }
     };
   }
+  if (mj) new Chat({ mj, controles, ui: UI, modo: () => modo });
   if (VECI.aviso) setTimeout(() => UI.toast(VECI.aviso, 'error', 5000), 4000);
   let avisoHeli = false;
   const ejes = { x: 0, y: 0 };

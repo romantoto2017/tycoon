@@ -24,7 +24,7 @@ const MODOS = { pie: 0, auto: 1, pony: 2 };
 
 // Lo que se ve por fuera de una mansión (sin muebles, cuadros ni paredes de adentro).
 const AFUERA = ITEMS.filter((it) => it.tipo === 'construccion' && it.construir && !it.mueble
-  && !/^(paredes_int|cuadro|obra|lujo_piano|lujo_nico_carton|tp_ciudad|perro_)/.test(it.id));
+  && !/^(paredes_int|cuadro|obra|lujo_piano|lujo_nico_carton|tp_ciudad|perro_|parrilla)/.test(it.id)); // la parrilla va al lado de lo de Lourdes: cada uno ve solo la suya
 
 const nombrePj = (id) => PERSONAJES.find((p) => p.id === id)?.nombre || '';
 const adentroDeCasa = (x, z, centro) => x > centro + MANSION.x0 - 0.5 && x < centro + MANSION.x1 + 0.5 && z > MANSION.z0 - 0.5 && z < MANSION.z1 + 0.5;
@@ -55,6 +55,18 @@ class Otro {
     this.grupo.add(this.etiqueta.sprite);
     this.auto = null;
     this.pony = null;
+    // Globo con lo último que dijo en el chat.
+    this.globo = crearEtiqueta([{ texto: ' ', tam: 52 }], 9);
+    this.globo.sprite.position.y = 9.4;
+    this.globo.sprite.visible = false;
+    this.grupo.add(this.globo.sprite);
+    this.tGlobo = 0;
+  }
+
+  hablar(texto) {
+    this.globo.actualizar([{ texto: texto.length > 42 ? `${texto.slice(0, 40)}…` : texto, tam: 52, color: '#ffffff' }]);
+    this.globo.sprite.visible = true;
+    this.tGlobo = 6;
   }
 
   async ponerInfo(info) {
@@ -77,6 +89,7 @@ class Otro {
   }
 
   actualizar(dt) {
+    if (this.tGlobo > 0 && (this.tGlobo -= dt) <= 0) this.globo.sprite.visible = false;
     const p = this.pos;
     const vivo = p && this.info.enLinea !== false && performance.now() - p.t < SIN_NOTICIAS * 1000;
     // Adentro de su propia mansión no se ve (los demás no entran a las casas ajenas).
@@ -349,11 +362,25 @@ export class Multijugador {
     this.muriendo = 0;
     this.alMorir = null; // main.js
     this.t = 0;
-    red.enLinea(uid);
+    red.enLinea(uid, nombre);
     red.alJugadores((js) => this.recibirJugadores(js));
     red.alPosiciones((id, p) => {
       if (id === uid) return;
       this.otro(id).ponerPos(p);
+    });
+  }
+
+  // ---------- Chat (sin censura: lo que escribís es lo que ven todos) ----------
+  enviarChat(texto) {
+    this.red.chat({ uid: this.uid, nombre: this.nombre, texto: texto.slice(0, 200), t: Date.now() });
+  }
+
+  // cb({ uid, nombre, texto, t, mio }) por cada mensaje (los últimos y los que llegan).
+  alChat(cb) {
+    this.red.alChat((d) => {
+      if (!d || !d.texto) return;
+      if (d.uid !== this.uid && this.otros.has(d.uid) && Date.now() - (d.t || 0) < 15000) this.otros.get(d.uid).hablar(d.texto);
+      cb({ ...d, mio: d.uid === this.uid });
     });
   }
 
@@ -364,6 +391,15 @@ export class Multijugador {
 
   recibirJugadores(js) {
     this.jugadores = js;
+    // "Fulanito se unió": cuando alguien pasa a estar conectado (no por los que ya estaban al entrar vos).
+    const primera = !this.enLineaAntes;
+    this.enLineaAntes ??= {};
+    for (const [id, info] of Object.entries(js)) {
+      if (id === this.uid) continue;
+      const ahora = info.enLinea === true;
+      if (!primera && ahora && !this.enLineaAntes[id] && info.nombre) this.alUnirse?.(info.nombre);
+      this.enLineaAntes[id] = ahora;
+    }
     for (const [id, info] of Object.entries(js)) {
       if (id === this.uid || info.slot == null) continue;
       this.otro(id).ponerInfo(info);

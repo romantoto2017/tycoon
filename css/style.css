@@ -829,6 +829,45 @@ html, body {
 }
 @media (prefers-reduced-motion: reduce) { .pg-barra i, .pg-peso, .pg-rep { transition: none; } .pg-lucha { animation: none; } }
 
+/* ---------- Chat (multijugador: chat.js) ---------- */
+.btn-chat {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(64px + env(safe-area-inset-left));
+  width: 44px; height: 44px; padding: 0;
+  display: grid; place-items: center;
+  color: #fff; background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 12px;
+  cursor: pointer; pointer-events: auto;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.btn-chat:hover { filter: brightness(1.25); }
+.btn-chat:active { transform: translateY(2px); }
+.btn-chat:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
+.btn-chat[aria-pressed="true"] { background: var(--azul); }
+body.con-chat .btn-misiones { left: calc(116px + env(safe-area-inset-left)); }
+.chat {
+  position: absolute;
+  top: calc(62px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left));
+  width: min(360px, calc(100vw - 24px));
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px;
+  background: rgba(16, 18, 24, 0.72);
+  border: 2px solid var(--panel-borde);
+  border-radius: 14px;
+  pointer-events: auto;
+}
+.chat-lista { list-style: none; margin: 0; padding: 0 2px; max-height: min(220px, 34vh); overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.chat-lista li { font-size: 15px; line-height: 1.3; color: #fff; text-shadow: 0 1px 0 #000; word-wrap: break-word; }
+.chat-lista b { color: #ffd23f; }
+.chat-lista li.mio b { color: #8dff6a; }
+.chat-lista li.sistema { color: #9fd3ff; font-style: italic; }
+.chat-form { display: flex; gap: 6px; }
+.chat-texto { flex: 1; min-width: 0; font-family: var(--fuente); font-size: 16px; font-weight: 600; padding: 8px 10px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.25); background: rgba(0, 0, 0, 0.45); color: #fff; outline: none; }
+.chat-texto:focus { border-color: var(--azul); }
+.chat-enviar { width: 44px; border: 0; border-radius: 10px; background: var(--azul); color: #fff; font-size: 18px; cursor: pointer; }
+@media (max-height: 520px) { .chat-lista { max-height: 28vh; } .chat-lista li { font-size: 13px; } }
+
 /* ---------- Misiones ---------- */
 .btn-misiones {
   position: absolute;

@@ -77,6 +77,8 @@ Hasta 9 jugadores a la vez, cada uno con su terreno sobre la misma calle (los 8 
 - **Al entrar** se pide el nombre de usuario (una vez; queda guardado). Arriba de los demás se ve su nombre y abajo el del personaje.
 - **Las mansiones de los demás** se ven solo por fuera, armadas según lo que compraron (sin muebles ni cuadros). A la casa no se puede entrar; al patio sí: la cancha (con su pelota), la pileta, el garage y el galpón.
 - **Puerta láser** ($2.000M, opcional, en la entrada): vos pasás; si otro la toca, se muere y aparece en la última cama en la que durmió (o en su mansión si nunca durmió).
+- **Chat** (el botón entre la configuración y las misiones, o T / Enter): sin censura, lo usan todos. Con el chat cerrado, lo que dicen los demás sale abajo y en un globo arriba de su cabeza. Cuando alguien entra, avisa "Fulanito se unió". En `js/chat.js` (los mensajes van a `chat/` en Firebase; se ven los últimos 40).
+- **Parrilla Vecibanda**: se compra al lado de lo de Lourdes y cada uno ve solo la suya (las mansiones de los demás no la muestran).
 - **Podio en el cielo** (atrás de las mansiones): los 3 con la mansión más avanzada, con su personaje, nombre y porcentaje.
 - Archivos: `js/arranque.js` (nombre, conexión y terreno, antes de cargar el juego), `js/red.js` (la base de datos), `js/multijugador.js` (los demás, sus mansiones, el podio y la puerta láser).
 - Sin config el juego anda solo, como siempre. La vista `?completo` no se conecta.
