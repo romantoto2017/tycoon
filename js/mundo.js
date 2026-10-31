@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { caja, matTex, aleatorio } from './util.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LIMITE_MAPA, TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU, GALPON as GA } from './constantes.js';
+import { LIMITE_MAPA, TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU, GALPON as GA, BARRIO, DX, LOTES, loteLocal } from './constantes.js';
 import { crearCielo } from './cielo.js';
 
-// Largo del barrio (en x): llega del gym (-455) al restaurante (+160) con margen.
-const LARGO = 1300;
+// Largo del barrio (en x): de la autopista hasta pasando el último terreno (BARRIO).
+const LARGO = BARRIO.x1 - BARRIO.x0;
+const MEDIO = (BARRIO.x0 + BARRIO.x1) / 2;
+// Algún terreno (con su galpón) ocupa este punto.
+const enLote = (x, z, m = 6) => LOTES.some((_, k) => { const c = loteLocal(k); return x > c + T.x0 - m && x < c + GA.x1 + m && z > T.z0 - m && z < T.z1 + m; });
 
 export function crearMundo(escena) {
   // Cielo, sol, luna, estrellas, luces y el dirigible: cambian con la hora (cielo.js).
@@ -53,10 +56,11 @@ export function crearMundo(escena) {
 
 function crearCalle(escena) {
   const g = new THREE.Group();
-  g.add(caja(LARGO, 0.1, 12, '#4d4f55', 0, 0.05, CALLE_Z));
-  g.add(caja(LARGO, 0.25, 2.5, '#c9c9c9', 0, 0.125, CALLE_Z - 7.25));
-  g.add(caja(LARGO, 0.25, 2.5, '#c9c9c9', 0, 0.125, CALLE_Z + 7.25));
-  g.add(caja(6, 0.08, CALLE_Z - 7 - T.z1, '#bdbdbd', 0, 0.04, (T.z1 + CALLE_Z - 6) / 2)); // vereda al terreno
+  g.add(caja(LARGO, 0.1, 12, '#4d4f55', MEDIO, 0.05, CALLE_Z));
+  g.add(caja(LARGO, 0.25, 2.5, '#c9c9c9', MEDIO, 0.125, CALLE_Z - 7.25));
+  g.add(caja(LARGO, 0.25, 2.5, '#c9c9c9', MEDIO, 0.125, CALLE_Z + 7.25));
+  // Vereda de la calle a cada terreno.
+  for (let k = 0; k < LOTES.length; k++) g.add(caja(6, 0.08, CALLE_Z - 7 - T.z1, '#bdbdbd', loteLocal(k), 0.04, (T.z1 + CALLE_Z - 6) / 2));
   escena.add(g);
 
   // Líneas amarillas punteadas: un solo InstancedMesh.
@@ -64,7 +68,7 @@ function crearCalle(escena) {
   const lineas = new THREE.InstancedMesh(new THREE.BoxGeometry(3, 0.12, 0.35), new THREE.MeshLambertMaterial({ color: '#ffd23f' }), n);
   const m = new THREE.Matrix4();
   for (let i = 0; i < n; i++) {
-    m.makeTranslation(-LARGO / 2 + 10 + i * 10, 0.08, CALLE_Z);
+    m.makeTranslation(BARRIO.x0 + 10 + i * 10, 0.08, CALLE_Z);
     lineas.setMatrixAt(i, m);
   }
   escena.add(lineas);
@@ -77,7 +81,7 @@ function crearCasasVecinas(escena) {
   const techos = ['#8d3b2f', '#455a64', '#6d4c41'];
   const z = CALLE_Z + 22;
   // Por la cuadra del gym (frente a la mansión, cruzando la calle, está la playa: playa.js).
-  const xs = [-395, -425, -455, -485];
+  const xs = [-395, -425, -455, -485].map((x) => x + DX);
   for (let i = 0; i < xs.length; i++) {
     const x = xs[i];
     const g = new THREE.Group();
@@ -98,16 +102,16 @@ function crearArboles(escena, altura = () => 0) {
   const rnd = aleatorio(7);
   const puntos = [];
   // Árboles alrededor de la mansión y, más desparramados, por todo el camino hasta el gym.
-  for (const [cuantos, anchoX] of [[70, 440], [90, LARGO - 80]]) {
+  // (multijugador: alrededor de la tuya y por todo el barrio, sin pisar ningún terreno)
+  for (const [cuantos, anchoX, centro] of [[70, 440, 0], [90 + Math.round((LARGO - 1300) / 15), LARGO - 80, MEDIO]]) {
     let n = 0;
     while (n < cuantos) {
-      const x = (rnd() - 0.5) * anchoX;
+      const x = centro + (rnd() - 0.5) * anchoX;
       const z = (rnd() - 0.5) * 360;
-      if (x > T.x0 - 6 && x < T.x1 + 6 && z > T.z0 - 6 && z < T.z1 + 6) continue; // terreno
+      if (enLote(x, z)) continue; // terrenos
       if (z > CALLE_Z - 10) continue;                                               // calle, playa y mar
       if (x > R.x0 - 8 && x < PA.x + 14 && z > R.z0 - 8 && z < CALLE_Z) continue;    // restaurante y parrilla
       if (x > GYM.x0 - 8 && x < GYM.x1 + 8 && z > GYM.z0 - 8 && z < CALLE_Z) continue; // gym
-      if (x > GA.x0 - 18 && x < GA.x1 + 8 && z > GA.z0 - 8 && z < CALLE_Z) continue;  // lote del galpón
       if (Math.hypot(x - MO.x, z - MO.z) < MO.r + 6) continue;                      // montaña
       puntos.push([x, z, 0.8 + rnd() * 0.6]);
       n++;

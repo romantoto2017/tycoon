@@ -20,7 +20,7 @@ const CERCA = 4.6;
 export const SOLO_BAUTI = 'Solo para los subiditos al pony';
 
 // Pony de bloques mirando a +z. Patas con pivote en la cadera (para el trote).
-function crearPony() {
+export function crearPony() {
   const g = new THREE.Group();
   const pelo = mat('#8b4a22');
   const oscuro = mat('#6a3416');

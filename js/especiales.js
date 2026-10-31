@@ -676,3 +676,18 @@ export function helicoptero(k, g) {
   // El helicóptero es aparte (helicoptero.js): se maneja.
 }
 
+
+// Puerta láser en la entrada de la mansión (x −5..5, z = 0): dos postes de metal y rayos rojos
+// horizontales que titilan (main.js / multijugador.js: la usa para matar a los que no son el dueño).
+export function puertaLaser(k, g) {
+  const metal = '#24272c';
+  for (const x of [-5.4, 5.4]) {
+    g.add(k.cajaDe(x - 0.35, 0, 0.3, x + 0.35, 7.6, 1.0, metal));
+    g.add(k.noSolido(k.cajaDe(x - 0.12, 0.6, 0.62, x + 0.12, 7.2, 0.68, k.brillo('#ff3b3b'))));
+  }
+  const rayos = k.grupo();
+  for (let i = 0; i < 7; i++) rayos.add(k.noSolido(k.cajaDe(-5.05, 0.7 + i * 1.0, 0.6, 5.05, 0.78 + i * 1.0, 0.7, k.brillo('#ff1a1a'))));
+  rayos.userData.dinamico = true;
+  rayos.userData.laser = true;
+  g.add(rayos);
+}

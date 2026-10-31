@@ -70,6 +70,30 @@ En la verdulería de la ciudad, al costado, se vende un fardo de **paja** ($40M,
 
 En el patio de atrás, al lado de la pileta: una estatua griega de mármol con la pose del Júpiter (el brazo levantado con el cetro, el manto colgando del hombro, el tronco de apoyo) y la cara de Santi en mármol (sacada de `assets/caras/santi.png` con `herramientas/santi.py`, en el contenedor). Al acercarte: "Leer testamento (E)". Todo en `js/estatua.js`.
 
+## Multijugador
+
+Hasta 9 jugadores a la vez, cada uno con su terreno sobre la misma calle (los 8 nuevos están pasando el restaurante, con lugar para el galpón). Lo compartido (gym, restaurante, playa, montaña, autopista, ciudad, tiendas) es uno solo; cada uno ve su mansión en el centro de siempre y el resto del mundo corrido según su terreno (`LOTES`, `DX` y `loteLocal` en `js/constantes.js`), así nadie se teletransporta.
+
+- **Al entrar** se pide el nombre de usuario (una vez; queda guardado). Arriba de los demás se ve su nombre y abajo el del personaje.
+- **Las mansiones de los demás** se ven solo por fuera, armadas según lo que compraron (sin muebles ni cuadros). A la casa no se puede entrar; al patio sí: la cancha (con su pelota), la pileta, el garage y el galpón.
+- **Puerta láser** ($2.000M, opcional, en la entrada): vos pasás; si otro la toca, se muere y aparece en la última cama en la que durmió (o en su mansión si nunca durmió).
+- **Podio en el cielo** (atrás de las mansiones): los 3 con la mansión más avanzada, con su personaje, nombre y porcentaje.
+- Archivos: `js/arranque.js` (nombre, conexión y terreno, antes de cargar el juego), `js/red.js` (la base de datos), `js/multijugador.js` (los demás, sus mansiones, el podio y la puerta láser).
+- Sin config el juego anda solo, como siempre. La vista `?completo` no se conecta.
+
+### Cómo prenderlo (Firebase, gratis, una sola vez)
+
+1. Entrá a https://console.firebase.google.com con una cuenta de Google y tocá **Crear un proyecto** (ponele "vecibanda", sin Google Analytics).
+2. En el menú: **Compilación → Realtime Database → Crear una base de datos** (ubicación: Estados Unidos) y elegí **Comenzar en modo de prueba**.
+3. En **Reglas** pegá esto y publicá (cualquiera con el link puede jugar; no lo pases fuera del grupo):
+   ```json
+   { "rules": { ".read": true, ".write": true } }
+   ```
+4. En **Configuración del proyecto** (la ruedita) → **Tus apps** → el ícono **</>** (Web) → registrá la app (sin Hosting). Te muestra un `firebaseConfig = { ... }`.
+5. Copiá ese objeto en `js/red-config.js` (en vez de `null`) y subilo. Listo: todos los que entren al link juegan juntos.
+
+Para probar sin Firebase: `?redlocal&uid=a&nombre=Ana` y `?redlocal&uid=b&nombre=Beto` en dos pestañas del mismo navegador.
+
 ## Día y noche
 
 Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. De noche, al lado de una cama comprada aparece "Dormir (E)": se funde a negro y te despertás a la mañana. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.

@@ -169,6 +169,13 @@ agregar({
   id: 'tp_ciudad', nombre: 'TP a la Ciudad Vecibanda', tipo: 'construccion', requiere: ['auto'], boton: suelo(TP_CIUDAD.x, TP_CIUDAD.z),
   especial: true, opcional: true, precio: TP_CIUDAD.precio, descripcion: 'Un portal: de la mansión a la ciudad en un segundo (y de vuelta)',
 });
+// Puerta láser (multijugador): en la puerta de adelante de tu mansión. Vos pasás; si otro
+// jugador la toca, se muere y aparece en la última cama en la que durmió (multijugador.js).
+agregar({
+  id: 'puerta_laser', nombre: 'Puerta láser', tipo: 'construccion', requiere: ['auto'], boton: suelo(13, 9),
+  especial: true, opcional: true, precio: 2e9, descripcion: 'Si otro jugador intenta entrar a tu casa, se muere',
+  construir: Es.puertaLaser,
+});
 cuarto(0);
 cuarto(1);
 mejora('velocidad', ['vel1', 'paredes_int_1']);

@@ -350,6 +350,16 @@
     <p id="msg-carga">Cargando...</p>
   </div>
 
+  <div id="usuario" class="pantalla oculto">
+    <div class="modal usuario" role="dialog" aria-labelledby="usuario-titulo">
+      <h2 id="usuario-titulo">¿Cómo te llamás?</h2>
+      <p>Tu nombre de usuario: lo ven los demás arriba de tu cabeza.</p>
+      <input id="usuario-nombre" class="usuario-input" type="text" maxlength="20" autocomplete="nickname" placeholder="Fulanito Tanto" aria-label="Nombre de usuario">
+      <p id="usuario-aviso" class="usuario-aviso" role="alert"></p>
+      <button id="usuario-listo" class="btn verde grande">Listo</button>
+    </div>
+  </div>
+
   <div id="errores"></div>
 
   <script>
@@ -366,7 +376,7 @@
         'Este juego no se puede abrir con doble clic. Abrilo desde GitHub Pages (ver README).';
     }
   </script>
-  <script type="module" src="js/main.js"
+  <script type="module" src="js/arranque.js"
           onerror="mostrarError('No se pudo cargar el juego. ¿Tenés internet?')"></script>
 </body>
 </html>

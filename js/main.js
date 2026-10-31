@@ -24,6 +24,7 @@ import { Amarishuow } from './amarishuow.js';
 import { subirPendientes } from './liberar.js';
 import { Pony, PRECIO_PAJA } from './pony.js';
 import { Estatua } from './estatua.js';
+import { Multijugador } from './multijugador.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
@@ -31,7 +32,7 @@ import { Playa } from './playa.js';
 import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD, PLAYA, AUTOS_DESDE } from './constantes.js';
+import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD, PLAYA, AUTOS_DESDE, BARRIO, DX } from './constantes.js';
 import { crearAK } from './arma.js';
 import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
 import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
@@ -170,11 +171,12 @@ async function iniciar() {
   // cosas) y la ciudad cuando termina de armarse (antes se ve su plano dibujado). En ui.js se
   // dibujan el minimapa y el mapa grande, arriba del plano (calles, autopista, pista, ciudad).
   const ZONAS_MAPA = {
-    barrio: [-660, -365, 335, 190],
+    // Con multijugador, el barrio entero (los 9 terrenos), con menos detalle.
+    barrio: globalThis.VECI?.red ? [BARRIO.x0 - 10, -365, BARRIO.x1 + 10, 190] : [-660 + DX, -365, 335, 190],
     autodromo: [AUTODROMO.x - 900, AUTOPISTA.z - 30, AUTODROMO.x + 900, AUTODROMO.z + 900],
     ciudad: [CIUDAD.x - RADIO_CIUDAD - 20, CIUDAD.z - RADIO_CIUDAD - 20, TALLER.x1 + 30, CIUDAD.z + RADIO_CIUDAD + 20],
   };
-  const PX_MAPA = { barrio: 1.6, autodromo: 0.9, ciudad: 1.5 }; // píxeles por unidad de cada foto
+  const PX_MAPA = { barrio: globalThis.VECI?.red ? 1 : 1.6, autodromo: 0.9, ciudad: 1.5 }; // píxeles por unidad de cada foto
   const fotos = {};
   const camMapa = new THREE.OrthographicCamera(-1, 1, 1, -1, 10, 2000);
   camMapa.up.set(0, 0, -1); // el norte (−z) arriba
@@ -314,6 +316,22 @@ async function iniciar() {
   // ---------- Auto ----------
   let conduciendo = false;
   let vehiculo = null; // el que estás manejando: un auto (el deportivo o uno del galpón) o tycoon.heli
+  // Multijugador (js/arranque.js conecta y elige el terreno): los demás, sus mansiones, el podio.
+  const VECI = globalThis.VECI || {};
+  const mj = VECI.red ? new Multijugador({ escena, colisiones, estado, jugador, tycoon, ui: UI, red: VECI.red, uid: VECI.uid, nombre: VECI.nombre, camara }) : null;
+  if (mj) {
+    mj.alMorir = (que) => {
+      if (que === 'muere') {
+        if (pony.montado) pony.bajar(jugador);
+        controles.activo = false;
+        if (jugador.modelo) jugador.modelo.grupo.rotation.x = -Math.PI / 2; // tirado en el piso
+      } else {
+        if (jugador.modelo) jugador.modelo.grupo.rotation.x = 0;
+        controles.activo = modo === 'juego';
+      }
+    };
+  }
+  if (VECI.aviso) setTimeout(() => UI.toast(VECI.aviso, 'error', 5000), 4000);
   let avisoHeli = false;
   const ejes = { x: 0, y: 0 };
   const tmpBajada = new THREE.Vector3();
@@ -409,6 +427,7 @@ async function iniciar() {
     durmiendo = true;
     controles.activo = false;
     if (cama.dueno) misiones.durmio(estado.personaje, cama.dueno);
+    estado.ultimaCama = { x: cama.x, y: cama.y, z: cama.z }; // multijugador: ahí reaparecés si te morís
     cartelSueno.classList.remove('oculto');
     requestAnimationFrame(() => cartelSueno.classList.add('visible'));
     await new Promise((r) => setTimeout(r, 1800));
@@ -1161,7 +1180,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1327,6 +1346,7 @@ async function iniciar() {
     ottati.actualizar(dt, jugador, modo === 'juego');
     amarishuow.actualizar(dt, jugador, modo === 'juego');
     pony.actualizar(dt, jugador);
+    if (modo === 'juego') mj?.actualizar(dt, { modo: conduciendo && vehiculo !== tycoon.heli ? 'auto' : pony.montado ? 'pony' : 'pie', vehiculo: conduciendo && vehiculo !== tycoon.heli ? vehiculo : null });
     banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);
     manu.actualizar(dt, jugador, modo === 'juego', banda.activa);
     concesionario.actualizar(dt, jugador);

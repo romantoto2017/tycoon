@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PLAYA as P } from './constantes.js';
+import { PLAYA as P, LOTES, loteLocal } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, cargarImagen, crearEtiqueta, liberarAlSubir } from './texturas.js';
 import { aleatorio } from './util.js';
@@ -27,7 +27,7 @@ import { sfx } from './sfx.js';
 const O = P.orilla;
 const Y_AGUA = 0.32;
 const ANCHO_PLAYA = P.x1 - P.x0;
-const SPOT = { x: 14, z: O - 3.6 }; // donde se para Francis cuando sale del agua
+const SPOT = { x: P.muelle.x - 32, z: O - 3.6 }; // donde se para Francis cuando sale del agua
 
 function lienzo(w, h, dibujar) {
   const c = document.createElement('canvas');
@@ -537,7 +537,8 @@ export class Playa {
     // el deck y frente al muelle).
     const zc0 = P.z0;
     const zc1 = P.z0 + 5;
-    const cortes = [[-4, 4], [P.muelle.x - 5, P.muelle.x + 5]];
+    // Sin cantero frente al portón de cada terreno (multijugador: LOTES) ni en el muelle.
+    const cortes = [...LOTES.map((_, k) => [loteLocal(k) - 4, loteLocal(k) + 4]), [P.muelle.x - 5, P.muelle.x + 5]];
     const libre = (x) => !cortes.some(([a, b]) => x > a - 1 && x < b + 1);
     for (let x = P.x0; x < P.x1; x += 10) {
       const a = x;
@@ -582,7 +583,7 @@ export class Playa {
     // Reposeras y sombrillas pastel cerca del agua.
     let k = 0;
     for (let x = P.x0 + 30; x < P.x1 - 20; x += 38) {
-      if (Math.abs(x) < 22 || Math.abs(x - P.muelle.x) < 14 || Math.abs(x - SPOT.x) < 10) continue;
+      if (LOTES.some((_, k) => Math.abs(x - loteLocal(k)) < 22) || Math.abs(x - P.muelle.x) < 14 || Math.abs(x - SPOT.x) < 10) continue;
       const z = O - 17 + (rnd() - 0.5) * 3;
       const color = PASTEL[k++ % PASTEL.length];
       sombrilla(pila, x, z - 0.6, color);

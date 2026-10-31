@@ -257,6 +257,13 @@ html, body {
 .modal p { margin: 0 0 18px; font-size: 17px; color: #333; }
 .fila { display: flex; gap: 12px; justify-content: center; }
 
+/* ---------- Nombre de usuario (arranque.js) ---------- */
+#usuario { z-index: 40; background: rgba(10, 14, 22, 0.55); }
+.modal.usuario h2 { color: #1e3a8a; }
+.usuario-input { width: 100%; font-family: var(--fuente); font-size: 22px; font-weight: 700; padding: 10px 14px; border-radius: 12px; border: 3px solid #cfd6e3; outline: none; text-align: center; }
+.usuario-input:focus { border-color: var(--azul); }
+.usuario-aviso { min-height: 22px; margin: 6px 0 10px !important; color: var(--rojo) !important; font-weight: 700; font-size: 15px !important; }
+
 /* ---------- Testamento de la estatua: un pergamino ---------- */
 .pergamino {
   width: min(460px, 100%);
