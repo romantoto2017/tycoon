@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { crearPaja } from './pony.js';
 import { CIUDAD as C, AUTOPISTA as AU, CONCESIONARIO as CO, AUTODROMO as AD, TALLER as TA } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, cargarImagen, crearEtiqueta, liberarAlSubir } from './texturas.js';
@@ -1308,6 +1309,12 @@ export class Ciudad {
     return v && jugador.pos.y < 3 && Math.hypot(jugador.pos.x - (C.x + v.x), jugador.pos.z - (C.z + v.z)) < 4.5;
   }
 
+  // El fardo de paja, al costado de la verdulería (para el pony: pony.js). Se vende una vez.
+  cercaPaja(jugador) {
+    const v = this.verdu;
+    return v && this.puedePaja?.() && jugador.pos.y < 3 && Math.hypot(jugador.pos.x - (C.x + v.x + 7), jugador.pos.z - (C.z + v.z + 0.5)) < 3.8;
+  }
+
   // La tienda en cuyo mostrador estás (o null).
   tiendaCerca(jugador) {
     if (!this.tiendas || jugador.pos.y > 3) return null;
@@ -1319,6 +1326,7 @@ export class Ciudad {
 
   accion(jugador) {
     if (!this.lista || !this.adentro(jugador.pos)) return '';
+    if (this.cercaPaja(jugador)) return `Comprar paja $${this.precioPaja} (E)`;
     if (this.cercaVerdu(jugador)) return `Comprar lechuga $${this.precioLechuga} (E)`;
     if (this.tiendaCerca(jugador)) return 'Ver la ropa (E)';
     const p = this.pelotaBasquet;
@@ -1330,6 +1338,7 @@ export class Ciudad {
   hacer(jugador) {
     const t = this.tiendaCerca(jugador);
     if (t) this.alTienda?.(t);
+    else if (this.cercaPaja(jugador)) this.alComprarPaja?.();
     else if (this.cercaVerdu(jugador)) this.alComprarLechuga?.();
     else if (this.accion(jugador)) this.tirar(jugador);
   }
@@ -1379,6 +1388,11 @@ export class Ciudad {
       this.verdulero = crearPersonaje(p, cab);
       this.verdulero.grupo.position.set(v.xVerdulero, PISO, v.zVerdulero);
       this.grupo.add(this.verdulero.grupo);
+      // El fardo de paja en la vereda (se ve mientras se pueda comprar).
+      this.fardo = crearPaja();
+      this.fardo.position.set(v.x + 7, PISO, v.z + 0.5);
+      this.fardo.rotation.y = 0.2;
+      this.grupo.add(this.fardo);
     }
   }
 
@@ -1426,6 +1440,7 @@ export class Ciudad {
       if (ver) this.moverPeaton(p, dt);
     }
     this.verdulero?.animar(dt, 0, true);
+    if (this.fardo) this.fardo.visible = !!this.puedePaja?.();
     for (const t of Object.values(this.tiendas || {})) {
       t.vendedor?.animar(dt, 0, true);
       if (t.globo > 0 && (t.globo -= dt) <= 0) t.etiqueta.actualizar([{ texto: t.T.vendedor.nombre, tam: 60, color: '#ffffff' }]);

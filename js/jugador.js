@@ -19,6 +19,7 @@ export class Jugador {
     this.pos = new THREE.Vector3(SPAWN.x, 0, SPAWN.z);
     this.enAgua = false;
     this.factorVel = 1; // por personaje (data/personajes.js: velocidad)
+    this.montura = null; // arriba de algo (el pony): { vel, alto, mover(dt, pos, angulo, vel) }
     this.escala = 1; // Jeipi es más alto (data/personajes.js: alto)
     this.agachado = false;
     this.quiereAgacharse = false;
@@ -84,7 +85,7 @@ export class Jugador {
     const p = this.pos;
     this.enAgua = agua.some((b) => p.x > b.min.x && p.x < b.max.x && p.z > b.min.z && p.z < b.max.z && p.y + 1.5 < b.max.y && p.y > b.min.y - 1);
     this.actualizarAgachado(colisiones);
-    const vel = VEL_CAMINAR * this.factorVel * (this.enAgua ? 0.6 : 1) * (this.agachado ? 0.55 : 1);
+    const vel = this.montura ? this.montura.vel * (this.enAgua ? 0.6 : 1) : VEL_CAMINAR * this.factorVel * (this.enAgua ? 0.6 : 1) * (this.agachado ? 0.55 : 1);
     this.vel.x = dir.x * vel;
     this.vel.z = dir.z * vel;
     let salto = false;
@@ -111,7 +112,17 @@ export class Jugador {
     this.contenedor.position.copy(this.pos);
     this.contenedor.rotation.y = this.angulo;
     this.sombra.position.set(this.pos.x, this.suelo + 0.06, this.pos.z);
-    if (this.modelo) this.modelo.animar(dt, velPlano, this.enSuelo || this.enAgua, this.agachado);
+    if (this.modelo) {
+      const m = this.montura;
+      this.modelo.animar(dt, velPlano, this.enSuelo || this.enAgua, this.agachado && !m, !!m);
+      // Montado: sentado en la montura, con las piernas abiertas a los costados del lomo.
+      this.modelo.grupo.position.y = m ? m.alto : 0;
+      if (m) {
+        this.modelo.partes.piernaI.muslo.rotation.z = -0.32;
+        this.modelo.partes.piernaD.muslo.rotation.z = 0.32;
+        m.mover(dt, this.pos, this.angulo, velPlano);
+      }
+    }
     return salto;
   }
 

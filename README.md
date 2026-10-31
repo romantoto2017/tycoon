@@ -62,6 +62,14 @@ Morocho, pelo corto con rulos, alto y medio gordito, con la remera gris de rayas
 
 Un cuerpo normal todo amarillo (cabeza incluida): sin cara, sin pelo y sin ropa. Cada tanto cambia de lugar: a veces pasea por la vereda de la mansión o por la plaza de la ciudad (como Dufre) y a veces está parado en el Power Camp, cerca de la entrada, mirando el celu. Si te acercás en el gym, guarda el celu y te ofrece la mano: "Chocar la mano con el Amarishuow (E)" (el mismo choque que Kelvin y Ottati). Todo en `js/amarishuow.js`.
 
+## El pony
+
+En la verdulería de la ciudad, al costado, se vende un fardo de **paja** ($40M, una sola vez). Se lleva a la mansión y se pone afuera de la cerca de adelante, a la derecha del portón ("Poner la paja (E)"): viene un pony islandés caminando por la calle y se pone a comer. "Atar al pony (E)" y queda atado al palenque, con montura. **Solo Bauti se puede subir** ("Subirse al pony (E)"); con otro personaje sale el cartel "Solo para los subiditos al pony". Montado va mucho más rápido que caminando (no usa el TP, que es a pie). Al bajarte queda donde lo dejaste; cerca del palenque se ata solo. Todo en `js/pony.js` (y `jugador.montura` en `js/jugador.js`).
+
+## La estatua de Santi
+
+En el patio de atrás, al lado de la pileta: una estatua griega de mármol con la pose del Júpiter (el brazo levantado con el cetro, el manto colgando del hombro, el tronco de apoyo) y la cara de Santi en mármol (sacada de `assets/caras/santi.png` con `herramientas/santi.py`, en el contenedor). Al acercarte: "Leer testamento (E)". Todo en `js/estatua.js`.
+
 ## Día y noche
 
 Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. De noche, al lado de una cama comprada aparece "Dormir (E)": se funde a negro y te despertás a la mañana. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.

@@ -257,6 +257,21 @@ html, body {
 .modal p { margin: 0 0 18px; font-size: 17px; color: #333; }
 .fila { display: flex; gap: 12px; justify-content: center; }
 
+/* ---------- Testamento de la estatua: un pergamino ---------- */
+.pergamino {
+  width: min(460px, 100%);
+  padding: 22px 28px 18px;
+  border-radius: 10px;
+  background: radial-gradient(ellipse at 50% 40%, #fbf3dc 0%, #efdfb6 70%, #dcc28c 100%);
+  border: 3px solid #a07a3c;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 30px rgba(120, 80, 20, 0.25);
+  text-align: center;
+  color: #3b2a12;
+}
+.pergamino h2 { margin: 0 0 10px; font-size: 26px; letter-spacing: 4px; text-transform: uppercase; color: #6b4a1c; }
+.pergamino-texto { margin: 0 0 12px; font-size: 21px; line-height: 1.35; font-style: italic; }
+.pergamino-firma { margin: 0 0 16px; font-size: 17px; font-weight: 700; }
+
 /* ---------- Caja fuerte (bóveda del garage) ---------- */
 .modal.caja-fuerte { width: min(420px, 100%); max-width: 420px; }
 .modal.caja-fuerte h2 { color: #a16207; }
