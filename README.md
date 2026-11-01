@@ -96,6 +96,12 @@ Hasta 9 jugadores a la vez, cada uno con su terreno sobre la misma calle (los 8 
 
 Para probar sin Firebase: `?redlocal&uid=a&nombre=Ana` y `?redlocal&uid=b&nombre=Beto` en dos pestañas del mismo navegador.
 
+## Lagatta Bar
+
+En la ciudad (manzana '4,5'): un bar oscuro y cálido, con la barra de mármol negro, la contrabarra llena de botellas iluminadas, teles, lámparas colgantes, banquetas y mesitas. Atiende **Lagatta** (de traje: `herramientas/lagatta.py`), que prepara con la coctelera y repasa vasos. "Sentarse en la barra (E)" abre la carta: 17 tragos, cada uno con su precio (sube con lo que ganás). Las chicas de la barra (Sofi, Cami y Juli) se sientan al lado: a la de al lado le podés invitar uno. Todo en `js/bar.js`.
+
+Misiones nuevas (de cualquiera): **Astrohijo** (ganá 1 Trillón en el casino), **Palleiro** (100 tragos en total, $5B), **Pou** ($500M) y **Valcohol** (15 tragos en una noche, $4B).
+
 ## Día y noche
 
 Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. De noche, al lado de una cama comprada aparece "Dormir (E)": se funde a negro y te despertás a la mañana. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.

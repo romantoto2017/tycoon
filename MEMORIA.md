@@ -6,8 +6,10 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Plugins: solo ponytail anda solo. claude-mem no sirve en la web: su memoria se borra con el contenedor y sincronizarla pide cuenta paga (cmem.ai Pro) y una terminal.
 
 ## Pendiente
-- (nada anotado todavía)
+- Multijugador y chat: probados solo con la red local de prueba; con Firebase real lo prueba el dueño.
 
 ## Último trabajo
+- Lagatta Bar en la ciudad (bar.js), misiones Astrohijo/Palleiro/Pou/Valcohol. Los efectos de tomar no se explican en ningún texto del juego (pedido del dueño).
+- Regla nueva en CLAUDE.md: no romper el progreso de los jugadores.
 - Multijugador con Firebase (proyecto vecibandatycoon) y chat con globo sobre la cabeza.
 - Música con loop natural.

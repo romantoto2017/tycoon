@@ -41,7 +41,7 @@ export function paseoCiudad() {
 
 // Las manzanas que no son edificios comunes (y qué son).
 const ESPECIALES = {
-  '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel', '5,3': 'verdu', '3,4': 'kicks', '4,4': 'drip', '2,4': 'futbolera', '6,4': 'casino', '1,4': 'lucca',
+  '3,3': 'plaza', '4,3': 'banco', '1,6': 'futbol', '6,6': 'basquet', '6,1': 'nafta', '1,1': 'parque', '2,3': 'super', '5,4': 'hotel', '5,3': 'verdu', '3,4': 'kicks', '4,4': 'drip', '2,4': 'futbolera', '6,4': 'casino', '1,4': 'lucca', '4,5': 'bar',
 };
 
 // El plano de la ciudad para el mapa (en coordenadas del mundo): las calles y cada manzana con lo
@@ -529,6 +529,7 @@ export class Ciudad {
     else if (especial === 'verdu') this.verduleria(c, lote, rnd);
     else if (especial === 'casino') this.casino?.armar(c, lote, PISO); // casino.js
     else if (especial === 'lucca') this.lucca?.armar(c, lote, PISO, rnd); // lucca.js
+    else if (especial === 'bar') this.bar?.armar(c, lote, PISO, rnd); // bar.js
     else if (TIENDAS.some((t) => t.id === especial)) this.tienda(c, lote, rnd, TIENDAS.find((t) => t.id === especial));
     else if (especial === 'hotel') this.torre(c, lote.x0 + 6, lote.z0 + 6, lote.x1 - 6, lote.z1 - 6, 76, rnd, { cartel: 11 });
     else if (anillo < 1) this.centro(c, lote, rnd);

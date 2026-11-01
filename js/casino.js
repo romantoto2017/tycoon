@@ -1372,8 +1372,13 @@ export class Casino {
     sfx.ficha();
     return true;
   }
-  pagar(monto) {
+  // apostado: lo que se jugó en esa mano (para contar lo ganado: misión Astrohijo).
+  pagar(monto, apostado = monto) {
     if (monto > 0) this.estado.plata += monto;
+    if (monto > apostado) {
+      this.estado.casinoGanado = (this.estado.casinoGanado || 0) + monto - apostado;
+      this.alGanar?.();
+    }
     this.guardar();
   }
 
@@ -1519,7 +1524,7 @@ export class Casino {
     if (this.jugando?.maquina === mq) {
       this.dibujarRodillosHTML(res);
       if (p.mult) {
-        this.pagar(apuesta * p.mult);
+        this.pagar(apuesta * p.mult, apuesta);
         this.mensaje(`${p.texto} Ganaste ${formato(apuesta * p.mult)} (x${p.mult})`, 'gana');
         sfx.premio(p.mult >= 25);
         mq.festejo = p.mult >= 25 ? 4 : 1.5;
@@ -1528,7 +1533,7 @@ export class Casino {
         this.mensaje('Nada esta vez... ¿otra?', 'pierde');
       }
       this.botones([['Girar', () => this.girarTragamonedas(), { clase: 'cas-principal' }]]);
-    } else if (p.mult) this.pagar(apuesta * p.mult);
+    } else if (p.mult) this.pagar(apuesta * p.mult, apuesta);
   }
 
   // ---------- Cartas ----------
@@ -1694,7 +1699,7 @@ export class Casino {
     else if (tj > td) { paga = h.apuesta * 2; texto = `Vos ${tj}, Astrojorge ${td}. ¡Ganaste ${formato(h.apuesta)}!`; }
     else if (tj === td) { paga = h.apuesta; texto = `Empate a ${tj}: te devuelven la apuesta`; }
     else texto = `Astrojorge ${td}, vos ${tj}. Perdiste ${formato(h.apuesta)}`;
-    this.pagar(paga);
+    this.pagar(paga, h.apuesta);
     const gano = paga > h.apuesta;
     this.mensaje(texto, gano ? 'gana' : paga ? '' : 'pierde');
     if (gano) sfx.premio(bjJ);
@@ -1806,7 +1811,7 @@ export class Casino {
       else if (cmp === 0) { paga = ante + ir; texto = 'Empate: te devuelven todo'; }
       else { paga = 0; texto = `${NOMBRES_MANO[md[0]]} de Astrojorge le gana a tu ${NOMBRES_MANO[mj[0]].toLowerCase()}. Perdiste ${formato(ante + ir)}`; }
     }
-    this.pagar(paga);
+    this.pagar(paga, ante + ir);
     const gano = paga > ante + ir;
     this.mensaje(texto, gano ? 'gana' : paga ? '' : 'pierde');
     if (gano) sfx.premio(mj[0] >= 6);
@@ -1903,7 +1908,7 @@ export class Casino {
     };
     let paga = 0;
     for (const [k, v] of Object.entries(this.apuestasRuleta)) paga += v * gana(k);
-    this.pagar(paga);
+    this.pagar(paga, total);
     this.historial = [n, ...this.historial].slice(0, 12);
     const nombre = `${n} ${c}`;
     if (paga > total) { this.mensaje(`¡${nombre}! Ganaste ${formato(paga - total)}`, 'gana'); sfx.premio(paga >= total * 10); this.decir(`${nombre}. ${una(FRASES.ganaste)}`); }

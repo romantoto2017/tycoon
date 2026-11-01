@@ -26,6 +26,7 @@ import { Pony, PRECIO_PAJA } from './pony.js';
 import { Estatua } from './estatua.js';
 import { Multijugador } from './multijugador.js';
 import { Chat } from './chat.js';
+import { Bar } from './bar.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
@@ -144,6 +145,9 @@ async function iniciar() {
   const amarishuow = new Amarishuow(escena, UI);
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
   const estatua = new Estatua({ escena, colisiones });
+  const bar = new Bar({ ciudad, escena, estado, ui: UI, jugador, controles, guardar: () => guardarAhora(), ingreso: () => tycoon.ingresoPorSegundo || 0 });
+  bar.alMision = (que, a) => misiones.revisarBar(que, a, () => { a.mareoHasta = (estado.tiempoJugado || 0) + 15 * 60; });
+  casino.alGanar = () => misiones.revisarCasino();
   // El testamento de la estatua del patio.
   const abrirTestamento = () => {
     controles.activo = false;
@@ -245,7 +249,7 @@ async function iniciar() {
   const centroPista = PISTA.puntos.reduce((a, q) => ({ x: a.x + q.x / PISTA.puntos.length, z: a.z + q.z / PISTA.puntos.length }), { x: 0, z: 0 });
   const centro = (r) => ({ x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 });
   const plano = planoCiudad();
-  const NOMBRES_CIUDAD = { plaza: 'Plaza', banco: 'Banco', futbol: 'Cancha de fútbol', basquet: 'Cancha de básquet', nafta: 'Estación de servicio', parque: 'Parque', super: 'Súper', hotel: 'Hotel', verdu: 'Verdulería', kicks: 'KICKS', drip: 'VECI DRIP', futbolera: 'LA FUTBOLERA', casino: 'Casino', lucca: 'LUCCABOSSIO™' };
+  const NOMBRES_CIUDAD = { plaza: 'Plaza', banco: 'Banco', futbol: 'Cancha de fútbol', basquet: 'Cancha de básquet', nafta: 'Estación de servicio', parque: 'Parque', super: 'Súper', hotel: 'Hotel', verdu: 'Verdulería', kicks: 'KICKS', drip: 'VECI DRIP', futbolera: 'LA FUTBOLERA', casino: 'Casino', lucca: 'LUCCABOSSIO™', bar: 'Lagatta Bar' };
   // nivel 0: siempre; 1: con un poco de zoom; 2: de cerca. desde: zoom mínimo (píxeles por unidad).
   const etiqueta = (r, texto, nivel, desde) => ({ ...('x0' in r ? centro(r) : r), texto, nivel, desde });
   // Lo que todavía no desbloqueaste: en el mapa se tapa con un "?" (y el nombre también es "?").
@@ -549,6 +553,10 @@ async function iniciar() {
     }
     if (!conduciendo && casino.accion(jugador)) {
       if (casino.hacer(jugador)) controles.activo = false;
+      return;
+    }
+    if (!conduciendo && bar.accion(jugador)) {
+      bar.hacer(jugador);
       return;
     }
     if (!conduciendo && lucca.accion(jugador)) {
@@ -1182,7 +1190,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1293,6 +1301,7 @@ async function iniciar() {
       const mando = autodromo.bloqueado ? { x: 0, y: 0 } : controles.ejes(ejes);
       mando.freno = !autodromo.bloqueado && controles.saltar;
       mando.derrape = !autodromo.bloqueado && controles.derrapar;
+      if (vehiculo !== tycoon.heli) bar.desviarEjes(mando, reloj.elapsedTime);
       vehiculo.actualizar(dt, mando, choquesActuales);
       jugador.pos.copy(vehiculo.pos);
     } else if (gym.entrenando) {
@@ -1307,6 +1316,7 @@ async function iniciar() {
       else resto.sostener(dt, jugador);
     } else {
       controles.direccion(dir);
+      bar.desviar(dir, reloj.elapsedTime);
       jugador.autoSalto = controles.esTactil;
       jugador.quiereAgacharse = puedeAgacharse && controles.agacharse;
       if (jugador.actualizar(dt, dir, controles.saltar, choquesActuales, tycoon.agua)) sfx.salto();
@@ -1314,7 +1324,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1358,13 +1368,14 @@ async function iniciar() {
     ciudad.actualizar(dt, jugador, modo === 'juego');
     casino.actualizar(dt, jugador, momento(hora()).noche);
     lucca.actualizar(dt, jugador);
+    bar.actualizar(dt, jugador);
     actualizarTP(dt);
     playa.actualizar(dt, jugador, momento(hora()).noche, !conduciendo);
     actualizarArma(dt);
     actualizarLechugas();
     brillos.actualizar(dt);
     // Adentro del gym se prenden las luces (sube de a poco al entrar, como un fundido).
-    luzGym += ((modo === 'juego' && gym.dentro(jugador.pos) ? 1 : modo === 'juego' && casino.dentro(jugador.pos) ? 0.7 : 0) - luzGym) * Math.min(1, dt * 4);
+    luzGym += ((modo === 'juego' && gym.dentro(jugador.pos) ? 1 : modo === 'juego' && (casino.dentro(jugador.pos) || bar.dentro(jugador.pos)) ? 0.7 : 0) - luzGym) * Math.min(1, dt * 4);
     mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzBarrio(), camara.position, luzGym);
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
@@ -1379,7 +1390,7 @@ async function iniciar() {
       UI.mapaCuadro(jugador.pos, conduciendo ? vehiculo.angulo : jugador.angulo, controles.activo && !taller.auto);
       if (taller.auto) taller.camara(camara); // adentro del taller, con el menú
       else if (casino.jugando) casino.camara(camara); // sentado en una mesa o en una tragamonedas
-      else if (!depurar.camaraLibre) camaraJuego(dt);
+      else if (!depurar.camaraLibre) { camaraJuego(dt); bar.camara(camara, reloj.elapsedTime); }
     } else {
       camaraMenu(dt);
       UI.mapaCuadro(jugador.pos, 0, false); // en el menú no hay minimapa

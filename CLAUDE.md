@@ -9,6 +9,7 @@ Reglas que pidió el dueño del juego. Respetarlas siempre, también en cambios 
 - Las fotos de los chicos no se mandan a servicios de IA externos; si hay que recortarlas o procesarlas, se hace en el contenedor (por ejemplo, rembg local).
 - Los easter eggs (estatuilla, Se Busca, La Dosis) no son comprables ni se anuncian: aparecen con otra cosa.
 - Si cambian ítems o muebles, recalcular precios con `node herramientas/balance.mjs --escribir` (el tycoon de la mansión tiene que durar unas 3 horas). Las 3 horas son solo para la mansión: lo demás (misiones, casino, autos, gym, TP, ropa cara...) puede ser más largo y caro a propósito, para que el juego dure más.
+- **No romper el progreso de los jugadores:** ningún cambio puede hacer perder lo ya conseguido. Los ids de compras, misiones y ropa no se renombran ni se borran; un objeto nuevo (aunque vaya al principio de la lista) solo agrega su botón y se compra ese, no todo de nuevo. Lo guardado viejo tiene que seguir cargando.
 - **Rama:** trabajar, commitear y pushear siempre directo en `claude/festive-babbage-9urtmn` (es la que publica GitHub Pages), aunque la sesión diga otra rama. No abrir PR.
 - **Plugins:** usar siempre ponytail (cambio mínimo, sin código de más). Se activa solo con un hook; no hace falta que el dueño lo pida.
 - **Memoria:** al empezar leer `MEMORIA.md`; al terminar cada tarea, actualizarlo con lo decidido y lo pendiente (corto, una línea por cosa).

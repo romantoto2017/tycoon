@@ -1306,6 +1306,19 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
   .cas-monto { font-size: 16px; min-width: 70px; padding: 2px 6px; }
 }
 
+/* ---------- Lagatta Bar (bar.js): usa el panel del casino ---------- */
+.bar-panel { max-height: 46vh; }
+.bar-lista { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; }
+.bar-trago { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(212, 169, 58, 0.35); font-size: 14px; }
+.bar-trago b { flex: 1; min-width: 0; color: #f3e6d0; }
+.bar-icono { font-size: 20px; }
+.bar-precio { color: #ffd23f; font-weight: 800; font-size: 13px; white-space: nowrap; }
+.bar-trago button { font-family: var(--fuente); font-weight: 800; font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 0; cursor: pointer; }
+.bar-tomar { background: linear-gradient(180deg, #ffde4d, #e8a312); color: #3a1d00; }
+.bar-invitar { background: #ff4fa3; color: #fff; }
+.bar-trago button:hover { filter: brightness(1.12); }
+@media (max-height: 520px) { .bar-lista { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); } .bar-trago { padding: 4px 6px; font-size: 12px; } }
+
 /* ---------- Catálogo de LUCCABOSSIO™: monocromo y minimalista, como su web (fondo hueso, negro
    cálido, mayúsculas espaciadas, sin colores; el único acento es el precio) ---------- */
 .catalogo.tema-lucca { --lb-fondo: #fafaf9; --lb-tinta: #1c1917; --lb-suave: #57534e; --lb-borde: #d6d3d1; --lb-carta: #ffffff; }

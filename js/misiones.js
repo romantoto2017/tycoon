@@ -61,6 +61,11 @@ export const MISIONES = [
   // Autódromo (abre con los autos): oro con un auto y oro con todos (el Auto Deportivo incluido).
   { id: 'hotwheels', personaje: null, desde: AUTOS_DESDE, titulo: 'Hot-Wheels', texto: 'Sacá la medalla de oro en el autódromo con algún auto', premio: { fijo: 1e10 } },
   { id: 'verstappen', personaje: null, desde: AUTOS_DESDE, titulo: 'Verstappen', texto: 'Sacá la medalla de oro con todos los autos', premio: { fijo: 1e12 } },
+  // Casino y bar (de cualquiera).
+  { id: 'astrohijo', personaje: null, titulo: 'Astrohijo', texto: 'Ganá 1 Trillón en el casino', premio: { fijo: 1e11 } },
+  { id: 'palleiro', personaje: null, titulo: 'Palleiro', texto: 'Tomate 100 tragos', premio: { fijo: 5e9 } },
+  { id: 'pou', personaje: null, titulo: 'Pou', texto: 'Quedá como Pou 3 veces en una noche', premio: { fijo: 5e8 } },
+  { id: 'valcohol', personaje: null, titulo: 'Valcohol', texto: 'Tomate 15 tragos en una noche', premio: { fijo: 4e9 } },
   // Secretas: no aparecen en ningún lado hasta que se cumplen (sin querer). Ahí salta el cartel
   // grande y recién entonces se ven en la lista, ya cumplidas.
   { id: 'amistad', personaje: null, caras: ['val', 'mateo'], secreta: true, titulo: 'Restaurando la amistad', texto: 'Dormiste en la cama de Val con Mateo y en la de Mateo con Val', premio: { fijo: 2e7 } },
@@ -156,6 +161,18 @@ export class Misiones {
     if (s.mateoEnVal && s.valEnMateo) this.completarSecreta('amistad');
   }
 
+  // Lo ganado en el casino (casino.js: estado.casinoGanado).
+  revisarCasino() {
+    if (!this.hecha('astrohijo') && (this.tycoon.estado.casinoGanado || 0) >= 1e12) this.completar('astrohijo', 'Astrohijo');
+  }
+
+  // Después de cada trago o cada vez que te pasa lo de Pou (bar.js). alValcohol: lo que sigue.
+  revisarBar(que, a, alValcohol) {
+    if (!this.hecha('palleiro') && a.total >= 100) this.completar('palleiro', 'Palleiro');
+    if (!this.hecha('valcohol') && a.noche.tragos >= 15) { this.completar('valcohol', 'Valcohol'); alValcohol?.(); }
+    if (!this.hecha('pou') && a.noche.vomitos >= 3) this.completar('pou', 'Pou');
+  }
+
   // Un tiro que le pegó a la Schwepa (main.js).
   tiroSchwepa(personaje) {
     if (personaje !== 'negro' || this.hecha('isa_bonanni')) return;
@@ -182,6 +199,11 @@ export class Misiones {
         const oros = this.oros();
         avance = m.id === 'hotwheels' ? Math.min(1, oros) : oros / AUTOS_CARRERA.length;
         if (m.id === 'verstappen') detalle = `Oros: ${oros} de ${AUTOS_CARRERA.length}`;
+      } else if (m.id === 'astrohijo') {
+        avance = Math.min(1, (e.casinoGanado || 0) / 1e12);
+      } else if (m.id === 'palleiro') {
+        avance = Math.min(1, (e.alcohol?.total || 0) / 100);
+        detalle = `Tragos: ${Math.min(100, e.alcohol?.total || 0)} de 100`;
       } else if (m.id === 'trabado') {
         avance = Math.min(1, (e.bautiGym || 0) / (BAUTI_GYM.adelgazar + BAUTI_GYM.musculo));
         detalle = this.hecha('trabado') ? '¡Bauti quedó trabado!' : `Entrenamiento: ${Math.floor(avance * 100)}%`;
