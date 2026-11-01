@@ -90,7 +90,7 @@ export const CUSI_ESCONDIDO = { x: 94.5 + DX, z: -124.5 };
 // Ciudad Vecibanda: a unos 20 km para el lado del gym, al final de la autopista (que sigue la
 // misma calle de la mansión). Centro de la ciudad en el mundo; la avenida principal es la
 // autopista que entra por el este.
-export const CIUDAD = { x: -20000 + DX, z: CALLE_Z };
+export const CIUDAD = { x: -4000 + DX, z: CALLE_Z }; // antes a 20 km: se hacía larguísimo
 // Playa frente a la mansión (cruzando la calle): la arena va de la vereda a la orilla y el mar sigue
 // hasta el horizonte. Se camina por el agua solo cerca de la orilla (hasta orilla + vadeo); el auto
 // no entra al agua. El muelle sale de la arena hacia el mar.

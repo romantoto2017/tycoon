@@ -197,8 +197,8 @@ class CasaAjena {
     if (!this.cola.length || !this.grupo) return;
     this.grupo.updateMatrixWorld(true);
     const kit = this.mj.kit;
-    const antes = [kit.alCama, kit.alRopero];
-    kit.alCama = kit.alRopero = null; // las camas y roperos ajenos no son tuyos
+    const antes = [kit.alCama, kit.alRopero, kit.alArcade];
+    kit.alCama = kit.alRopero = kit.alArcade = null; // las camas y roperos ajenos no son tuyos
     for (let i = 0; i < PIEZAS_POR_CUADRO && this.cola.length; i++) {
       const it = this.cola.shift();
       const g = new THREE.Group();
@@ -213,7 +213,7 @@ class CasaAjena {
       });
       this.lote.absorber(g);
     }
-    [kit.alCama, kit.alRopero] = antes;
+    [kit.alCama, kit.alRopero, kit.alArcade] = antes;
   }
 
   crearPelota() {

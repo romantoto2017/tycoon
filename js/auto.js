@@ -1017,7 +1017,7 @@ export class Concesionario {
       }
     }
     const d = Math.hypot(jugador.pos.x - (CO.x0 + CO.x1) / 2, jugador.pos.z - (CO.z0 + CO.z1) / 2);
-    // Solo se dibuja de cerca (está a 20 km de la mansión); los autos se cargan al acercarse.
+    // Solo se dibuja de cerca (está a 3 km de la mansión); los autos se cargan al acercarse.
     this.grupo.visible = d < 900;
     if (d < 600) {
       for (const e of this.exhibidos) {

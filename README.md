@@ -102,6 +102,14 @@ En la ciudad (manzana '4,5'): un bar oscuro y cálido, con la barra de mármol n
 
 Misiones nuevas (de cualquiera): **Astrohijo** (ganá 1 Trillón en el casino), **Palleiro** (100 tragos en total, $5B), **Pou** ($500M) y **Valcohol** (15 tragos en una noche, $4B).
 
+## Hilario José
+
+Solo en la ciudad: da vueltas a la plaza arriba de su hoverboard rojo (con las luces azules), con el traje de PedidosYa (campera y pantalón rojos con vivos blancos, casco rojo y la mochila de reparto) y un matcha de Starbucks en la mano. Si te ve, te dice "Puta, tomo matcha", "Y soy de nicho" o "De hecho, yo uso SoundCloud". Cara y traje con `herramientas/hilario.py` (en el contenedor). Todo en `js/hilario.js`.
+
+## Geometry Dash (arcade)
+
+En el arcade de la mansión, en las máquinas: "Jugar al Geometry Dash (E)". El cubo avanza solo y salta con espacio, flecha arriba, clic o tocando (mantener apretado salta apenas toca el piso). Pinchos, bloques que se pisan, intentos y el mejor porcentaje guardado. En `js/geometry.js`; `node herramientas/geometry_bot.mjs` prueba que el nivel se pueda pasar.
+
 ## Día y noche
 
 Un día dura 24 minutos de juego: 10 de día, 2 de atardecer (se pone el sol y sale la luna), 10 de noche con estrellas y 2 de amanecer. Se cuenta con el tiempo jugado, así que queda guardado con la partida. De noche, al lado de una cama comprada aparece "Dormir (E)": se funde a negro y te despertás a la mañana. Sin las farolas compradas, de noche casi no se ve; con farolas, el terreno queda iluminado. Arriba da vueltas despacito el dirigible "SAYAGO IS YOURS...". Todo está en `js/cielo.js`.
@@ -257,7 +265,7 @@ La música del juego es `assets/especiales/vecicoon.mp3`, en loop sin cortes (`j
 
 ## Ciudad Vecibanda y la autopista
 
-Siguiendo la calle de la mansión para el lado del gym arranca la **autopista** (dos carriles por mano, barandas, faroles, árboles y carteles verdes con los km). Son unos 19 km hasta la **Ciudad Vecibanda**: en auto, sobre la autopista, va mucho más rápido (hasta 150 en vez de 34) y se llega en unos 2 minutos; caminando son más de 20. Al salir de la autopista el auto frena solo a la velocidad normal.
+Siguiendo la calle de la mansión para el lado del gym arranca la **autopista** (dos carriles por mano, barandas, faroles, árboles y carteles verdes con los km). Son unos 3 km hasta la **Ciudad Vecibanda** (antes eran 19 y se hacía larguísimo): en auto, sobre la autopista, va mucho más rápido (hasta 150 en vez de 34) y se llega en unos 20 segundos; caminando, unos 3 minutos. Al salir de la autopista el auto frena solo a la velocidad normal.
 
 La ciudad (`js/ciudad.js`) está armada como una de verdad: una cuadrícula de 8 x 8 manzanas con dos avenidas anchas que se cruzan en el medio (una es la continuación de la autopista), rascacielos de vidrio en el centro, alrededor edificios de 3 a 7 pisos con negocios y toldos sobre la vereda (farmacia, pizzería, kiosco, café, panadería...), y en las afueras casas con jardín y techo de dos aguas. Hay plaza con fuente y la moneda gigante, el Banco Vecibanda (escalinata, columnas y frontón), el Hotel VB, el Super Vecibanda con estacionamiento, una estación de servicio, un parque con juegos, semáforos, sendas peatonales, faroles que se prenden de noche, autos estacionados y gente caminando por las veredas (no hacen nada).
 

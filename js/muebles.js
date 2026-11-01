@@ -568,7 +568,8 @@ function maquinaArcade(k, s, x, z, color, pantalla) {
   s.b(x - 0.8, 0, z - 0.85, x + 0.8, 5.2, z + 0.85, color);
   s.d(x - 0.82, 0, z - 0.87, x + 0.82, 0.3, z + 0.87, '#24282c');
   s.d(x - 0.85, 2.7, z - 0.7, x - 0.8, 4.4, z + 0.7, '#111111');
-  s.d(x - 0.87, 2.85, z - 0.6, x - 0.85, 4.25, z + 0.6, brillo(k, pantalla));
+  const pant = s.d(x - 0.87, 2.85, z - 0.6, x - 0.85, 4.25, z + 0.6, brillo(k, pantalla));
+  k.alArcade?.(pant.position.clone()); // se juega al Geometry Dash (main.js)
   s.d(x - 0.87, 3.3, z - 0.35, x - 0.86, 3.7, z + 0.1, brillo(k, '#ffffff'));
   s.b(x - 1.4, 2, z - 0.85, x - 0.8, 2.4, z + 0.85, '#2b2f34');
   s.d(x - 1.25, 2.4, z - 0.45, x - 1.15, 2.85, z - 0.35, '#24282c');

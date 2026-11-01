@@ -27,6 +27,8 @@ import { Estatua } from './estatua.js';
 import { Multijugador } from './multijugador.js';
 import { Chat } from './chat.js';
 import { Bar } from './bar.js';
+import { Hilario } from './hilario.js';
+import { GeometryDash } from './geometry.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
 import { Lucca } from './lucca.js';
@@ -143,6 +145,7 @@ async function iniciar() {
   // Manu Mendez: solo, de paseo; con la Schwepa, robando (la mansión o un local de la ciudad).
   const manu = new Manu(escena, UI);
   const amarishuow = new Amarishuow(escena, UI);
+  const hilario = new Hilario(escena, UI);
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
   const estatua = new Estatua({ escena, colisiones });
   const bar = new Bar({ ciudad, escena, estado, ui: UI, jugador, controles, guardar: () => guardarAhora(), ingreso: () => tycoon.ingresoPorSegundo || 0 });
@@ -607,6 +610,11 @@ async function iniciar() {
       }
       return;
     }
+    if (arcadeCerca()) {
+      controles.activo = false;
+      geometry.abrir(() => { controles.activo = modo === 'juego'; });
+      return;
+    }
     if (roperoCerca()) abrirRopero();
     else if (camaCerca()) dormir();
     else subirOBajar();
@@ -956,6 +964,9 @@ async function iniciar() {
 
   // Ropero: a la izquierda tu personaje (en 3D, girando) y a la derecha tus prendas.
   const probador = new Probador(document.getElementById('ropero-vista'));
+  // Geometry Dash en las máquinas del arcade.
+  const geometry = new GeometryDash({ estado, guardar: () => guardarAhora(), sfx });
+  const arcadeCerca = () => !conduciendo && tycoon.arcades.some((a) => Math.hypot(a.x - jugador.pos.x, a.z - jugador.pos.z) < 3.4 && Math.abs(a.y - 3.5 - jugador.pos.y) < 3);
   const roperoCerca = () => {
     if (conduciendo) return null;
     return tycoon.roperos.find((r) => Math.hypot(r.x - jugador.pos.x, r.z - jugador.pos.z) < 4.5 && Math.abs(r.y - jugador.pos.y) < 2.5) || null;
@@ -1190,7 +1201,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, hilario, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1288,7 +1299,7 @@ async function iniciar() {
       jugador.pos.copy(tycoon.heli.pos);
     } else if (conduciendo) {
       vehiculo.terreno = mundo.altura;
-      // En la autopista (la ciudad queda a 20 km) y en el autódromo, cada auto llega a su
+      // En la autopista (la ciudad queda a 3 km) y en el autódromo, cada auto llega a su
       // velocidad máxima de verdad; en el barrio y en la ciudad, a su tope de calle.
       const enAutopista = ciudad.enAutopista(vehiculo.pos);
       vehiculo.velMax = enAutopista || autodromo.enPista(vehiculo.pos) ? vehiculo.specs.v : vehiculo.specs.barrio;
@@ -1324,7 +1335,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1357,6 +1368,7 @@ async function iniciar() {
     dufre.actualizar(dt, jugador, modo === 'juego');
     ottati.actualizar(dt, jugador, modo === 'juego');
     amarishuow.actualizar(dt, jugador, modo === 'juego');
+    hilario.actualizar(dt, jugador, modo === 'juego');
     pony.actualizar(dt, jugador);
     if (modo === 'juego') mj?.actualizar(dt, { modo: conduciendo && vehiculo !== tycoon.heli ? 'auto' : pony.montado ? 'pony' : 'pie', vehiculo: conduciendo && vehiculo !== tycoon.heli ? vehiculo : null });
     banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);

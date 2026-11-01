@@ -21,7 +21,8 @@ const LUGARES = {
 const LO_VE = 13; // a cuánto te ve
 
 export class Paseante {
-  constructor(escena, ui, personaje, { manosBolsillo = false } = {}) {
+  // vel: a qué velocidad anda; sinPasos: va arriba de algo (no mueve las piernas); lugar: fijo.
+  constructor(escena, ui, personaje, { manosBolsillo = false, vel = VEL, sinPasos = false, lugar = null } = {}) {
     this.escena = escena;
     this.ui = ui;
     this.personaje = personaje;
@@ -29,7 +30,10 @@ export class Paseante {
     this.modelo = null;
     this.cargando = false;
     this.reloj = 0;
-    this.ir(Math.random() < 0.5 ? 'casa' : 'ciudad');
+    this.vel = vel;
+    this.sinPasos = sinPasos;
+    this.lugarFijo = lugar;
+    this.ir(lugar || (Math.random() < 0.5 ? 'casa' : 'ciudad'));
     this.dijo = false; // ya te habló en este cruce (vuelve a hablar cuando te alejás)
     this.globo = 0;
   }
@@ -107,7 +111,7 @@ export class Paseante {
       if (d > LO_VE + 12) this.dijo = false;
       // De vez en cuando se muda (de la casa a la ciudad o al revés), si estás lejos de los dos.
       this.reloj += dt;
-      if (this.reloj > CAMBIO) {
+      if (this.reloj > CAMBIO && !this.lugarFijo) {
         this.reloj = 0;
         const otro = this.lugar === 'casa' ? 'ciudad' : 'casa';
         const [ox, oz] = LUGARES[otro]().puntos[0];
@@ -118,7 +122,7 @@ export class Paseante {
       const dx = px - this.x;
       const dz = pz - this.z;
       const largo = Math.hypot(dx, dz);
-      const paso = VEL * dt;
+      const paso = this.vel * dt;
       if (largo <= paso) {
         this.x = px;
         this.z = pz;
@@ -132,7 +136,7 @@ export class Paseante {
       let a = objetivo - g.rotation.y;
       a = Math.atan2(Math.sin(a), Math.cos(a));
       g.rotation.y += a * Math.min(1, dt * 6);
-      this.modelo.animar(dt, VEL, true);
+      this.modelo.animar(dt, this.sinPasos ? 0 : this.vel, true);
     }
     if (this.globo > 0) {
       this.globo -= dt;

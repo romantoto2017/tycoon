@@ -9,7 +9,7 @@ import { crearZapatilla } from './zapatillas.js';
 import { aleatorio } from './util.js';
 import { sfx } from './sfx.js';
 
-// Ciudad Vecibanda: a ~20 km del barrio, al final de la autopista. Pensada como una ciudad
+// Ciudad Vecibanda: a ~3 km del barrio, al final de la autopista. Pensada como una ciudad
 // de verdad: primero la cuadrícula de calles (avenidas anchas en el medio, calles comunes),
 // rascacielos de vidrio en el centro, alrededor edificios de 3 a 7 pisos con negocios
 // alineados sobre la vereda, y en las afueras casas con jardín. Plaza con fuente frente al
@@ -428,7 +428,7 @@ export class Ciudad {
       this.escena.add(gp);
     };
     cartelRuta(AU.x1 - 40, ['AUTOPISTA', `CIUDAD VECIBANDA ${Math.round((AU.x1 - AU.x0) / 1000)} km`]);
-    for (let x = AU.x1 - 2000; x > AU.x0 + 1000; x -= 2000) cartelRuta(x, ['CIUDAD VECIBANDA', `${Math.round((x - AU.x0) / 1000)} km`]);
+    for (let x = AU.x1 - 1000; x > AU.x0 + 500; x -= 1000) cartelRuta(x, ['CIUDAD VECIBANDA', `${Math.round((x - AU.x0) / 1000)} km`]);
     cartelRuta(AU.x0 + 120, ['BIENVENIDOS A', 'CIUDAD VECIBANDA']);
   }
 
@@ -1425,7 +1425,7 @@ export class Ciudad {
   // ---------- Cada cuadro ----------
   actualizar(dt, jugador, jugando) {
     // Se empieza a armar cuando te vas acercando por la autopista (una manzana por cuadro).
-    if (!this.pendientes && jugador.pos.x < AU.x0 + 9000) this.empezar();
+    if (!this.pendientes && jugador.pos.x < AU.x0 + 2200) this.empezar();
     if (this.pendientes && this.pendientes.length) this.armarUna();
     if (!this.lista) return;
     const adentro = this.adentro(jugador.pos);

@@ -266,6 +266,8 @@ export class Tycoon {
     this.kit.alCama = (p, dueno) => { p.dueno = dueno; this.camas.push(p); };
     this.roperos = []; // posiciones de los roperos comprados (para cambiarse la ropa)
     this.kit.alRopero = (p) => this.roperos.push(p);
+    this.arcades = []; // pantallas de las máquinas del arcade (Geometry Dash)
+    this.kit.alArcade = (p) => this.arcades.push(p);
     this.lote = new Lote(escena);
     this.fuegos = new Fuegos(escena);
 

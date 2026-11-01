@@ -62,7 +62,7 @@ export const MISIONES = [
   { id: 'hotwheels', personaje: null, desde: AUTOS_DESDE, titulo: 'Hot-Wheels', texto: 'Sacá la medalla de oro en el autódromo con algún auto', premio: { fijo: 1e10 } },
   { id: 'verstappen', personaje: null, desde: AUTOS_DESDE, titulo: 'Verstappen', texto: 'Sacá la medalla de oro con todos los autos', premio: { fijo: 1e12 } },
   // Casino y bar (de cualquiera).
-  { id: 'astrohijo', personaje: null, titulo: 'Astrohijo', texto: 'Ganá 1 Trillón en el casino', premio: { fijo: 1e11 } },
+  { id: 'astrohijo', personaje: null, titulo: 'Astrohijo', texto: 'Ganá 1 Trillón en el casino', premio: { fijo: 1e12 } },
   { id: 'palleiro', personaje: null, titulo: 'Palleiro', texto: 'Tomate 100 tragos', premio: { fijo: 5e9 } },
   { id: 'pou', personaje: null, titulo: 'Pou', texto: 'Quedá como Pou 3 veces en una noche', premio: { fijo: 5e8 } },
   { id: 'valcohol', personaje: null, titulo: 'Valcohol', texto: 'Tomate 15 tragos en una noche', premio: { fijo: 4e9 } },
