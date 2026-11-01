@@ -317,7 +317,7 @@ const DEF_PERROS = {
 const CADAVER = 900; // el cuerpo queda 15 minutos de juego; después ya no está (y no se puede revivir)
 
 // Perro de bloques, sentado, mirando a +z. Devuelve el grupo y lo que se mueve.
-function crearPerro(d) {
+export function crearPerro(d) {
   const g = new THREE.Group();
   const pelo = mat(d.pelo);
   const panza = mat(d.panza);

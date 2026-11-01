@@ -213,3 +213,6 @@ export function crearCielo(escena) {
     },
   };
 }
+
+// Qué noche es (cuenta de a una por ciclo de día y noche), para lo que pasa "una vez por noche".
+export const nocheN = (t) => Math.floor((t + ARRANQUE) / CICLO);

@@ -28,6 +28,8 @@ import { Multijugador } from './multijugador.js';
 import { Chat } from './chat.js';
 import { Bar } from './bar.js';
 import { Hilario } from './hilario.js';
+import { Humano } from './humano.js';
+import { Cachimba } from './cachimba.js';
 import { GeometryDash } from './geometry.js';
 import { Ciudad, planoCiudad, RADIO_CIUDAD, crearPortal } from './ciudad.js';
 import { Casino, CASINO_DESDE } from './casino.js';
@@ -36,7 +38,7 @@ import { Playa } from './playa.js';
 import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD, PLAYA, AUTOS_DESDE, BARRIO, DX } from './constantes.js';
+import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD, PLAYA, AUTOS_DESDE, BARRIO, DX, CACHIMBA } from './constantes.js';
 import { crearAK } from './arma.js';
 import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
 import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
@@ -146,6 +148,12 @@ async function iniciar() {
   const manu = new Manu(escena, UI);
   const amarishuow = new Amarishuow(escena, UI);
   const hilario = new Hilario(escena, UI);
+  // El Humano (de noche, en la ciudad) y su barrio, La Cachimba del Piojo (solo si te invitó).
+  const humano = new Humano({ escena, ui: UI, estado, guardar: () => guardarAhora(), hora: () => hora(), ingreso: () => tycoon.ingresoPorSegundo || 0, pausar: (b) => { controles.activo = !b && modo === 'juego'; } });
+  const cachimba = new Cachimba({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones });
+  cachimba.armar();
+  humano.alInvitar = () => cachimba.armar();
+  cachimba.alVisitar = () => capturarMapa('cachimba');
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
   const estatua = new Estatua({ escena, colisiones });
   const bar = new Bar({ ciudad, escena, estado, ui: UI, jugador, controles, guardar: () => guardarAhora(), ingreso: () => tycoon.ingresoPorSegundo || 0 });
@@ -183,8 +191,9 @@ async function iniciar() {
     barrio: globalThis.VECI?.red ? [BARRIO.x0 - 10, -365, BARRIO.x1 + 10, 190] : [-660 + DX, -365, 335, 190],
     autodromo: [AUTODROMO.x - 900, AUTOPISTA.z - 30, AUTODROMO.x + 900, AUTODROMO.z + 900],
     ciudad: [CIUDAD.x - RADIO_CIUDAD - 20, CIUDAD.z - RADIO_CIUDAD - 20, TALLER.x1 + 30, CIUDAD.z + RADIO_CIUDAD + 20],
+    cachimba: [CACHIMBA.x0 - 20, CACHIMBA.z0 - 20, CACHIMBA.x1 + 20, AUTOPISTA.z - AUTOPISTA.medioAncho],
   };
-  const PX_MAPA = { barrio: globalThis.VECI?.red ? 1 : 1.6, autodromo: 0.9, ciudad: 1.5 }; // píxeles por unidad de cada foto
+  const PX_MAPA = { barrio: globalThis.VECI?.red ? 1 : 1.6, autodromo: 0.9, ciudad: 1.5, cachimba: 1.2 }; // píxeles por unidad de cada foto
   const fotos = {};
   const camMapa = new THREE.OrthographicCamera(-1, 1, 1, -1, 10, 2000);
   camMapa.up.set(0, 0, -1); // el norte (−z) arriba
@@ -270,14 +279,16 @@ async function iniciar() {
         { ...CONCESIONARIO, color: '#3d4045' }, { ...TALLER, color: '#d4581f' }, { ...MANSION, color: '#e8e2d6' }, { ...GYM, color: '#1e1f22' },
         { ...GALPON, color: '#9aa1a8' }, { ...RESTO, color: '#b55239' }, { ...GARAGE, color: '#cfc9bd' },
       ],
-      zonas: { ...ZONAS_MAPA, todo: [CIUDAD.x - 420, -380, 360, AUTODROMO.z + 920] },
+      zonas: { ...ZONAS_MAPA, todo: [CIUDAD.x - 420, -460, 360, AUTODROMO.z + 920] },
       playa: { arena: { x0: PLAYA.x0, z0: PLAYA.z0, x1: PLAYA.x1, z1: PLAYA.orilla }, mar: { x0: PLAYA.mar.x0, z0: PLAYA.orilla, x1: PLAYA.mar.x1, z1: PLAYA.mar.z1 }, muelle: { x0: PLAYA.muelle.x - PLAYA.muelle.ancho / 2, z0: PLAYA.orilla - 9, x1: PLAYA.muelle.x + PLAYA.muelle.ancho / 2, z1: PLAYA.orilla + PLAYA.muelle.largo } },
     },
     etiquetas: [
       etiqueta(MANSION, 'Mansión', 0, 0),
+      // Hasta que El Humano te invita no está; después, "?" hasta que vas.
+      Object.assign(oculto(etiqueta(CACHIMBA, 'La Cachimba del Piojo', 0, 0), CACHIMBA, () => !estado.cachimba?.visitada), { nada: () => !estado.cachimba }),
       oculto(etiqueta(centroPista, 'Autódromo Vecibanda Ring', 0, 0), margen(cajaPista, 70), () => progreso() < AUTOS_DESDE),
       etiqueta({ x: CIUDAD.x, z: CIUDAD.z - RADIO_CIUDAD - 30 }, 'Ciudad Vecibanda', 0, 0),
-      etiqueta({ x: (AUTOPISTA.x0 + AUTOPISTA.x1) / 2 - 3000, z: AUTOPISTA.z - 30 }, 'Autopista', 0, 0),
+      etiqueta({ x: (AUTOPISTA.x0 + AUTOPISTA.x1) / 2, z: AUTOPISTA.z + 30 }, 'Autopista', 0, 0),
       etiqueta(GYM, 'Power Camp (gym)', 1, 0.15),
       oculto(etiqueta(GALPON, 'Galpón Vecibanda', 1, 0.15), margen(GALPON, 4), () => !estado.compras.includes('galpon')),
       oculto(etiqueta(RESTO, 'Restaurante', 1, 0.15), margen(RESTO, 4), () => !tycoon.restoAbierto),
@@ -1201,7 +1212,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, hilario, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, hilario, humano, cachimba, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1369,6 +1380,8 @@ async function iniciar() {
     ottati.actualizar(dt, jugador, modo === 'juego');
     amarishuow.actualizar(dt, jugador, modo === 'juego');
     hilario.actualizar(dt, jugador, modo === 'juego');
+    humano.actualizar(dt, jugador, modo === 'juego', momento(hora()).noche, !conduciendo);
+    cachimba.actualizar(dt, jugador, modo === 'juego');
     pony.actualizar(dt, jugador);
     if (modo === 'juego') mj?.actualizar(dt, { modo: conduciendo && vehiculo !== tycoon.heli ? 'auto' : pony.montado ? 'pony' : 'pie', vehiculo: conduciendo && vehiculo !== tycoon.heli ? vehiculo : null });
     banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);

@@ -908,7 +908,7 @@ function dibujarMapa(g, w, h, vista, chico = false) {
   }
   // Lo que no desbloqueaste: tapado, con un "?" grande.
   for (const e of MAPA.etiquetas) {
-    if (!e.area || !e.bloqueado?.()) continue;
+    if (!e.area || !e.bloqueado?.() || e.nada?.()) continue;
     const a = X(e.area.x0);
     const b = Z(e.area.z0);
     const c = (e.area.x1 - e.area.x0) * s;
@@ -931,6 +931,7 @@ function dibujarMapa(g, w, h, vista, chico = false) {
   g.lineJoin = 'round';
   for (const e of MAPA.etiquetas) {
     if (s < e.desde || (chico && e.nivel > 0)) continue; // en el minimapa, solo los grandes
+    if (e.nada?.()) continue; // todavía no existe
     const x = X(e.x);
     const y = Z(e.z);
     if (x < -60 || x > w + 60 || y < -20 || y > h + 20) continue;

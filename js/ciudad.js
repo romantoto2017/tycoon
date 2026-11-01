@@ -169,7 +169,7 @@ const texAutopista = () => lienzo(128, 256, (g, w, h) => {
 // ---------- Constructor de mallas ----------
 // Junta cajas y formas en pocas mallas (una por material) con colores por vértice. Las caras
 // de los costados llevan UV en unidades del mundo (/4): las fachadas repiten un piso cada 4.
-class Constructor {
+export class Constructor {
   constructor() { this.cubos = {}; }
   cubo(nombre) { return (this.cubos[nombre] ??= { pos: [], nor: [], uv: [], col: [], idx: [] }); }
   cara(nombre, v, n, uvs, color) {
@@ -1452,7 +1452,7 @@ export class Ciudad {
 }
 
 // Cara simple (estilo Roblox) para la gente de la ciudad: ojos, cejas y sonrisa.
-function dibujarCara(canvas, piel, pelo) {
+export function dibujarCara(canvas, piel, pelo) {
   const g = canvas.getContext('2d');
   const s = canvas.width;
   g.fillStyle = piel;

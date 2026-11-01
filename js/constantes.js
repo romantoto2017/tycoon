@@ -95,7 +95,7 @@ export const CIUDAD = { x: -4000 + DX, z: CALLE_Z }; // antes a 20 km: se hacía
 // hasta el horizonte. Se camina por el agua solo cerca de la orilla (hasta orilla + vadeo); el auto
 // no entra al agua. El muelle sale de la arena hacia el mar.
 // Llega de punta a punta del barrio (frente a los 9 terrenos).
-export const PLAYA = { x0: -700 + DX, x1: 2300 + DX, z0: CALLE_Z + 8.5, orilla: CALLE_Z + 58, vadeo: 6.5, mar: { x0: -3000 + DX, x1: 4600 + DX, z1: 2600 }, muelle: { x: 46 + DX, largo: 40, ancho: 5 } };
+export const PLAYA = { x0: -700 + DX, x1: 2300 + DX, z0: CALLE_Z + 8.5, orilla: CALLE_Z + 58, vadeo: 6.5, mar: { x0: -1150 + DX, x1: 4600 + DX, z1: 2600 }, muelle: { x: 46 + DX, largo: 40, ancho: 5 } };
 // TP a la ciudad: el portal a la salida de la mansión (se compra, 10 T) y donde aparecés en la
 // ciudad (en la avenida de la entrada, con el portal de vuelta).
 export const TP_CIUDAD = { x: -18, z: 47, precio: 5e12, llegada: { x: CIUDAD.x + 296, z: CALLE_Z + 18 } };
@@ -116,3 +116,7 @@ export const TALLER = { x0: CONCESIONARIO.x1 + 18, x1: CONCESIONARIO.x1 + 50, z0
 export const AUTODROMO = { x: (AUTOPISTA.x0 + AUTOPISTA.x1) / 2, z: CALLE_Z + 100, escala: 3.2, ancho: 34 };
 // Hasta dónde se puede ir caminando o en auto: el barrio, la autopista, el autódromo y la ciudad.
 export const LIMITE_MAPA = { x0: CIUDAD.x - 480, x1: 2300 + DX, z0: -520, z1: 1000 };
+// La Cachimba del Piojo (el barrio de El Humano): bien apartada, al norte de la autopista, a mitad
+// de camino a la ciudad. Solo existe cuando El Humano te invita. Se entra por un camino de tierra
+// que sale de la autopista (x del camino: entrada).
+export const CACHIMBA = { x0: -2790 + DX, x1: -2550 + DX, z0: -420, z1: -240, entrada: -2670 + DX };
