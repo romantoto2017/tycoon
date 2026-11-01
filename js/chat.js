@@ -40,6 +40,9 @@ export class Chat {
       }
     });
     mj.alChat((d) => this.agregar(d));
+    // Los que están conectados jugando ahora, arriba de los mensajes.
+    mj.alConectados = (nombres) => { $('chat-conectados').textContent = `Conectados (${nombres.length}): ${nombres.join(', ')}`; };
+    if (mj.jugadores) mj.recibirJugadores(mj.jugadores);
     mj.alUnirse = (nombre) => this.agregar({ sistema: true, texto: `${nombre} se unió`, t: Date.now() });
   }
 

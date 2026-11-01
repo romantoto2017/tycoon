@@ -400,6 +400,7 @@ export class Multijugador {
       if (!primera && ahora && !this.enLineaAntes[id] && info.nombre) this.alUnirse?.(info.nombre);
       this.enLineaAntes[id] = ahora;
     }
+    this.alConectados?.(Object.entries(js).filter(([id, i]) => id === this.uid || i.enLinea === true).map(([id, i]) => (id === this.uid ? this.nombre : i.nombre) || '?'));
     for (const [id, info] of Object.entries(js)) {
       if (id === this.uid || info.slot == null) continue;
       this.otro(id).ponerInfo(info);

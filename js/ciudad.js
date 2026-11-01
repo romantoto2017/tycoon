@@ -32,11 +32,15 @@ export const RADIO_CIUDAD = MEDIO + 40;
 const PEATONES = 48;
 const VER_GENTE = 190; // más lejos que esto, la gente ni se dibuja ni se mueve
 
-// Vuelta a la plaza (por la vereda), en coordenadas del mundo: el paseo de Dufre en la ciudad.
+// Un paseo por la ciudad (por las veredas), en coordenadas del mundo: la vuelta a un grupo de
+// manzanas elegido al azar (de 1 a 3 por lado, cruzando las calles), así cada uno anda por otro lado.
 export function paseoCiudad() {
-  const m = manzana(N / 2 - 1, N / 2 - 1);
+  const az = () => Math.floor(Math.random() * N);
+  const [i0, j0] = [az(), az()];
+  const a = manzana(i0, j0);
+  const b = manzana(Math.min(N - 1, i0 + Math.floor(Math.random() * 3)), Math.min(N - 1, j0 + Math.floor(Math.random() * 3)));
   const d = 2.8;
-  return { y: PISO, puntos: [[m.x0 + d, m.z1 - d], [m.x1 - d, m.z1 - d], [m.x1 - d, m.z0 + d], [m.x0 + d, m.z0 + d]].map(([x, z]) => [C.x + x, C.z + z]) };
+  return { y: PISO, puntos: [[a.x0 + d, b.z1 - d], [b.x1 - d, b.z1 - d], [b.x1 - d, a.z0 + d], [a.x0 + d, a.z0 + d]].map(([x, z]) => [C.x + x, C.z + z]) };
 }
 
 // Las manzanas que no son edificios comunes (y qué son).

@@ -548,6 +548,7 @@ export class Perros {
       // Revive: vuelve a estar sentado cuidando la casa (la Schwepa lo puede volver a matar).
       this.tycoon.estado.pocion = false;
       this.datos(muerto.id).muerto = null;
+      this.datos(muerto.id).defendio = false; // revivido: puede volver a echar a la Schwepa una vez
       this.ui.toast(`¡${muerto.nombre} revivió! La pócima de Francis funcionó`, 'plata', 4500);
       sfx.brillo();
       this.revividos = [...(this.revividos || []), muerto.id];
