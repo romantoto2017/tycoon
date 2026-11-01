@@ -1362,7 +1362,7 @@ export class Ciudad {
       const j = cerca ? 2 + Math.floor(rnd() * 4) : Math.floor(rnd() * N);
       const m = manzana(i, j);
       const p = {
-        id: `peaton${n % 10}`, nombre: ' ', sinFoto: true, piel: pieles[n % pieles.length], pelo: pelos[(n * 3) % pelos.length], peinado: ['liso', 'ondulado', 'rulos'][n % 3],
+        id: `peaton${n % 10}`, nombre: ' ', sinFoto: true, sinCara: true, piel: pieles[n % pieles.length], pelo: pelos[(n * 3) % pelos.length], peinado: ['liso', 'ondulado', 'rulos'][n % 3],
         remera: ropa[Math.floor(rnd() * ropa.length)], pantalon: pantalones[Math.floor(rnd() * pantalones.length)], cuerpo: rnd() < 0.15 ? 'gordo' : undefined,
       };
       const cab = await cargarCabeza(p);

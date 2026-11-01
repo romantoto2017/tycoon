@@ -151,9 +151,6 @@ async function iniciar() {
   // El Humano (de noche, en la ciudad) y su barrio, La Cachimba del Piojo (solo si te invitó).
   const humano = new Humano({ escena, ui: UI, estado, guardar: () => guardarAhora(), hora: () => hora(), ingreso: () => tycoon.ingresoPorSegundo || 0, pausar: (b) => { controles.activo = !b && modo === 'juego'; } });
   const cachimba = new Cachimba({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones });
-  cachimba.armar();
-  humano.alInvitar = () => cachimba.armar();
-  cachimba.alVisitar = () => capturarMapa('cachimba');
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
   const estatua = new Estatua({ escena, colisiones });
   const bar = new Bar({ ciudad, escena, estado, ui: UI, jugador, controles, guardar: () => guardarAhora(), ingreso: () => tycoon.ingresoPorSegundo || 0 });
@@ -256,6 +253,7 @@ async function iniciar() {
     if (!fotos.autodromo) return 'autodromo';
     if (!fotos.barrio || (fotos.barrio.compras !== estado.compras.length && performance.now() - fotos.barrio.cuando > 90000)) return 'barrio';
     if (ciudad.lista && !fotos.ciudad) return 'ciudad';
+    if (cachimba.grupo && estado.cachimba?.visitada && !fotos.cachimba) return 'cachimba';
     return null;
   };
   const centroPista = PISTA.puntos.reduce((a, q) => ({ x: a.x + q.x / PISTA.puntos.length, z: a.z + q.z / PISTA.puntos.length }), { x: 0, z: 0 });

@@ -9,6 +9,7 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Multijugador y chat: probados solo con la red local de prueba; con Firebase real lo prueba el dueño.
 
 ## Último trabajo
+- iPhone otra vez: la Cachimba se arma recién a <1000 de distancia (antes al cargar: pico de memoria); peatones y villeros con sinCara (se vacía también el frente). Canvas vivos ~37 MB.
 - Perros revividos vuelven a echar a la Schwepa 1 vez (defendio=false). paseoCiudad: vuelta a un grupo de manzanas al azar (no solo la plaza). Chat muestra 'Conectados (N)'.
 - El Humano (humano.js, de noche en la ciudad; 3 noches dándole plata = invita) y La Cachimba del Piojo (cachimba.js, CACHIMBA en constantes, solo con estado.cachimba). Mar del mapa: PLAYA.mar.x0 = -1150 (tapaba el autódromo).
 - Ciudad a 3 km (antes 20): CIUDAD.x = -4000. Hilario José (hilario.js, solo ciudad, hoverboard). Geometry Dash en el arcade (geometry.js). Astrohijo paga 1T.

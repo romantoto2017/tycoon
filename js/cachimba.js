@@ -110,7 +110,7 @@ function fierro() {
 }
 
 export class Cachimba {
-  // colisiones: la lista de choques de afuera de la ciudad (main.js). alVisitar: la primera vez.
+  // colisiones: la lista de choques de afuera de la ciudad (main.js).
   constructor({ escena, estado, ui, guardar, colisiones }) {
     Object.assign(this, { escena, estado, ui, guardar, colisiones });
     this.grupo = null;
@@ -118,7 +118,6 @@ export class Cachimba {
     this.robo = 0; // segundos hasta que te roban (si te toca)
     this.gente = [];
     this.perros = [];
-    this.alVisitar = null;
   }
 
   get invitado() { return !!this.estado.cachimba; }
@@ -300,7 +299,7 @@ export class Cachimba {
     const z0 = CRUCES[0];
     for (const [n, v] of VILLEROS.entries()) {
       const p = {
-        id: `villero${n % 6}`, nombre: ' ', sinFoto: true, piel: v.piel, pelo: '#151010', peinado: n % 3 ? 'liso' : 'rulos',
+        id: `villero${n % 6}`, nombre: ' ', sinFoto: true, sinCara: true, piel: v.piel, pelo: '#151010', peinado: n % 3 ? 'liso' : 'rulos',
         remera: v.remera || v.piel, pantalon: v.pantalon, cuerpo: n === 7 ? 'gordo' : undefined, detallar: detallesVillero(v),
       };
       await this.persona(p, CALLE_X + v.x, z0 + v.z - 30, v.a, (m) => {
@@ -340,8 +339,10 @@ export class Cachimba {
   }
 
   actualizar(dt, jugador, jugando) {
-    if (!this.grupo) return;
     const p = jugador.pos;
+    // Se arma recién cuando venís para este lado (no al cargar la partida: pico de memoria del iPhone).
+    if (!this.grupo && this.dentro(p, 1000)) this.armar();
+    if (!this.grupo) return;
     const cerca = this.dentro(p, 150);
     this.grupo.visible = this.dentro(p, 700); // desde la autopista se ve; más lejos, no se dibuja
     if (cerca) {
@@ -366,7 +367,6 @@ export class Cachimba {
     if (!c.visitada) {
       c.visitada = true;
       this.guardar();
-      this.alVisitar?.();
       this.ui.toast('El Humano: "¡Viniste, amigo! Bienvenido a La Cachimba del Piojo"', 'info', 5000);
     }
     this.robo = Math.random() < ROBO ? 5 + Math.random() * 10 : 0;

@@ -298,7 +298,8 @@ export function crearPersonaje(p, cabezaTex, vestido = null, opciones = {}) {
   const propia = PERSONAJES.some((x) => x.id === p.id);
   let texturas = !propia && cabezaTex.texCompartidas;
   if (!texturas) {
-    texturas = lados.map(([c], i) => (propia || i === 4 ? texturaDeCanvas(c) : liberarAlSubir(texturaDeCanvas(c))));
+    // sinCara: gente que nunca sale en un diálogo (peatones, villeros): el frente también se vacía.
+    texturas = lados.map(([c], i) => (propia || (i === 4 && !p.sinCara) ? texturaDeCanvas(c) : liberarAlSubir(texturaDeCanvas(c))));
     if (!propia) cabezaTex.texCompartidas = texturas;
   }
   const materiales = lados.map(([, tono], i) => new THREE.MeshBasicMaterial({ map: texturas[i], color: tono }));

@@ -32,7 +32,6 @@ export class Humano extends Paseante {
     this.enojado = 0;
     this.latas = [];
     this.tiro = 0;
-    this.alInvitar = null; // main.js
   }
 
   datos() { return (this.estado.humano ??= { dado: 0, noche: -1 }); }
@@ -77,7 +76,6 @@ export class Humano extends Paseante {
     ]);
     this.pausar(false);
     this.ui.toast('El Humano te espera en La Cachimba del Piojo: apareció un "?" en el mapa', 'plata', 6000);
-    this.alInvitar?.();
   }
 
   // De noche, salvo que ya le hayas dado esta noche (se fue). Enojado te sigue aunque se haga de día.
