@@ -249,12 +249,16 @@ export class Constructor {
       geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3));
       geo.setIndex(b.idx);
       geo.computeBoundingSphere();
+      geo.computeBoundingBox();
+      // Es fija: una vez en la placa de video, la copia de JavaScript sobra (memoria del celu).
+      for (const at of [...Object.values(geo.attributes), geo.index]) at.onUpload(soltarArray);
       g.add(new THREE.Mesh(geo, materiales[nombre]));
     }
     return g;
   }
 }
 const tmpColor = new THREE.Color();
+function soltarArray() { this.array = null; }
 
 // ---------- Choques en grilla ----------
 class Grilla {

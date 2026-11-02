@@ -205,12 +205,13 @@ async function iniciar() {
     const [x0, z0, x1, z1] = ZONAS_MAPA[id];
     const w = Math.round((x1 - x0) * PX_MAPA[id]);
     const h = Math.round((z1 - z0) * PX_MAPA[id]);
-    const rt = new THREE.WebGLRenderTarget(w, h, { samples: 4 });
+    // De a pedazos chicos (con el mismo antialias): una sola foto grande pedía ~50 MB de golpe a la
+    // placa de video y en el iPhone se caía el WebGL (todo negro al abrir el mapa).
+    const T = 512;
+    const rt = new THREE.WebGLRenderTarget(T, T, { samples: 4 });
     rt.texture.colorSpace = THREE.SRGBColorSpace;
-    Object.assign(camMapa, { left: -(x1 - x0) / 2, right: (x1 - x0) / 2, top: (z1 - z0) / 2, bottom: -(z1 - z0) / 2 });
     camMapa.position.set((x0 + x1) / 2, 900, (z0 + z1) / 2);
     camMapa.lookAt((x0 + x1) / 2, 0, (z0 + z1) / 2);
-    camMapa.updateProjectionMatrix();
     // Sin carteles flotantes, con lo que está lejos a la vista y sin niebla (correrla, no
     // sacarla: sacarla recompila todos los materiales).
     const ocultos = [];
@@ -221,10 +222,26 @@ async function iniciar() {
     mundo.paraMapa(true);
     escena.fog.near = 1e5;
     escena.fog.far = 1e6;
-    renderer.setRenderTarget(rt);
-    renderer.render(escena, camMapa);
-    const px = new Uint8Array(w * h * 4);
-    renderer.readRenderTargetPixels(rt, 0, 0, w, h, px);
+    // WebGL lee de abajo para arriba: cada pedazo se da vuelta al pasarlo a la imagen.
+    const img = new ImageData(w, h);
+    const px = new Uint8Array(T * T * 4);
+    const [ux, uz] = [(x1 - x0) / w, (z1 - z0) / h]; // unidades por píxel
+    for (let ty = 0; ty < h; ty += T) {
+      for (let tx = 0; tx < w; tx += T) {
+        const tw = Math.min(T, w - tx);
+        const th = Math.min(T, h - ty);
+        camMapa.left = -(x1 - x0) / 2 + tx * ux;
+        camMapa.right = camMapa.left + tw * ux;
+        camMapa.top = (z1 - z0) / 2 - ty * uz;
+        camMapa.bottom = camMapa.top - th * uz;
+        camMapa.updateProjectionMatrix();
+        rt.viewport.set(0, 0, tw, th);
+        renderer.setRenderTarget(rt);
+        renderer.render(escena, camMapa);
+        renderer.readRenderTargetPixels(rt, 0, 0, tw, th, px);
+        for (let r = 0; r < th; r++) img.data.set(px.subarray(r * tw * 4, (r + 1) * tw * 4), ((ty + th - 1 - r) * w + tx) * 4);
+      }
+    }
     renderer.setRenderTarget(null);
     rt.dispose();
     mundo.paraMapa(false);
@@ -232,9 +249,6 @@ async function iniciar() {
     escena.fog.far = far;
     for (const g of lejos) g.visible = false;
     for (const o of ocultos) o.visible = true;
-    // WebGL lee de abajo para arriba: se da vuelta al pasarlo a la imagen.
-    const img = new ImageData(w, h);
-    for (let y = 0; y < h; y++) img.data.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
     // Hasta que la imagen nueva esté lista se sigue viendo la anterior (si había).
     const vieja = fotos[id]?.canvas || null;
     const foto = { x0, z0, x1, z1, canvas: vieja, compras: estado.compras.length, cuando: performance.now() };
@@ -1210,7 +1224,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, hilario, humano, cachimba, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { renderer, depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, hilario, humano, cachimba, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1421,7 +1435,8 @@ async function iniciar() {
 
     // Canvas de un solo dibujo: se suben ya a la placa de video y se vacían (js/liberar.js).
     subirPendientes((t) => renderer.initTexture(t));
-    renderer.render(escena, camara);
+    // Con el mapa abierto (tapa toda la pantalla) no se dibuja el 3D: menos calor en el celu.
+    if (!UI.mapaAbierto()) renderer.render(escena, camara);
   };
   bucle();
 }

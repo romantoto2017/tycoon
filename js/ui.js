@@ -1068,6 +1068,8 @@ export function cerrarMapa() {
   window.removeEventListener('keydown', mapaGrande.teclas);
   mapaGrande = null;
   mostrar('mapa', false);
+  const c = $('mapa-lienzo');
+  c.width = c.height = 1; // ocupa toda la pantalla: cerrado no tiene que guardar memoria
   MAPA.alCerrar?.();
 }
 

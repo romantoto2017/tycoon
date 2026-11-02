@@ -68,6 +68,10 @@ class Pila {
     if (!this.geos.length) return null;
     const m = new THREE.Mesh(mergeGeometries(this.geos), material);
     m.geometry.computeBoundingSphere();
+    m.geometry.computeBoundingBox();
+    this.geos = [];
+    // Es fija: una vez en la placa de video, la copia de JavaScript sobra (memoria del celu).
+    for (const at of Object.values(m.geometry.attributes)) at.onUpload(function () { this.array = null; });
     return m;
   }
 }
