@@ -22,16 +22,16 @@ const TAM_MONEDA = 0.6;
 const MAX_MONEDAS = 500;
 const ALTURA_CAIDA = 14;
 
-const GEO_BOTON = new THREE.CylinderGeometry(1.4, 1.4, 0.3, 20);
-const GEO_ARO = new THREE.CylinderGeometry(1.75, 1.75, 0.16, 20);
+export const GEO_BOTON = new THREE.CylinderGeometry(1.4, 1.4, 0.3, 20);
+export const GEO_ARO = new THREE.CylinderGeometry(1.75, 1.75, 0.16, 20);
 const GEO_PLANO = new THREE.PlaneGeometry(1, 1);
-const GEO_HAZ = new THREE.CylinderGeometry(0.5, 0.5, 40, 8, 1, true);
-const MAT_VERDE = new THREE.MeshLambertMaterial({ color: '#2fd14a', emissive: '#0b4a14' });
-const MAT_ROJO = new THREE.MeshLambertMaterial({ color: '#e53935', emissive: '#3a0a0a' });
+export const GEO_HAZ = new THREE.CylinderGeometry(0.5, 0.5, 40, 8, 1, true);
+export const MAT_VERDE = new THREE.MeshLambertMaterial({ color: '#2fd14a', emissive: '#0b4a14' });
+export const MAT_ROJO = new THREE.MeshLambertMaterial({ color: '#e53935', emissive: '#3a0a0a' });
 const MAT_DORADO = new THREE.MeshLambertMaterial({ color: '#ffc928', emissive: '#4a3500' });
 const MAT_ASCENSOR = new THREE.MeshLambertMaterial({ color: '#7c4dff', emissive: '#2a1060' });
 const PISOS_ASCENSOR = ['piso_pb', 'piso_1', 'piso_2', 'piso_3', 'techo'];
-const MAT_HAZ = new THREE.MeshBasicMaterial({ color: '#7dff6a', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
+export const MAT_HAZ = new THREE.MeshBasicMaterial({ color: '#7dff6a', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
 
 function crearKit() {
   const brillos = new Map();
