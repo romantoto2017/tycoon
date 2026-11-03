@@ -45,6 +45,7 @@ import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
 import { vestido } from './vestir.js';
 import { Probador } from './probador.js';
 import { NicoBaraja } from './nico.js';
+import { PEDIR_COMPLETA } from './entorno.js';
 import { Costa, alturaCosta } from './costa.js';
 import { Tanzania } from './tanzania.js';
 
@@ -113,6 +114,11 @@ async function iniciar() {
   // ?completo: muestra la mansión terminada sin tocar la partida guardada.
   const vistaCompleta = new URLSearchParams(location.search).has('completo');
   if (vistaCompleta) estado.compras = ITEMS.map((i) => i.id);
+  if (PEDIR_COMPLETA) {
+    estado.compras = ITEMS.map((i) => i.id);
+    estado.plata = Math.max(estado.plata, 5e14); // 500T: Nico y la tanzania entera
+    guardar(estado);
+  }
   // Partidas guardadas antes de que el terreno fuera una compra.
   if (estado.compras.length && !estado.compras.includes('terreno')) estado.compras.unshift('terreno');
   estado.ropa ??= [];
