@@ -361,3 +361,13 @@ En `prueba/` hay una copia exacta del juego, publicada en la misma página con `
 - **No toca el juego de verdad:** usa sus propias partidas guardadas (claves `prueba-...` en el navegador) y su propio lugar en Firebase (`prueba/...`, con sus 9 terrenos aparte). Todo eso sale de `js/entorno.js`, según si el juego corre desde `/prueba/`.
 - **Arranca con tu partida:** la primera vez, la copia toma una copia de lo que tenés guardado en el juego de verdad (y tu nombre). Lo que hagas después queda solo en la prueba.
 - `sh herramientas/copiar_prueba.sh` rehace la copia desde el juego; `sh herramientas/pasar_prueba.sh` pasa lo de `prueba/` al juego de verdad.
+
+## Actualización en prueba: la costa y la tanzania
+
+Todo esto está **solo en la copia de prueba** (`prueba/`); se pasa al juego con `herramientas/pasar_prueba.sh` cuando el dueño lo apruebe.
+
+- **Nico Baraja** (`prueba/js/nico.js`): con la mansión al 99% aparece al final de la calle del barrio, apoyado en su Koenigsegg Agera, al lado de la barrera de la costa. Por 200B te habilita el negocio: saca la barrera y queda guardado (`estado.costa`). Su cuerpo está escaneado de la foto con `herramientas/nicobaraja.py` (la tinta de los tatuajes del pecho, la panza, la manga del brazo derecho y el cuello, sobre la piel del juego), con las cadenas de oro en 3D, el short de jean, el cinto trenzado y las Jordan.
+- **La costa** (`prueba/js/costa.js`, medidas en `COSTA` de `constantes.js`): la calle sigue y se bifurca. El ramal recto va por abajo, junto a una playa con olas y cuatro mansiones de lujo (pileta, palmeras, autos caros). El ramal en curva sube el acantilado hasta la parcela del galpón.
+- **Los dueños** (`prueba/data/compradores.js`): cada mansión tiene timbre; sale el dueño (Don Rulo Ferrando, Brenda Lavalleja, El Turco Haddad, Valentina Ocampo) y charla distinto si ya tenés el galpón. Todavía no compran, pero cada uno ya tiene `compra: { cantidad, paga, cada }`; para activar las ventas: `VENTAS_COMPRADORES = true` y un sistema que lea esos datos.
+- **Tanzania** (`prueba/js/tanzania.js`, números en `prueba/data/tanzania.js`): la planta inventada del juego (hojas aserradas, cogollos violeta). En el galpón de chapa del acantilado, con botones como los de la mansión: plantar (mesas), cultivar (luces), cosechar, procesar (secadero, picadora, prensa, laboratorio) y vender (pad VENDER, contacto que vende solo, furgoneta). Lo comprado va en `estado.tanzania` (aparte de la mansión). `node herramientas/balance_tanzania.mjs` simula la duración.
+- **Crédito**: Koenigsegg Agera por [LDawesome](https://sketchfab.com/LDawesome) (CC-BY 4.0), achicado para el juego.

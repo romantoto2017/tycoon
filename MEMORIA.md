@@ -6,10 +6,12 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Plugins: solo ponytail anda solo. claude-mem no sirve en la web: su memoria se borra con el contenedor y sincronizarla pide cuenta paga (cmem.ai Pro) y una terminal.
 
 ## Pendiente
+- Aprobar los números de la tanzania (data/tanzania.js) y pasar prueba/ al juego con herramientas/pasar_prueba.sh.
 - Liberar el terreno viejo de Tepho y le shpet pasa cuando entra cualquiera al juego publicado (Firebase no se puede tocar desde el contenedor).
 - Multijugador y chat: probados solo con la red local de prueba; con Firebase real lo prueba el dueño.
 
 ## Último trabajo
+- EN PRUEBA (prueba/): Nico Baraja (nico.js, 200B al 99%, estado.costa), la costa (costa.js: bifurcación, acantilado, playa, 4 mansiones con dueños-compradores en data/compradores.js) y el tycoon de tanzania (tanzania.js + data/tanzania.js, estado.tanzania). Precios de tanzania = propuesta, falta que el dueño los apruebe.
 - prueba/ cerrada con llave: …/prueba/#llave=… (solo la tiene el dueño; en el repo solo HUELLA en entorno.js). Si se pierde, generar otra y cambiar HUELLA.
 - Copia de prueba en prueba/ (/.../prueba/): partidas con clave prueba-..., Firebase bajo prueba/ (js/entorno.js). La actu grande se hace ahí y se pasa con herramientas/pasar_prueba.sh.
 - Una sola partida: sin lugar/conexión/sacado no se juega (arranque.js). Tepho y le shpet NO están echados: si entran desde una sesión sin terreno (app) se llevan el de su otra sesión (Safari) aunque esté abierta; la vieja queda en movidos/ y no entra (LIBERAR en red.js). Progreso: el de la sesión nueva (decisión del dueño). Aviso de ocupados muestra los nombres.
