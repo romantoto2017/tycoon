@@ -68,11 +68,15 @@ function pedirNombre() {
       if (msg) msg.textContent = 'Conectando...';
       red = await Promise.race([conectarRed(FIREBASE), esperar(10000)]);
       if (red) {
-        await Promise.race([red.liberarViejos(uid), esperar(10000)]);
-        if (await Promise.race([red.movido(uid), esperar(10000)])) await parar('Esta cuenta ahora juega desde la app del celu: entrá por ahí');
+        // Primero si esta sesión ya fue reemplazada (así no le vuelve a sacar el terreno a la nueva).
+        if (await Promise.race([red.movido(uid), esperar(10000)])) await parar('Esta cuenta ahora juega desde la app: entrá por ahí');
+        await Promise.race([red.liberarViejos(uid, nombre), esperar(10000)]);
         const k = await Promise.race([red.tomarLote(uid), esperar(10000)]);
         if (k === null) red = null;
-        else if (k < 0) await parar('Los 9 lugares de la partida están ocupados: no se puede jugar');
+        else if (k < 0) {
+          const quienes = await Promise.race([red.ocupantes(), esperar(10000)]);
+          await parar(`Los 9 lugares de la partida están ocupados: no se puede jugar${quienes ? ` (${quienes.join(', ')})` : ''}`);
+        }
         else slot = k;
       }
     } catch (e) {

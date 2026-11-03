@@ -363,6 +363,8 @@ export class Multijugador {
     this.alMorir = null; // main.js
     this.t = 0;
     red.enLinea(uid, nombre);
+    // Si entraste con esta cuenta desde otro lado (la app), esta sesión se recarga y ya no entra.
+    red.alMovido(uid, () => location.reload());
     red.alJugadores((js) => this.recibirJugadores(js));
     red.alPosiciones((id, p) => {
       if (id === uid) return;
