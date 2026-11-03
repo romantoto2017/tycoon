@@ -841,6 +841,9 @@ html, body {
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 .btn-chat:hover { filter: brightness(1.25); }
+/* Fumar tanzania (fumar.js): abajo del botón de configuración, solo con bolsitas encima. */
+.btn-fumar { position: absolute; top: calc(62px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); width: 44px; height: 44px; padding: 0; font-size: 22px; background: var(--panel); border: 2px solid #8e5ee0; border-radius: 12px; cursor: pointer; pointer-events: auto; }
+.btn-fumar:active { transform: translateY(2px); }
 .btn-chat:active { transform: translateY(2px); }
 .btn-chat:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
 .btn-chat[aria-pressed="true"] { background: var(--azul); }

@@ -48,6 +48,7 @@ import { NicoBaraja } from './nico.js';
 import { PEDIR_COMPLETA } from './entorno.js';
 import { Costa, alturaCosta } from './costa.js';
 import { Tanzania } from './tanzania.js';
+import { Fumar } from './fumar.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -170,6 +171,10 @@ async function iniciar() {
   const costa = new Costa({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones, pausar: pausarDialogo });
   const tanzania = new Tanzania({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones });
   nico.alAbrir = () => { LIMITE_MAPA.x1 = COSTA.x1; };
+  playa.tanzania = tanzania; // Francis te compra tanzania
+  cachimba.tanzania = tanzania; // El Humano también, en la Cachimba
+  cachimba.pausar = pausarDialogo;
+  const fumar = new Fumar({ escena, estado, ui: UI, guardar: () => guardarAhora(), jugador, tanzania, puede: () => modo === 'juego' && controles.activo && !conduciendo });
   tanzania.alComprar = (it) => { if (it.tipo === 'galpon') delete fotos.costa; }; // la foto del mapa, con el galpón
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
   const estatua = new Estatua({ escena, colisiones });
@@ -394,7 +399,7 @@ async function iniciar() {
   const tmpBajada = new THREE.Vector3();
   const btnManejar = document.getElementById('btn-manejar');
   let textoManejar = '';
-  const autos = () => (tycoon.auto ? [tycoon.auto, ...flota.autos] : flota.autos);
+  const autos = () => [...(tycoon.auto ? [tycoon.auto] : []), ...flota.autos, ...tanzania.autos];
   // El auto más cercano para subirse (a menos de 6), o null.
   const cercaDelAuto = () => {
     if (jugador.pos.y >= 2) return null;
@@ -591,6 +596,14 @@ async function iniciar() {
     }
     if (!conduciendo && costa.accion(jugador)) {
       costa.hacer(jugador);
+      return;
+    }
+    if (tanzania.accion(jugador)) {
+      tanzania.hacer();
+      return;
+    }
+    if (cachimba.accion(jugador)) {
+      cachimba.hacer();
       return;
     }
     if (!conduciendo && pony.hacer(jugador, estado.personaje === 'bauti')) return;
@@ -1391,7 +1404,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : nico.accion(jugador) || costa.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : nico.accion(jugador) || costa.accion(jugador) || tanzania.accion(jugador) || cachimba.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1430,6 +1443,7 @@ async function iniciar() {
     nico.actualizar(dt, jugador);
     costa.actualizar(dt, jugador);
     tanzania.actualizar(dt, jugador);
+    fumar.actualizar(dt);
     pony.actualizar(dt, jugador);
     if (modo === 'juego') mj?.actualizar(dt, { modo: conduciendo && vehiculo !== tycoon.heli ? 'auto' : pony.montado ? 'pony' : 'pie', vehiculo: conduciendo && vehiculo !== tycoon.heli ? vehiculo : null });
     banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);
@@ -1448,7 +1462,7 @@ async function iniciar() {
     actualizarLechugas();
     brillos.actualizar(dt);
     // Adentro del gym se prenden las luces (sube de a poco al entrar, como un fundido).
-    luzGym += ((modo === 'juego' && gym.dentro(jugador.pos) ? 1 : modo === 'juego' && (casino.dentro(jugador.pos) || bar.dentro(jugador.pos)) ? 0.7 : 0) - luzGym) * Math.min(1, dt * 4);
+    luzGym += ((modo === 'juego' && gym.dentro(jugador.pos) ? 1 : modo === 'juego' && (casino.dentro(jugador.pos) || bar.dentro(jugador.pos)) ? 0.7 : modo === 'juego' && tanzania.dentro(jugador.pos) ? -0.8 : 0) - luzGym) * Math.min(1, dt * 4);
     mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzBarrio(), camara.position, luzGym);
     if (modo === 'juego') {
       estado.tiempoJugado += dt;

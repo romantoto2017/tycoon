@@ -25,6 +25,7 @@ import { sfx } from './sfx.js';
 // plano con un shader corto.
 
 const O = P.orilla;
+const FRANCIS_PAGA = 1.8; // lo que paga Francis por cada bolsita de tanzania (veces lo que vale)
 export const Y_AGUA = 0.32;
 const ANCHO_PLAYA = P.x1 - P.x0;
 const SPOT = { x: P.muelle.x - 32, z: O - 3.6 }; // donde se para Francis cuando sale del agua
@@ -732,13 +733,13 @@ export class Playa {
 
   accion(jugador) {
     if (!this.cerca(jugador)) return '';
-    return this.perrosDesbloqueados() ? 'Hablar con Francis Jeremy (E)' : 'Saludar a Francis Jeremy (E)';
+    return this.perrosDesbloqueados() || this.conTanzania() ? 'Hablar con Francis Jeremy (E)' : 'Saludar a Francis Jeremy (E)';
   }
 
   // Devuelve true si abrió la charla (main.js frena los controles hasta que termina).
   hacer(jugador, alTerminar) {
     if (!this.cerca(jugador)) return false;
-    if (!this.perrosDesbloqueados()) {
+    if (!this.perrosDesbloqueados() && !this.conTanzania()) {
       this.hablar(una(FRASES));
       sfx.salto();
       return false;
@@ -746,6 +747,9 @@ export class Playa {
     this.charla(alTerminar);
     return true;
   }
+
+  // Llevás bolsitas de tanzania encima (main.js le pasa el tycoon: this.tanzania).
+  conTanzania() { return (this.tanzania?.datos.encima || 0) > 0; }
 
   // La charla: con opciones. Para la pócima hay que contarle lo de los perros y no rechazarla;
   // las otras ramas terminan en nada.
@@ -767,12 +771,27 @@ export class Playa {
       this.ui.toast('Conseguiste la pócima de Francis: dásela a un perro tirado (una por vez)', 'plata', 5000);
       return terminar();
     };
+    // Venderle tanzania: paga más que en el galpón (FRANCIS_PAGA veces lo que vale cada bolsita).
+    const tanzania = async () => {
+      const n = this.tanzania.datos.encima;
+      const r = await decir([`¿Tanzania? ¿Vos? Nooo mano, no te puedo creer. A ver, mostrame...`, `Uuuh, mirá el color de esos cogollos violeta. Esto es de la buena, mano. Te las compro todas: ${n} bolsitas.`], [
+        ['Dale, son tuyas', 'si'],
+        ['Mejor no, me las guardo', 'no'],
+      ]);
+      if (r !== 'si') { await decir(['Bueno mano, vos sabés. Si cambiás de idea, acá estoy en el agua.']); return terminar(); }
+      this.tanzania.vender(FRANCIS_PAGA);
+      sfx.brillo();
+      await decir(['Trato, mano. Esto me lo fumo mirando el atardecer arriba de la tabla. MUAJAJAJAJAJ', 'Traeme más cuando tengas, eh. #under']);
+      return terminar();
+    };
     (async () => {
       const r1 = await decir(['Qué onda mano, ¿qué hacés por acá? Vamo a surfear esas olas.'], [
         ['Vine a mirar el mar nomás', 'mar'],
         ['¿Me enseñás a surfear?', 'surf'],
         ['Ando medio bajón', 'bajon'],
+        ...(this.conTanzania() ? [['Te traje algo… tanzania', 'tanzania']] : []),
       ]);
+      if (r1 === 'tanzania') return tanzania();
       if (r1 === 'mar') { await decir(['El mar cura todo, mano. Todo menos la policía. POLICÍA, ¡ABRA LA PUERTA! jajaja']); return terminar(); }
       if (r1 === 'surf') { await decir(['Primero hay que sentir la ola, mano. La ola te elige a vos.', 'Hoy no, que está picado. #under']); return terminar(); }
       if (r1 !== 'bajon') return terminar();

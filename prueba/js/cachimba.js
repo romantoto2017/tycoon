@@ -17,6 +17,7 @@ import { sfx } from './sfx.js';
 // remera o con la ropa rota), perros flacos y lastimados, El Humano en la entrada y a veces la
 // Schwepa y Manu Mendez. Cada vez que entrás hay un 30% de que te roben toda la plata.
 const ROBO = 0.3;
+const HUMANO_PAGA = 1.5; // lo que paga El Humano por cada bolsita de tanzania (veces lo que vale)
 const CALLE_X = CA.entrada; // la calle principal (de barro), sigue al camino de tierra
 const CRUCES = [CA.z0 + 55, CA.z0 + 120]; // las dos calles que la cruzan
 const enCalle = (x0, z0, x1, z1) => (x1 > CALLE_X - 7 && x0 < CALLE_X + 7) || CRUCES.some((z) => z1 > z - 6 && z0 < z + 6);
@@ -358,6 +359,26 @@ export class Cachimba {
     if (ahora && !this.adentro) this.entrar();
     if (!this.dentro(p, 40)) this.adentro = false;
     if (ahora && this.robo > 0 && (this.robo -= dt) <= 0) this.robar();
+  }
+
+  // Venderle tanzania a El Humano (la que llevás encima: tanzania.js). Paga más que el galpón.
+  accion(jugador) {
+    const h = this.humano?.grupo;
+    if (!h || jugador.conduciendo || !((this.tanzania?.datos.encima || 0) > 0)) return '';
+    return Math.hypot(jugador.pos.x - h.position.x, jugador.pos.z - h.position.z) < 5 ? 'Venderle tanzania a El Humano (E)' : '';
+  }
+
+  async hacer() {
+    const n = this.tanzania.datos.encima;
+    const cara = (await cargarCabeza(HUMANO)).frente.toDataURL();
+    const decir = (lineas, opciones) => new Promise((res) => this.ui.dialogo({ nombre: HUMANO.nombre, cara, remera: HUMANO.remera, lineas, opciones, alElegir: res, alTerminar: () => res(-1) }));
+    this.pausar?.(true);
+    const r = await decir(['¿Qué traés ahí, amigo? …¿Eso es tanzania? ¡La puta madre, amigo!', `Acá en la Cachimba esto vuela. Te compro las ${n} bolsitas, ya mismo.`], ['Dale, vendelas', 'No, después']);
+    if (r === 0) {
+      this.tanzania.vender(HUMANO_PAGA);
+      await decir(['Sos un capo, amigo. Volvé cuando quieras, que acá siempre hay quien compre.']);
+    }
+    this.pausar?.(false);
   }
 
   entrar() {
