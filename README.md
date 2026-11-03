@@ -357,6 +357,7 @@ Para la Chromebook: cada manzana es una sola malla por material (lo que no se ve
 
 En `prueba/` hay una copia exacta del juego, publicada en la misma página con `/prueba/` al final (por ejemplo `https://romantoto2017.github.io/tycoon/prueba/`). Sirve para probar una actualización antes de que la vean todos:
 
+- **Solo con el link del dueño** (`…/prueba/#llave=…`): sin la llave muestra "404 · Página no encontrada". En el código está solo la huella SHA-256 de la llave (`HUELLA` en `js/entorno.js`), no la llave; el navegador que entró con el link la recuerda. Para cambiarla: otra llave, su huella en `HUELLA` y `copiar_prueba.sh`.
 - **No toca el juego de verdad:** usa sus propias partidas guardadas (claves `prueba-...` en el navegador) y su propio lugar en Firebase (`prueba/...`, con sus 9 terrenos aparte). Todo eso sale de `js/entorno.js`, según si el juego corre desde `/prueba/`.
 - **Arranca con tu partida:** la primera vez, la copia toma una copia de lo que tenés guardado en el juego de verdad (y tu nombre). Lo que hagas después queda solo en la prueba.
 - `sh herramientas/copiar_prueba.sh` rehace la copia desde el juego; `sh herramientas/pasar_prueba.sh` pasa lo de `prueba/` al juego de verdad.

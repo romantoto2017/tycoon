@@ -10,6 +10,7 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Multijugador y chat: probados solo con la red local de prueba; con Firebase real lo prueba el dueño.
 
 ## Último trabajo
+- prueba/ cerrada con llave: …/prueba/#llave=… (solo la tiene el dueño; en el repo solo HUELLA en entorno.js). Si se pierde, generar otra y cambiar HUELLA.
 - Copia de prueba en prueba/ (/.../prueba/): partidas con clave prueba-..., Firebase bajo prueba/ (js/entorno.js). La actu grande se hace ahí y se pasa con herramientas/pasar_prueba.sh.
 - Una sola partida: sin lugar/conexión/sacado no se juega (arranque.js). Tepho y le shpet NO están echados: si entran desde una sesión sin terreno (app) se llevan el de su otra sesión (Safari) aunque esté abierta; la vieja queda en movidos/ y no entra (LIBERAR en red.js). Progreso: el de la sesión nueva (decisión del dueño). Aviso de ocupados muestra los nombres.
 - Mapa negro/calor: foto del mapa en pedazos de 512 (antes ~50 MB de golpe), sin render 3D con el mapa abierto, lienzo del mapa se libera al cerrar; cuadros >1024 achicados (texturas 127→93 MB barrio, 179→135 ciudad); Constructor y Pila sueltan arrays al subir.

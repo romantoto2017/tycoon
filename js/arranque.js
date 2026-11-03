@@ -4,7 +4,7 @@
 import { FIREBASE } from './red-config.js';
 import { conectarRed } from './red.js';
 
-import { PRUEBA, clave } from './entorno.js';
+import { PRUEBA, clave, llaveOk } from './entorno.js';
 
 const CLAVE_UID = clave('vecibanda-uid');
 const CLAVE_NOMBRE = clave('vecibanda-usuario');
@@ -39,6 +39,11 @@ function pedirNombre() {
 (async () => {
   const msg = document.getElementById('msg-carga');
   const param = new URLSearchParams(location.search);
+  if (!(await llaveOk())) {
+    document.title = 'Página no encontrada';
+    document.body.innerHTML = '<h1 style="font-family:sans-serif;color:#888;text-align:center;margin-top:20vh">404 · Página no encontrada</h1>';
+    return;
+  }
   // Las vistas de prueba (?completo, ?redlocal) y jugar sin red son solo para probar en la compu:
   // en la página publicada hay una sola partida.
   const enCompu = ['localhost', '127.0.0.1'].includes(location.hostname);
