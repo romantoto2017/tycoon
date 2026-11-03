@@ -5,7 +5,7 @@
 //   compra.cantidad: bolsitas por pedido; compra.paga: cuánto paga cada una (veces lo que vale
 //   procesada); compra.cada: segundos entre pedidos.
 // Los ids no se renombran ni se borran (más adelante pueden ir en la partida guardada).
-export const VENTAS_COMPRADORES = false;
+export const VENTAS_COMPRADORES = true; // encendido: te compran lo que llevás encima (costa.js)
 
 export const COMPRADORES = [
   {

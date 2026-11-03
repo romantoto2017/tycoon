@@ -88,6 +88,10 @@ class RedFirebase {
 
   chat(datos) { this.db.push(this.db.ref(this.base, 'chat'), datos); }
 
+  // Golpes (Bauti trabado tira a otro al cielo): golpes/{uid} = { de, nombre, t }.
+  golpe(uid, datos) { this.db.set(this.db.ref(this.base, `golpes/${uid}`), datos); }
+  alGolpe(uid, cb) { this.db.onValue(this.db.ref(this.base, `golpes/${uid}`), (s) => { if (s.val()) cb(s.val()); }); }
+
   // Los últimos mensajes y los que van llegando.
   alChat(cb) {
     const { ref, query, limitToLast, onChildAdded } = this.db;
@@ -108,7 +112,7 @@ class RedFirebase {
 class RedLocal {
   constructor() {
     this.canal = new BroadcastChannel(clave('vecibanda-red'));
-    this.oyentes = { jugadores: [], pos: [], chat: [] };
+    this.oyentes = { jugadores: [], pos: [], chat: [], golpe: {} };
     this.canal.onmessage = (e) => this.recibir(e.data);
   }
 
@@ -119,6 +123,7 @@ class RedLocal {
     if (m.tipo === 'jugadores') this.oyentes.jugadores.forEach((cb) => cb(this.leer('jugadores')));
     if (m.tipo === 'pos') this.oyentes.pos.forEach((cb) => cb(m.uid, m.datos));
     if (m.tipo === 'chat') this.oyentes.chat.forEach((cb) => cb(m.datos));
+    if (m.tipo === 'golpe') (this.oyentes.golpe[m.uid] || []).forEach((cb) => cb(m.datos));
   }
 
   async liberarViejos(uid, nombre) {
@@ -163,6 +168,8 @@ class RedLocal {
     this.canal.postMessage({ tipo: 'chat', datos });
     this.recibir({ tipo: 'chat', datos });
   }
+  golpe(uid, datos) { this.canal.postMessage({ tipo: 'golpe', uid, datos }); }
+  alGolpe(uid, cb) { (this.oyentes.golpe[uid] ??= []).push(cb); }
   alChat(cb) { this.oyentes.chat.push(cb); for (const d of this.leer('chat').lista || []) cb(d); }
   alJugadores(cb) { this.oyentes.jugadores.push(cb); cb(this.leer('jugadores')); }
   alPosiciones(cb) { this.oyentes.pos.push(cb); }

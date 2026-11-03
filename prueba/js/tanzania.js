@@ -124,7 +124,9 @@ export class Tanzania {
     this.alComprar = null;
   }
 
-  get datos() { return (this.estado.tanzania ??= { compras: [], deposito: 0, encima: 0 }); }
+  get datos() { return (this.estado.tanzania ??= { compras: [], deposito: 0, encima: 0, producido: 0, vendido: 0, entregas: 0 }); }
+  // Cuenta lo vendido (en gramos: una bolsita = 1 g) para el contador del galpón.
+  anotarVenta(plata) { this.datos.vendido = (this.datos.vendido || 0) + plata / this.bolsa; }
   tiene(id) { return this.datos.compras.includes(id); }
   get ingresoPorSegundo() { return ingresoTz(this.datos.compras); }
   get bolsa() { return precioBolsa(this.datos.compras); }
@@ -387,6 +389,10 @@ export class Tanzania {
     this.etiquetaDeposito = crearEtiqueta([{ texto: 'DEPÓSITO', tam: 44 }, { texto: formato(0), tam: 70, color: '#ffd23f', moneda: true }], 6);
     this.etiquetaDeposito.sprite.position.set(dx, Y + 5.5, dz);
     this.grupo.add(this.etiquetaDeposito.sprite);
+    // El contador, colgado en la pared del fondo arriba del entrepiso.
+    this.contador = crearEtiqueta([{ texto: 'TANZANIA', tam: 46 }, { texto: ' ', tam: 48 }, { texto: ' ', tam: 48 }], 9);
+    this.contador.sprite.position.set(x0 + 18, Y + 11.6, z0 + 11.6); // colgado de la baranda del entrepiso, se ve desde el portón
+    this.grupo.add(this.contador.sprite);
     const vender = crearEtiqueta([{ texto: 'VENDER', tam: 56, color: '#ffd23f' }, { texto: 'pisá para cobrar', tam: 32 }], 5);
     vender.sprite.position.set(cx, Y + 3.4, cz);
     this.grupo.add(vender.sprite);
@@ -467,11 +473,12 @@ export class Tanzania {
   }
 
   // Vender lo que llevás encima a `veces` lo que vale cada una (Francis, la Cachimba).
-  vender(veces) {
+  vender(veces, tope = Infinity) {
     const d = this.datos;
-    const n = d.encima || 0;
+    const n = Math.min(d.encima || 0, tope);
     const monto = Math.floor(n * this.bolsa * veces);
-    d.encima = 0;
+    d.encima -= n;
+    d.vendido = (d.vendido || 0) + n;
     this.estado.plata += monto;
     this.guardar();
     sfx.cobrar();
@@ -488,10 +495,12 @@ export class Tanzania {
     // todo menos una reserva de RESERVA bolsitas (para agarrar y fumar o vender por tu cuenta).
     const d = this.datos;
     d.deposito += this.ingresoPorSegundo * dt;
+    d.producido = (d.producido || 0) + (this.ingresoPorSegundo * dt) / this.bolsa;
     const sobra = Math.floor(d.deposito - RESERVA * this.bolsa);
     if (this.tiene('tz_contacto') && sobra >= 1) {
       this.estado.plata += sobra;
       d.deposito -= sobra;
+      this.anotarVenta(sobra);
     }
     if (!this.grupo) return;
     this.grupo.visible = cerca;
@@ -524,6 +533,7 @@ export class Tanzania {
         const monto = Math.floor(d.deposito);
         this.estado.plata += monto;
         d.deposito -= monto;
+        this.anotarVenta(monto);
         sfx.cobrar();
         this.ui.toast(`+${formato(monto)}`, 'plata');
       }
@@ -533,6 +543,11 @@ export class Tanzania {
         this.mostrado = mostrado;
         this.ultimoCartel = this.reloj;
         this.etiquetaDeposito.actualizar([{ texto: 'DEPÓSITO', tam: 44 }, { texto: formato(mostrado), tam: 70, color: '#ffd23f', moneda: true }]);
+      }
+      // El contador de la pared: gramos producidos y vendidos (una vez por segundo).
+      if (this.reloj - (this.ultimoContador || -9) > 1) {
+        this.ultimoContador = this.reloj;
+        this.contador.actualizar([{ texto: 'TANZANIA', tam: 46, color: '#d9b3ff' }, { texto: `Producida: ${formato(d.producido || 0)} g`, tam: 48, color: '#8dff6a' }, { texto: `Vendida: ${formato(d.vendido || 0)} g`, tam: 48, color: '#ffd23f' }]);
       }
     }
   }

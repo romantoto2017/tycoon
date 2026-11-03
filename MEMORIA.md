@@ -11,6 +11,7 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Multijugador y chat: probados solo con la red local de prueba; con Firebase real lo prueba el dueño.
 
 ## Último trabajo
+- EN PRUEBA: celular (Tranzapp + TanzaCoin, celular.js; se consigue vendiendo a un dueño), entregas con la van y punto azul (UI.marcasMapa), contador en el galpón, ojos rojos por personaje (OJOS en fumar.js), gente fumando tras 5 entregas, villeros compran, Bauti trabado pega y manda al cielo.
 - EN PRUEBA: costa rediseñada (cerro con camino subible en auto, barrio privado, 4 mansiones con estilos reales), warehouse verde oscuro por dentro, camioneta manejable, fumar (F/🌿, ojos rojos), vender a Francis (1,8x) y El Humano (1,5x).
 - Link de prueba con ?completa (antes del #): mansión 100% + 500T guardados en la partida de prueba (PEDIR_COMPLETA en prueba/js/entorno.js).
 - EN PRUEBA (prueba/): Nico Baraja (nico.js, 200B al 99%, estado.costa), la costa (costa.js: bifurcación, acantilado, playa, 4 mansiones con dueños-compradores en data/compradores.js) y el tycoon de tanzania (tanzania.js + data/tanzania.js, estado.tanzania). Precios de tanzania = propuesta, falta que el dueño los apruebe.

@@ -366,11 +366,30 @@ export class Multijugador {
     // Si entraste con esta cuenta desde otro lado (la app), esta sesión se recarga y ya no entra.
     red.alMovido(uid, () => location.reload());
     red.alJugadores((js) => this.recibirJugadores(js));
+    // Te pegó Bauti trabado: volás al cielo (main.js: alGolpe).
+    this.golpeVisto = Date.now();
+    red.alGolpe(uid, (g) => { if (g.t > this.golpeVisto) { this.golpeVisto = g.t; this.alGolpe?.(g); } });
     red.alPosiciones((id, p) => {
       if (id === uid) return;
       this.otro(id).ponerPos(p);
     });
   }
+
+  // ---------- Golpe de Bauti trabado ----------
+  // El otro jugador (a pie) más cerca, a menos de 4.
+  cercano(pos) {
+    let mejor = null;
+    let dm = 4;
+    for (const o of this.otros.values()) {
+      const a = o.actual;
+      if (!o.grupo.visible || !a || a.m) continue;
+      const d = Math.hypot(a.x - pos.x, a.z - pos.z);
+      if (d < dm && Math.abs(a.y - pos.y) < 3) { dm = d; mejor = o; }
+    }
+    return mejor;
+  }
+
+  pegar(o) { this.red.golpe(o.uid, { de: this.uid, nombre: this.nombre, t: Date.now() }); }
 
   // ---------- Chat (sin censura: lo que escribís es lo que ven todos) ----------
   enviarChat(texto) {

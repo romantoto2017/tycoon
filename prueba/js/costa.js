@@ -5,7 +5,7 @@ import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, crearEtiqueta } from './texturas.js';
 import { cargarAuto, AUTOS_POR_ID } from './auto.js';
 import { texArena, texMojada, texEspuma, Y_AGUA } from './playa.js';
-import { COMPRADORES } from '../data/compradores.js';
+import { COMPRADORES, VENTAS_COMPRADORES } from '../data/compradores.js';
 import { aleatorio } from './util.js';
 
 // La costa (la habilita Nico Baraja, nico.js): la calle del barrio sigue hacia el este y, pasando
@@ -25,9 +25,9 @@ const M = CO.meseta;
 const F = CO.falda;
 const CALLE = { z0: CALLE_Z - 6, z1: CALLE_Z + 6 };
 const MEDIO_CAMINO = 6.5;
-const PUERTA_Z = 86; // el frente de las mansiones (la puerta), hacia la calle
+export const PUERTA_Z = 86; // el frente de las mansiones (la puerta), hacia la calle
 const REJA_Z = CALLE.z1 + 2.5; // la reja del barrio privado, al borde de la vereda
-const MANSIONES = [150, 360, 570, 780].map((x, i) => ({
+export const MANSIONES = [150, 360, 570, 780].map((x, i) => ({
   x: CO.playa.x0 + x, estilo: i, ...COMPRADORES[i],
   auto: ['ferrari_f40', 'mclaren_p1', 'gtr', 'mclaren_p1'][i],
 }));
@@ -477,7 +477,23 @@ export class Costa {
     d.t = 12;
     d.m.grupo.rotation.y = Math.atan2(jugador.pos.x - d.m.grupo.position.x, jugador.pos.z - d.m.grupo.position.z);
     const lineas = this.estado.tanzania?.compras?.includes('tz_galpon') ? ma.conGalpon : ma.sinGalpon;
-    await new Promise((res) => this.ui.dialogo({ nombre: ma.nombre, cara: d.cara, remera: ma.look.remera, lineas, alTerminar: res }));
+    const decir = (l, opciones) => new Promise((res) => this.ui.dialogo({ nombre: ma.nombre, cara: d.cara, remera: ma.look.remera, lineas: l, opciones, alElegir: res, alTerminar: () => res(-1) }));
+    // Con bolsitas encima, te compra (VENTAS_COMPRADORES): hasta su cantidad, a lo que paga. El
+    // primero que te compra te da el celular (Tranzapp y la cotización: celular.js).
+    const encima = this.tanzania?.datos.encima || 0;
+    if (VENTAS_COMPRADORES && encima > 0) {
+      const n = Math.min(encima, ma.compra.cantidad);
+      const r = await decir([...lineas.slice(0, 1), `…¿Eso que tenés ahí es lo que pienso? Te compro ${n} bolsitas, ya.`], [`Venderle ${n} bolsitas`, 'No, gracias']);
+      if (r === 0) {
+        this.tanzania.vender(ma.compra.paga, n);
+        if (!this.estado.celular) {
+          this.estado.celular = true;
+          this.guardar();
+          await decir(['Bien ahí. Tomá este celular: es seguro, nadie lo rastrea.', 'Ahí vas a ver a cuánto se paga la tanzania y te va a escribir gente por Tranzapp. Vos entregás con la camioneta y cobrás.']);
+          this.ui.toast('Conseguiste el celular: tocá 📱 o la P', 'plata', 5000);
+        } else await decir(['Un placer hacer negocios, eh.']);
+      }
+    } else await decir(lineas);
     this.pausar(false);
   }
 

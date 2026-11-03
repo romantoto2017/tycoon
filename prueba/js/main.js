@@ -16,7 +16,7 @@ import { momento, hastaLaManana } from './cielo.js';
 import { Ladron, Perros } from './ladron.js';
 import { Mazza } from './mazza.js';
 import { Restaurante } from './restaurante.js';
-import { Gimnasio, fisico, bautiGordo } from './gimnasio.js';
+import { Gimnasio, fisico, bautiGordo, BAUTI_GYM } from './gimnasio.js';
 import { Misiones } from './misiones.js';
 import { Dufre, Ottati } from './dufre.js';
 import { Manu, Banda } from './manu.js';
@@ -48,7 +48,8 @@ import { NicoBaraja } from './nico.js';
 import { PEDIR_COMPLETA } from './entorno.js';
 import { Costa, alturaCosta } from './costa.js';
 import { Tanzania } from './tanzania.js';
-import { Fumar } from './fumar.js';
+import { Fumar, Fumadores } from './fumar.js';
+import { Celular } from './celular.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -166,6 +167,8 @@ async function iniciar() {
   const humano = new Humano({ escena, ui: UI, estado, guardar: () => guardarAhora(), hora: () => hora(), ingreso: () => tycoon.ingresoPorSegundo || 0, pausar: (b) => { controles.activo = !b && modo === 'juego'; } });
   const cachimba = new Cachimba({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones });
   // Nico Baraja (al 99% de la mansión) habilita la costa: las mansiones de lujo y el galpón de tanzania.
+  // Bauti 100% musculoso ("trabado"): solo él puede pegarle a los demás jugadores.
+  const bautiTrabado = () => estado.personaje === 'bauti' && (estado.bautiGym || 0) >= BAUTI_GYM.adelgazar + BAUTI_GYM.musculo;
   const pausarDialogo = (b) => { controles.activo = !b && modo === 'juego'; };
   const nico = new NicoBaraja({ escena, estado, ui: UI, guardar: () => guardarAhora(), progreso: () => tycoon.progreso, pausar: pausarDialogo });
   const costa = new Costa({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones, pausar: pausarDialogo });
@@ -174,6 +177,13 @@ async function iniciar() {
   playa.tanzania = tanzania; // Francis te compra tanzania
   cachimba.tanzania = tanzania; // El Humano también, en la Cachimba
   cachimba.pausar = pausarDialogo;
+  costa.tanzania = tanzania; // los dueños de las mansiones te compran (y uno te da el celular)
+  const celular = new Celular({ estado, ui: UI, guardar: () => guardarAhora(), tanzania, ciudad, controles, modo: () => modo });
+  celular.alCambiarMarcas = (lista) => UI.marcasMapa(lista);
+  const fumadores = new Fumadores({ escena, estado, cabezas: () => [
+    ...ciudad.peatones.map((p) => ({ cabeza: p.mod.partes.cabeza, piel: p.piel })),
+    ...cachimba.gente.filter((m) => m.villero).map((m) => ({ cabeza: m.partes.cabeza, piel: m.piel })),
+  ] });
   const fumar = new Fumar({ escena, estado, ui: UI, guardar: () => guardarAhora(), jugador, tanzania, puede: () => modo === 'juego' && controles.activo && !conduciendo });
   tanzania.alComprar = (it) => { if (it.tipo === 'galpon') delete fotos.costa; }; // la foto del mapa, con el galpón
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
@@ -381,6 +391,14 @@ async function iniciar() {
   const VECI = globalThis.VECI || {};
   const mj = VECI.red ? new Multijugador({ escena, colisiones, estado, jugador, tycoon, ui: UI, red: VECI.red, uid: VECI.uid, nombre: VECI.nombre, camara }) : null;
   if (mj) {
+    // Bauti trabado (100% musculoso) le pega a otro jugador y lo tira al cielo; acá, cuando te toca a vos.
+    mj.alGolpe = (g) => {
+      if (conduciendo || pony.montado) return;
+      jugador.vel.y = 190; // con gravedad 196: unos 90 de alto
+      jugador.pos.y += 0.5;
+      sfx.choque();
+      UI.toast(`¡${g.nombre} te pegó una piña y te mandó al cielo!`, 'error', 4000);
+    };
     mj.alMorir = (que) => {
       if (que === 'muere') {
         if (pony.montado) pony.bajar(jugador);
@@ -402,10 +420,10 @@ async function iniciar() {
   const autos = () => [...(tycoon.auto ? [tycoon.auto] : []), ...flota.autos, ...tanzania.autos];
   // El auto más cercano para subirse (a menos de 6), o null.
   const cercaDelAuto = () => {
-    if (jugador.pos.y >= 2) return null;
     let mejor = null;
     let dMejor = 6;
     for (const a of autos()) {
+      if (Math.abs(jugador.pos.y - (a.pos.y || 0)) >= 2) continue; // a su altura (la camioneta está en el cerro)
       const d = Math.hypot(jugador.pos.x - a.pos.x, jugador.pos.z - a.pos.z);
       if (d < dMejor) { dMejor = d; mejor = a; }
     }
@@ -590,6 +608,13 @@ async function iniciar() {
       if (taller.hacer(vehiculo)) controles.activo = false;
       return;
     }
+    const victima = bautiTrabado() && !conduciendo && mj?.cercano(jugador.pos);
+    if (victima) {
+      mj.pegar(victima);
+      sfx.choque();
+      UI.toast(`¡Bauti le pegó a ${victima.info.nombre || 'alguien'} y lo mandó al cielo!`, 'plata');
+      return;
+    }
     if (!conduciendo && nico.accion(jugador)) {
       nico.hacer();
       return;
@@ -603,7 +628,7 @@ async function iniciar() {
       return;
     }
     if (cachimba.accion(jugador)) {
-      cachimba.hacer();
+      cachimba.hacer(jugador);
       return;
     }
     if (!conduciendo && pony.hacer(jugador, estado.personaje === 'bauti')) return;
@@ -1404,7 +1429,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : nico.accion(jugador) || costa.accion(jugador) || tanzania.accion(jugador) || cachimba.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : (bautiTrabado() && mj?.cercano(jugador.pos) ? `Pegarle a ${mj.cercano(jugador.pos).info.nombre || 'él'} (E)` : '') || nico.accion(jugador) || costa.accion(jugador) || tanzania.accion(jugador) || cachimba.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1444,6 +1469,8 @@ async function iniciar() {
     costa.actualizar(dt, jugador);
     tanzania.actualizar(dt, jugador);
     fumar.actualizar(dt);
+    fumadores.actualizar(dt, jugador);
+    celular.actualizar(dt, jugador, conduciendo && vehiculo === tanzania.autos[0], vehiculo?.vel || 0);
     pony.actualizar(dt, jugador);
     if (modo === 'juego') mj?.actualizar(dt, { modo: conduciendo && vehiculo !== tycoon.heli ? 'auto' : pony.montado ? 'pony' : 'pie', vehiculo: conduciendo && vehiculo !== tycoon.heli ? vehiculo : null });
     banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);
