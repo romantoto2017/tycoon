@@ -7,16 +7,17 @@
 // mentira entre pestañas del mismo navegador (para probar sin Firebase).
 const VERSION = '10.12.2';
 export const LOTES_TOTAL = 9;
-// Los que el dueño sacó del server (por nombre de usuario, sin mayúsculas, espacios ni tildes).
-const SACADOS = ['tepho', 'leshpet'];
+// Una sola vez: Tepho y le shpet entraron primero desde el navegador y ahora juegan desde la app
+// (para el juego es otro usuario), así que el terreno del navegador se libera para que entren.
+// Se borran solo sus entradas desconectadas que no sean de quien entra; queda anotado en limpieza/.
+const LIBERAR = ['tepho', 'leshpet'];
 const normal = (n) => String(n || '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '');
-export const sacado = (nombre) => SACADOS.includes(normal(nombre));
-
-// Los uids a sacar: los de nombre prohibido y los que ya están en expulsados.
-function aSacar(jugadores, expulsados) {
-  return [...new Set([...Object.keys(expulsados || {}), ...Object.entries(jugadores || {}).filter(([, i]) => sacado(i?.nombre)).map(([u]) => u)])];
+function viejos(jugadores, uid, hechos) {
+  return Object.entries(jugadores || {})
+    .map(([u, i]) => [u, normal(i?.nombre)])
+    .filter(([u, n]) => u !== uid && LIBERAR.includes(n) && !(hechos || {})[n] && jugadores[u].enLinea !== true);
 }
-const sinSacados = (lotes, fuera) => Array.from({ length: LOTES_TOTAL }, (_, k) => ((lotes && lotes[k]) && !fuera.includes(lotes[k]) ? lotes[k] : null));
+const sinUids = (lotes, fuera) => Array.from({ length: LOTES_TOTAL }, (_, k) => ((lotes && lotes[k]) && !fuera.includes(lotes[k]) ? lotes[k] : null));
 
 // Busca el terreno del uid o le asigna el primero libre. Devuelve el número o -1 (todos ocupados).
 function elegirLote(lotes, uid) {
@@ -45,21 +46,17 @@ class RedFirebase {
     return k;
   }
 
-  // Saca del server a los prohibidos: les libera el terreno y borra sus datos (lo hace cualquiera
-  // que entra, así queda limpio aunque vuelvan a escribir).
-  async expulsar() {
+  async liberarViejos(uid) {
     const { ref, get, update, runTransaction } = this.db;
-    const [js, ex] = await Promise.all([get(ref(this.base, 'jugadores')), get(ref(this.base, 'expulsados'))]);
-    const fuera = aSacar(js.val(), ex.val());
-    if (!fuera.length) return;
-    const cambios = {};
-    for (const u of fuera) Object.assign(cambios, { [`expulsados/${u}`]: true, [`jugadores/${u}`]: null, [`pos/${u}`]: null });
+    const [js, hechos, ex] = await Promise.all(['jugadores', 'limpieza', 'expulsados'].map((k) => get(ref(this.base, k))));
+    const v = viejos(js.val(), uid, hechos.val());
+    if (!v.length && ex.val() == null) return;
+    const cambios = { expulsados: null }; // lo dejó una versión que los echaba para siempre
+    for (const [u, n] of v) Object.assign(cambios, { [`jugadores/${u}`]: null, [`pos/${u}`]: null, [`limpieza/${n}`]: true });
     await update(ref(this.base), cambios);
-    await runTransaction(ref(this.base, 'lotes'), (l) => (l ? sinSacados(l, fuera) : l));
+    const fuera = v.map(([u]) => u);
+    if (fuera.length) await runTransaction(ref(this.base, 'lotes'), (l) => (l ? sinUids(l, fuera) : l));
   }
-
-  async expulsado(uid) { return (await this.db.get(this.db.ref(this.base, `expulsados/${uid}`))).val() === true; }
-  alExpulsado(uid, cb) { this.db.onValue(this.db.ref(this.base, `expulsados/${uid}`), (s) => { if (s.val() === true) cb(); }); }
 
   enLinea(uid, nombre) {
     const { ref, onDisconnect, update, remove } = this.db;
@@ -110,20 +107,16 @@ class RedLocal {
     if (m.tipo === 'chat') this.oyentes.chat.forEach((cb) => cb(m.datos));
   }
 
-  async expulsar() {
+  async liberarViejos(uid) {
     const j = this.leer('jugadores');
-    const ex = this.leer('expulsados');
-    const fuera = aSacar(j, ex);
+    const hechos = this.leer('limpieza');
+    const fuera = viejos(j, uid, hechos).map(([u, n]) => { delete j[u]; hechos[n] = true; return u; });
     if (!fuera.length) return;
-    for (const u of fuera) { ex[u] = true; delete j[u]; }
-    this.escribir('expulsados', ex);
     this.escribir('jugadores', j);
-    this.escribir('lotes', sinSacados(this.leer('lotes'), fuera));
+    this.escribir('limpieza', hechos);
+    this.escribir('lotes', sinUids(this.leer('lotes'), fuera));
     this.canal.postMessage({ tipo: 'jugadores' });
   }
-
-  async expulsado(uid) { return this.leer('expulsados')[uid] === true; }
-  alExpulsado(uid, cb) { this.oyentes.jugadores.push(() => { if (this.leer('expulsados')[uid] === true) cb(); }); }
 
   async tomarLote(uid) {
     const r = elegirLote(this.leer('lotes'), uid);

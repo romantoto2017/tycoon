@@ -2,7 +2,7 @@
 // si hay multijugador (js/red-config.js), se conecta y se toma uno de los 9 terrenos. Recién
 // ahí se carga main.js: las constantes (constantes.js) ya saben qué terreno es el tuyo.
 import { FIREBASE } from './red-config.js';
-import { conectarRed, sacado } from './red.js';
+import { conectarRed } from './red.js';
 
 const CLAVE_UID = 'vecibanda-uid';
 const CLAVE_NOMBRE = 'vecibanda-usuario';
@@ -68,8 +68,7 @@ function pedirNombre() {
       if (msg) msg.textContent = 'Conectando...';
       red = await Promise.race([conectarRed(FIREBASE), esperar(10000)]);
       if (red) {
-        await Promise.race([red.expulsar(), esperar(10000)]);
-        if (sacado(nombre) || await Promise.race([red.expulsado(uid), esperar(10000)])) await parar('No podés jugar: te sacaron de la partida');
+        await Promise.race([red.liberarViejos(uid), esperar(10000)]);
         const k = await Promise.race([red.tomarLote(uid), esperar(10000)]);
         if (k === null) red = null;
         else if (k < 0) await parar('Los 9 lugares de la partida están ocupados: no se puede jugar');
