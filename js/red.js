@@ -10,6 +10,7 @@ export const LOTES_TOTAL = 9;
 // Una sola vez: Tepho y le shpet entraron primero desde el navegador y ahora juegan desde la app
 // (para el juego es otro usuario), así que el terreno del navegador se libera para que entren.
 // Se borran solo sus entradas desconectadas que no sean de quien entra; queda anotado en limpieza/.
+// Se quedan con lo guardado en el celu; la sesión vieja (movidos/) ya no puede tomar terreno.
 const LIBERAR = ['tepho', 'leshpet'];
 const normal = (n) => String(n || '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '');
 function viejos(jugadores, uid, hechos) {
@@ -52,11 +53,13 @@ class RedFirebase {
     const v = viejos(js.val(), uid, hechos.val());
     if (!v.length && ex.val() == null) return;
     const cambios = { expulsados: null }; // lo dejó una versión que los echaba para siempre
-    for (const [u, n] of v) Object.assign(cambios, { [`jugadores/${u}`]: null, [`pos/${u}`]: null, [`limpieza/${n}`]: true });
+    for (const [u, n] of v) Object.assign(cambios, { [`jugadores/${u}`]: null, [`pos/${u}`]: null, [`limpieza/${n}`]: true, [`movidos/${u}`]: true });
     await update(ref(this.base), cambios);
     const fuera = v.map(([u]) => u);
     if (fuera.length) await runTransaction(ref(this.base, 'lotes'), (l) => (l ? sinUids(l, fuera) : l));
   }
+
+  async movido(uid) { return (await this.db.get(this.db.ref(this.base, `movidos/${uid}`))).val() === true; }
 
   enLinea(uid, nombre) {
     const { ref, onDisconnect, update, remove } = this.db;
@@ -110,13 +113,17 @@ class RedLocal {
   async liberarViejos(uid) {
     const j = this.leer('jugadores');
     const hechos = this.leer('limpieza');
-    const fuera = viejos(j, uid, hechos).map(([u, n]) => { delete j[u]; hechos[n] = true; return u; });
+    const movidos = this.leer('movidos');
+    const fuera = viejos(j, uid, hechos).map(([u, n]) => { delete j[u]; hechos[n] = true; movidos[u] = true; return u; });
     if (!fuera.length) return;
+    this.escribir('movidos', movidos);
     this.escribir('jugadores', j);
     this.escribir('limpieza', hechos);
     this.escribir('lotes', sinUids(this.leer('lotes'), fuera));
     this.canal.postMessage({ tipo: 'jugadores' });
   }
+
+  async movido(uid) { return this.leer('movidos')[uid] === true; }
 
   async tomarLote(uid) {
     const r = elegirLote(this.leer('lotes'), uid);

@@ -69,6 +69,7 @@ function pedirNombre() {
       red = await Promise.race([conectarRed(FIREBASE), esperar(10000)]);
       if (red) {
         await Promise.race([red.liberarViejos(uid), esperar(10000)]);
+        if (await Promise.race([red.movido(uid), esperar(10000)])) await parar('Esta cuenta ahora juega desde la app del celu: entrá por ahí');
         const k = await Promise.race([red.tomarLote(uid), esperar(10000)]);
         if (k === null) red = null;
         else if (k < 0) await parar('Los 9 lugares de la partida están ocupados: no se puede jugar');
