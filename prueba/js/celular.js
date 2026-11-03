@@ -11,8 +11,8 @@ import { sfx } from './sfx.js';
 //   dirección. Aceptás y en el mapa aparece un punto azul exacto; llegás con la camioneta de
 //   reparto (tanzania.js) con los gramos encima (las bolsitas del depósito: 1 bolsita = 1 g) y se
 //   entrega sola al frenar ahí. Todo queda en estado.tranzapp.
-const CADA = [50, 110]; // segundos entre un mensaje y otro (al azar en ese rango)
-const MAX_PEDIDOS = 3;
+const CADA = [30, 75]; // segundos entre un mensaje y otro (al azar en ese rango)
+const MAX_PEDIDOS = 4;
 const RADIO = 10; // a cuánto del punto se entrega
 
 // La cotización (veces lo que vale una bolsita) en el segundo t de juego: ondas lentas y rápidas
@@ -41,8 +41,31 @@ function destinos(ciudad, estado) {
       { quien: 'El Humano', foto: '🥫', lugar: 'la entrada de La Cachimba del Piojo', x: CA.entrada + 3, z: CA.z1 - 8 },
     );
   }
+  // Gente común: una casa de cada manzana de la ciudad y las casillas de la Cachimba (el nombre se
+  // elige al azar cuando escribe: quien null).
+  const CALLES = ['Las Heras', 'Belgrano', 'Mitre', 'Sarmiento', 'Rivadavia', 'San Martín', 'Moreno', 'Alsina', 'Lavalle'];
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) lista.push({ quien: null, lugar: `la casa de ${CALLES[i]} ${(j + 1) * 100 + ((i * 37 + j * 11) % 90)}, en la ciudad`, ...mz(i, j, ((i + j) % 3 - 1) * 12) });
+  }
+  if (estado.cachimba?.visitada) {
+    const CHAPAS = ['azul', 'oxidada', 'verde', 'naranja', 'gris', 'roja'];
+    for (let k = 0; k < 12; k++) {
+      const z = CA.z0 + 12 + k * 14;
+      lista.push({ quien: null, lugar: `la casilla de chapa ${CHAPAS[k % CHAPAS.length]} de La Cachimba (pasillo ${k + 1})`, x: CA.entrada + (k % 2 ? 4 : -4), z, cachimba: true });
+    }
+  }
   return lista;
 }
+// Los que escriben sin ser nadie conocido (gente de la ciudad o de la Cachimba).
+const GENTE = ['El Tano', 'La Yesi', 'Brayan', 'El Facha', 'Maxi', 'Cele', 'El Gordo Rubén', 'La Tota', 'Thiago', 'Dylan', 'El Pela', 'Romina', 'El Chino', 'Nahuel', 'La Colo', 'Iván', 'El Ruso', 'Franco', 'Agus', 'Lauti', 'Mica', 'El Tucu', 'Jona', 'La Pato'];
+const VILLA = ['El Rata', 'Maicol', 'La Negra Sandra', 'Jhonatan', 'El Tuerto', 'Yanina', 'El Chapa', 'Brisa', 'El Moncho', 'Cristian "Pitufo"'];
+const CARAS = ['🧔', '👩', '🧑', '👱', '🧢', '👦', '👧', '🧓'];
+const PIDE_CASA = [
+  (n) => `Llevame ${n} g a`,
+  (n) => `Traeme ${n} g de la violeta a`,
+  (n) => `Necesito ${n} g. Dejalo en`,
+  (n) => `¿Me alcanzás ${n} g? Estoy en`,
+];
 const PIDE = [
   (n) => `Eu, ¿tenés ${n} g de la violeta? Te espero en`,
   (n) => `Necesito ${n} g de tanzania urgente, hermano. Estoy en`,
@@ -118,7 +141,7 @@ export class Celular {
     } else {
       const lista = d.pedidos.map((p) => `<div class="cel-chat ${p.aceptado ? 'aceptado' : ''}">
         <div class="cel-de"><span class="cel-avatar">${p.foto}</span><b>${p.quien}</b></div>
-        <div class="cel-msj">${p.texto} <b>${p.lugar}</b>.</div>
+        <div class="cel-msj">${p.texto} <b>${p.lugar}</b>${p.post || ''}.</div>
         <div class="cel-msj cel-paga">Te pago ${formato(p.paga)} por los ${p.gramos} g.</div>
         ${p.aceptado ? '<div class="cel-ok">✔ Aceptado: punto azul en el mapa. Llevalo con la camioneta.</div>' : `<button class="cel-aceptar" data-aceptar="${p.id}">Aceptar pedido</button>`}
       </div>`).join('') || '<div class="cel-vacio">Nadie te escribió todavía…</div>';
@@ -181,10 +204,13 @@ export class Celular {
       if (q) {
         const gramos = [5, 8, 10, 15, 20, 25, 30, 40][Math.floor(Math.random() * 8)];
         const paga = Math.round(gramos * this.gramo * (1.5 + Math.random() * 0.6));
-        d.pedidos.push({ id: ++d.id, ...q, gramos, paga, texto: PIDE[Math.floor(Math.random() * PIDE.length)](gramos), visto: false });
+        const az = (l) => l[Math.floor(Math.random() * l.length)];
+        const comun = !q.quien;
+        const quien = comun ? az(q.cachimba ? VILLA : GENTE) : q.quien;
+        d.pedidos.push({ id: ++d.id, ...q, quien, foto: q.foto || az(CARAS), gramos, paga, texto: az(comun ? PIDE_CASA : PIDE)(gramos), post: comun ? ', te espero ahí' : '', visto: false });
         this.guardar();
         sfx.pip();
-        this.ui.toast(`📱 Tranzapp · ${q.quien}: quiere ${gramos} g de tanzania`, 'info', 4500);
+        this.ui.toast(`📱 Tranzapp · ${quien}: quiere ${gramos} g de tanzania`, 'info', 4500);
         this.punto();
         if (this.abierto) this.dibujar();
       }
