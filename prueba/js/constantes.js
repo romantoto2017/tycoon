@@ -129,8 +129,9 @@ export const COSTA = {
   barrera: 2254 + DX, // donde termina la calle del barrio (BARRIO.x1)
   nico: { x: 2236 + DX, z: CALLE_Z - 11 }, // donde espera Nico, apoyado en el Koenigsegg
   bif: 2560 + DX, // donde se abre el camino en dos
-  meseta: { x0: 2650 + DX, x1: 3400 + DX, z0: -300, z1: 34, alto: 24 }, // arriba del acantilado
-  galpon: { x: 3030 + DX, z: -120, ancho: 84, fondo: 56 }, // el galpón de tanzania (arriba)
+  meseta: { x0: 2880 + DX, x1: 3200 + DX, z0: -220, z1: -40, alto: 30 }, // la cima plana del cerro
+  falda: { o: 290, e: 250, n: 170, s: 92 }, // cuánto baja el cerro hacia cada lado (al mar, empinado)
+  galpon: { x: 3045 + DX, z: -130, ancho: 84, fondo: 56 }, // el galpón de tanzania (en la cima)
   playa: { x0: 2560 + DX, x1: 3460 + DX }, // la arena de las mansiones (de la calle a la orilla)
   precio: 2e11, // lo que pide Nico (200B)
   desde: 0.99, // la mansión al 99%

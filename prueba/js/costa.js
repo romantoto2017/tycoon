@@ -9,45 +9,75 @@ import { COMPRADORES } from '../data/compradores.js';
 import { aleatorio } from './util.js';
 
 // La costa (la habilita Nico Baraja, nico.js): la calle del barrio sigue hacia el este y, pasando
-// la barrera, se abre en dos. El ramal recto sigue por abajo, junto a la arena de cuatro mansiones
-// de lujo frente al mar (modernas, con pileta, palmeras y autos caros); cada una tiene timbre y
-// sale su dueño (data/compradores.js). El ramal en curva sube al acantilado: arriba, la parcela del
-// galpón de tanzania (tanzania.js), escondido y mirando al mar. El mar y las olas son los de la
-// playa (playa.js), que siguen hasta acá.
+// la barrera, se abre en dos. El ramal recto sigue por abajo, por el barrio privado de la playa
+// (garita, reja negra con pilares de piedra, un portón por casa): cuatro mansiones de lujo con
+// arquitectura de casas modernas de verdad (la blanca en voladizo, la de piedra y madera, la de
+// terrazas escalonadas y el pabellón de vidrio), cada una con pileta, palmeras, su auto en la
+// entrada y timbre (sale el dueño, data/compradores.js). El otro ramal es un camino de cerro: sube
+// de a poco dando la vuelta (se sube en auto) hasta la cima plana, donde está el galpón de tanzania
+// (tanzania.js). El cerro es un terreno de verdad: laderas con pasto, roca a la vista del lado del
+// mar, árboles, piedras, arbustos y faroles en el camino. El mar y las olas son los de playa.js.
 //
 // Liviano: se arma recién cuando te acercás con la costa abierta, todo lo quieto va en pocas mallas
-// (Constructor: suelta la copia de JavaScript al subirse) y los autos son los del concesionario.
+// (Constructor: suelta la copia de JavaScript al subirse), lo que se repite (árboles, piedras) es
+// instanciado y los autos son los del concesionario.
 const M = CO.meseta;
+const F = CO.falda;
 const CALLE = { z0: CALLE_Z - 6, z1: CALLE_Z + 6 };
-const ANCHO_RAMPA = 12;
-const Z_CURVA = -150; // a qué altura (z) la subida llega a la meseta
-const MANSIONES = [140, 340, 540, 740].map((x, i) => ({ x: CO.playa.x0 + x, ...COMPRADORES[i], auto: ['ferrari_f40', 'mclaren_p1', 'gtr', 'mclaren_p1'][i], color: ['#d9b48a', '#9fb7c9', '#2f3437', '#c9d6c3'][i] }));
-const PUERTA_Z = 80; // el frente de las mansiones (hacia la calle)
+const MEDIO_CAMINO = 6.5;
+const PUERTA_Z = 86; // el frente de las mansiones (la puerta), hacia la calle
+const REJA_Z = CALLE.z1 + 2.5; // la reja del barrio privado, al borde de la vereda
+const MANSIONES = [150, 360, 570, 780].map((x, i) => ({
+  x: CO.playa.x0 + x, estilo: i, ...COMPRADORES[i],
+  auto: ['ferrari_f40', 'mclaren_p1', 'gtr', 'mclaren_p1'][i],
+}));
+const ENTRADA = (m) => ({ x0: m.x + 15, x1: m.x + 31 }); // el portón de autos y la entrada
 
-// La subida: curva (cuadrática) del desvío al borde de la meseta, con su altura en cada punto.
-const P0 = new THREE.Vector2(CO.bif, CALLE_Z);
-const P1 = new THREE.Vector2(CO.bif, Z_CURVA);
-const P2 = new THREE.Vector2(M.x0 + 1, Z_CURVA);
-const RAMPA = Array.from({ length: 61 }, (_, i) => {
-  const t = i / 60;
-  const u = 1 - t;
-  const x = u * u * P0.x + 2 * u * t * P1.x + t * t * P2.x;
-  const z = u * u * P0.y + 2 * u * t * P1.y + t * t * P2.y;
-  const s = THREE.MathUtils.clamp((t - 0.12) / 0.86, 0, 1);
-  return { x, z, y: M.alto * s * s * (3 - 2 * s) };
-});
+// ---------- El cerro ----------
+const suave = (t) => { const k = THREE.MathUtils.clamp(t, 0, 1); return k * k * (3 - 2 * k); };
+// Altura del cerro sin el camino: la cima plana y las faldas (más corta y empinada hacia el mar),
+// con lomas suaves para que no parezca una torta.
+function cerro(x, z) {
+  const dx = x < M.x0 ? (M.x0 - x) / F.o : x > M.x1 ? (x - M.x1) / F.e : 0;
+  const dz = z < M.z0 ? (M.z0 - z) / F.n : z > M.z1 ? (z - M.z1) / F.s : 0;
+  const d = Math.hypot(dx, dz);
+  if (d >= 1) return 0;
+  const lomas = (Math.sin(x * 0.031) * Math.cos(z * 0.027) + Math.sin(x * 0.011 + z * 0.017) * 0.8) * 2.2 * Math.sin(Math.PI * Math.min(1, d * 1.6));
+  return Math.max(0, M.alto * (1 - suave(d)) + (d > 0 ? lomas : 0));
+}
 
-// Piso en (x, z): la meseta arriba del acantilado y la subida (lo demás, 0).
-export function alturaCosta(x, z) {
-  if (x < CO.x0 || x > CO.x1 + 40) return 0;
-  if (x >= M.x0 && x <= M.x1 && z >= M.z0 && z <= M.z1) return M.alto;
+// El camino: sale del desvío y sube por la falda del oeste dando la vuelta hasta la cima (curva
+// suave entre estos puntos). Su altura sube de a poco con lo recorrido (unos 560 de largo: 5%).
+const PUNTOS = [[CO.bif, CALLE_Z], [CO.bif + 22, 34], [CO.bif + 68, -8], [CO.bif + 128, -58], [CO.bif + 168, -128], [CO.bif + 196, -196], [CO.bif + 258, -238], [CO.bif + 322, -226], [CO.bif + 360, -186], [CO.bif + 400, -140]];
+const CAMINO = (() => {
+  const curva = new THREE.CatmullRomCurve3(PUNTOS.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
+  const pts = curva.getSpacedPoints(180);
+  let largo = 0;
+  const lista = pts.map((p, i) => { if (i) largo += p.distanceTo(pts[i - 1]); return { x: p.x, z: p.z, s: largo }; });
+  for (const q of lista) q.y = M.alto * suave((q.s / largo) / 0.93);
+  return lista;
+})();
+const CAJA_CAMINO = CAMINO.reduce((a, q) => ({ x0: Math.min(a.x0, q.x), x1: Math.max(a.x1, q.x), z0: Math.min(a.z0, q.z), z1: Math.max(a.z1, q.z) }), { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity });
+
+// El punto del camino más cercano a (x, z): [distancia, altura del camino ahí].
+function alCamino(x, z) {
+  if (x < CAJA_CAMINO.x0 - 20 || x > CAJA_CAMINO.x1 + 20 || z < CAJA_CAMINO.z0 - 20 || z > CAJA_CAMINO.z1 + 20) return [Infinity, 0];
   let mejor = Infinity;
-  let y = 0;
-  for (const q of RAMPA) {
-    const d = (q.x - x) ** 2 + (q.z - z) ** 2;
-    if (d < mejor) { mejor = d; y = q.y; }
+  let k = 0;
+  for (let i = 0; i < CAMINO.length; i++) {
+    const d = (CAMINO[i].x - x) ** 2 + (CAMINO[i].z - z) ** 2;
+    if (d < mejor) { mejor = d; k = i; }
   }
-  return mejor < (ANCHO_RAMPA / 2 + 0.5) ** 2 ? y : 0;
+  return [Math.sqrt(mejor), CAMINO[k].y];
+}
+
+// Piso en (x, z): el cerro, aplanado donde pasa el camino (con su terraplén o su corte).
+export function alturaCosta(x, z) {
+  if (x < CO.x0 || x > CO.x1 + 60 || z > CALLE.z0) return 0;
+  const h = cerro(x, z);
+  const [d, y] = alCamino(x, z);
+  if (d >= MEDIO_CAMINO + 12) return h;
+  return THREE.MathUtils.lerp(y, h, suave((d - MEDIO_CAMINO) / 12));
 }
 
 // Una palmera: tronco curvo de tramos y un penacho de hojas.
@@ -58,11 +88,11 @@ function palmera(c, x, z, alto, rnd) {
     c.cil(0.42 - k * 0.04, 0.5 - k * 0.04, alto / 6 + 0.05, k % 2 ? '#8a6a4a' : '#7a5c3e', px, (k * alto) / 6, z, 7);
     px += inc * 0.6;
   }
-  for (let h = 0; h < 8; h++) {
-    const a = (h / 8) * Math.PI * 2 + rnd();
-    const g = new THREE.BoxGeometry(0.9, 0.08, 5.2);
-    g.translate(0, 0, 2.4);
-    g.rotateX(0.5 + rnd() * 0.3);
+  for (let h = 0; h < 9; h++) {
+    const a = (h / 9) * Math.PI * 2 + rnd();
+    const g = new THREE.BoxGeometry(0.9, 0.08, 5.6);
+    g.translate(0, 0, 2.6);
+    g.rotateX(0.45 + rnd() * 0.35);
     g.rotateY(a);
     g.translate(px, alto, z);
     c.forma('liso', g, h % 2 ? '#3f8f3a' : '#4fa244');
@@ -79,79 +109,152 @@ export class Costa {
 
   get abierta() { return !!this.estado.costa; }
 
+  solido(x0, y0, z0, x1, y1, z1) {
+    this.colisiones.push(new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1)));
+  }
+
   armar() {
     if (this.grupo || !this.abierta) return;
     this.grupo = new THREE.Group();
     this.escena.add(this.grupo);
     const rnd = aleatorio(777);
     const c = new Constructor();
-    const solido = (x0, y0, z0, x1, y1, z1) => this.colisiones.push(new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1)));
+    this.calle(c);
+    this.armarCerro(c, rnd);
+    this.playa();
+    this.barrio(c, rnd);
+    const materiales = {
+      liso: new THREE.MeshLambertMaterial({ vertexColors: true }),
+      luz: new THREE.MeshBasicMaterial({ vertexColors: true }),
+      cristal: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.38, depthWrite: false }),
+    };
+    this.grupo.add(c.armar(materiales));
+    // Los autos caros en la entrada de cada mansión (los modelos del concesionario).
+    for (const ma of MANSIONES) {
+      const e = ENTRADA(ma);
+      const x = (e.x0 + e.x1) / 2;
+      cargarAuto(AUTOS_POR_ID[ma.auto]).then((a) => {
+        a.position.set(x, 0.12, PUERTA_Z + 4);
+        a.rotation.y = Math.PI;
+        this.grupo.add(a);
+        const [mx, mz] = a.userData.medio;
+        this.solido(x - mx, 0, PUERTA_Z + 4 - mz, x + mx, 3, PUERTA_Z + 4 + mz);
+      });
+    }
+  }
 
-    // La calle que sigue (asfalto, la línea amarilla cortada y las veredas).
+  // La calle que sigue (asfalto, la línea amarilla cortada, la vereda) y las columnas de luz.
+  calle(c) {
     c.piso(CO.x0 - 60, CALLE.z0, CO.x1, CALLE.z1, 0.045, '#3e4046');
     for (let x = CO.x0 - 56; x < CO.x1 - 4; x += 8) c.piso(x, CALLE_Z - 0.15, x + 4, CALLE_Z + 0.15, 0.055, '#f5c518');
-    c.piso(CO.x0 - 60, CALLE.z0 - 2.5, CO.x1, CALLE.z0, 0.12, '#bdbab2');
+    c.piso(CO.x0 - 60, CALLE.z0 - 2.5, CO.bif - 8, CALLE.z0, 0.12, '#bdbab2');
+    c.piso(CO.bif + 8, CALLE.z0 - 2.5, CO.x1, CALLE.z0, 0.12, '#bdbab2');
+    c.piso(CO.x0 - 60, CALLE.z1, CO.x1, REJA_Z + 0.5, 0.12, '#bdbab2');
+  }
 
-    // La subida en curva: una cinta de asfalto con su terraplén de tierra a los costados.
-    const pos = [];
+  armarCerro(c, rnd) {
+    // El terreno: una malla con la altura de cada punto (el camino incluido). Colores según la
+    // pendiente: pasto en lo suave, roca en lo empinado (la cara al mar) y tierra al borde del camino.
+    const [x0, x1, z0, z1] = [CO.bif - 40, CO.x1 + 40, M.z0 - F.n - 10, CALLE.z0 - 2.5];
+    const paso = 5;
+    const nx = Math.round((x1 - x0) / paso);
+    const nz = Math.round((z1 - z0) / paso);
+    const geo = new THREE.PlaneGeometry(x1 - x0, z1 - z0, nx, nz).rotateX(-Math.PI / 2).translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) pos.setY(i, alturaCosta(pos.getX(i), pos.getZ(i)) + 0.05);
+    geo.computeVertexNormals();
+    const nor = geo.attributes.normal;
+    const col = new Float32Array(pos.count * 3);
+    const tmp = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const empinado = 1 - nor.getY(i);
+      const [d] = alCamino(x, z);
+      const ruido = (Math.sin(x * 0.17) * Math.cos(z * 0.13) + Math.sin(x * 0.05 - z * 0.07)) * 0.5;
+      if (d < MEDIO_CAMINO + 4) tmp.set('#8a6f52');
+      else if (empinado > 0.28) tmp.set(ruido > 0 ? '#8d8679' : '#7b746a');
+      else if (empinado > 0.16) tmp.set('#6e8a44');
+      else tmp.set(ruido > 0.3 ? '#6aa043' : ruido < -0.3 ? '#4f8a35' : '#5f9a3c');
+      tmp.toArray(col, i * 3);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const terreno = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    for (const at of Object.values(geo.attributes)) at.onUpload(function () { this.array = null; });
+    geo.index.onUpload(function () { this.array = null; });
+    this.grupo.add(terreno);
+
+    // El asfalto del camino (con las líneas de los bordes) arriba del terreno.
+    const cinta = [];
+    const lineas = [];
     const lado = (i) => {
-      const a = RAMPA[Math.max(0, i - 1)];
-      const b = RAMPA[Math.min(RAMPA.length - 1, i + 1)];
+      const a = CAMINO[Math.max(0, i - 1)];
+      const b = CAMINO[Math.min(CAMINO.length - 1, i + 1)];
       const d = new THREE.Vector2(b.x - a.x, b.z - a.z).normalize();
-      return new THREE.Vector2(-d.y, d.x).multiplyScalar(ANCHO_RAMPA / 2);
+      return new THREE.Vector2(-d.y, d.x);
     };
-    const quad = (a, b, cc, d) => pos.push(...a, ...b, ...cc, ...a, ...cc, ...d);
-    const tierra = [];
-    const quadT = (a, b, cc, d) => tierra.push(...a, ...b, ...cc, ...a, ...cc, ...d);
-    for (let i = 0; i < RAMPA.length - 1; i++) {
-      const [q, r] = [RAMPA[i], RAMPA[i + 1]];
+    const tira = (arr, q, r, nq, nr, a0, a1, dy) => {
+      const p = (k, n, a) => [k.x + n.x * a, k.y + dy, k.z + n.y * a];
+      arr.push(...p(q, nq, a0), ...p(q, nq, a1), ...p(r, nr, a1), ...p(q, nq, a0), ...p(r, nr, a1), ...p(r, nr, a0));
+    };
+    for (let i = 0; i < CAMINO.length - 1; i++) {
+      const [q, r] = [CAMINO[i], CAMINO[i + 1]];
       const [nq, nr] = [lado(i), lado(i + 1)];
-      const y0 = q.y + 0.06;
-      const y1 = r.y + 0.06;
-      quad([q.x - nq.x, y0, q.z - nq.y], [q.x + nq.x, y0, q.z + nq.y], [r.x + nr.x, y1, r.z + nr.y], [r.x - nr.x, y1, r.z - nr.y]);
-      for (const s of [-1, 1]) quadT([q.x + s * nq.x, 0, q.z + s * nq.y], [r.x + s * nr.x, 0, r.z + s * nr.y], [r.x + s * nr.x, y1 - 0.05, r.z + s * nr.y], [q.x + s * nq.x, y0 - 0.05, q.z + s * nq.y]);
+      tira(cinta, q, r, nq, nr, -MEDIO_CAMINO + 0.5, MEDIO_CAMINO - 0.5, 0.35);
+      for (const s of [-1, 1]) tira(lineas, q, r, nq, nr, s * (MEDIO_CAMINO - 1.1), s * (MEDIO_CAMINO - 0.8), 0.38);
+      if (i % 4 < 2) tira(lineas, q, r, nq, nr, -0.15, 0.15, 0.38);
     }
-    const geo = (arr) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.computeVertexNormals(); return g; };
-    c.forma('liso', geo(pos), '#44464c');
-    // El terraplén se ve de los dos lados: los mismos triángulos con el orden al revés.
-    const reves = [];
-    for (let i = 0; i < tierra.length; i += 9) reves.push(...tierra.slice(i, i + 3), ...tierra.slice(i + 6, i + 9), ...tierra.slice(i + 3, i + 6));
-    c.forma('liso', geo(tierra), '#8a6f52');
-    c.forma('liso', geo(reves), '#8a6f52');
+    const geoDe = (arr) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.computeVertexNormals(); return g; };
+    // El orden de los vértices de la cinta queda hacia abajo o hacia arriba según el lado: se dibuja de las dos caras.
+    const asfalto = new THREE.Mesh(geoDe(cinta), new THREE.MeshLambertMaterial({ color: '#45474c', side: THREE.DoubleSide }));
+    const pintura = new THREE.Mesh(geoDe(lineas), new THREE.MeshBasicMaterial({ color: '#e8e2c8', side: THREE.DoubleSide }));
+    this.grupo.add(asfalto, pintura);
+    // Faroles a lo largo del camino (de un lado y del otro), con la luz que se ve de noche.
+    for (let i = 6; i < CAMINO.length - 2; i += 12) {
+      const q = CAMINO[i];
+      const n = lado(i);
+      const s = (i / 12) % 2 ? 1 : -1;
+      const x = q.x + n.x * s * (MEDIO_CAMINO + 1.5);
+      const z = q.z + n.y * s * (MEDIO_CAMINO + 1.5);
+      const y = alturaCosta(x, z);
+      c.cil(0.16, 0.2, 6.5, '#2b2d30', x, y, z, 6);
+      c.caja(x - 0.5, y + 6.3, z - 0.5, x + 0.5, y + 7.3, z + 0.5, '#ffd58a', { lados: 'luz', arriba: '#2b2d30' });
+    }
+    // Árboles (copas redondas y pinos), piedras y arbustos por las laderas, lejos del camino y
+    // del predio del galpón (instanciados: una malla por tipo).
+    const G = CO.galpon;
+    const libre = (x, z) => alCamino(x, z)[0] > MEDIO_CAMINO + 6 && !(Math.abs(x - G.x) < G.ancho / 2 + 34 && Math.abs(z - G.z) < G.fondo / 2 + 34) && z < CALLE.z0 - 6;
+    const lugares = (n, peso) => {
+      const out = [];
+      for (let k = 0; out.length < n && k < n * 12; k++) {
+        const x = x0 + rnd() * (x1 - x0);
+        const z = z0 + rnd() * (z1 - z0);
+        if (!libre(x, z) || cerro(x, z) < 0.5 || !peso(x, z)) continue;
+        out.push([x, alturaCosta(x, z), z, 0.7 + rnd() * 0.7]);
+      }
+      return out;
+    };
+    const pendiente = (x, z) => Math.abs(cerro(x + 2, z) - cerro(x - 2, z)) + Math.abs(cerro(x, z + 2) - cerro(x, z - 2));
+    const instancias = (geo, mat, lista, ajustar) => {
+      const im = new THREE.InstancedMesh(geo, mat, lista.length);
+      const o = new THREE.Object3D();
+      lista.forEach((l, i) => { ajustar(o, l); o.updateMatrix(); im.setMatrixAt(i, o.matrix); });
+      this.grupo.add(im);
+      return im;
+    };
+    const copas = lugares(70, (x, z) => pendiente(x, z) < 3);
+    const pinos = lugares(55, () => rnd() < 0.8);
+    instancias(new THREE.CylinderGeometry(0.5, 0.7, 6, 6).translate(0, 3, 0), new THREE.MeshLambertMaterial({ color: '#6d4a2c' }), [...copas, ...pinos], (o, [x, y, z, s]) => { o.position.set(x, y - 0.2, z); o.rotation.set(0, 0, 0); o.scale.setScalar(s); });
+    instancias(new THREE.IcosahedronGeometry(4.6, 1).translate(0, 8.5, 0), new THREE.MeshLambertMaterial({ color: '#3f7f34', flatShading: true }), copas, (o, [x, y, z, s]) => { o.position.set(x, y, z); o.rotation.set(0, s * 9, 0); o.scale.set(s * 1.15, s, s * 1.15); });
+    instancias(new THREE.ConeGeometry(3.4, 10, 7).translate(0, 9, 0), new THREE.MeshLambertMaterial({ color: '#2c6a33', flatShading: true }), pinos, (o, [x, y, z, s]) => { o.position.set(x, y, z); o.rotation.set(0, s * 7, 0); o.scale.setScalar(s); });
+    const piedras = lugares(150, (x, z) => pendiente(x, z) > 2.5 || rnd() < 0.25);
+    instancias(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: '#8a8378', flatShading: true }), piedras, (o, [x, y, z, s]) => { o.position.set(x, y + 0.3, z); o.rotation.set(s * 3, s * 5, s * 2); o.scale.set(s * 2.6, s * 1.6, s * 2.2); });
+    const arbustos = lugares(220, () => true);
+    instancias(new THREE.IcosahedronGeometry(1.3, 0).scale(1, 0.7, 1), new THREE.MeshLambertMaterial({ color: '#4c8a36', flatShading: true }), arbustos, (o, [x, y, z, s]) => { o.position.set(x, y + 0.4, z); o.rotation.set(0, s * 4, 0); o.scale.setScalar(s); });
+  }
 
-    // El acantilado: la meseta de roca con pasto arriba y vetas en la cara que da al mar.
-    c.caja(M.x0, 0, M.z0, M.x1, M.alto, M.z1, '#8b7560', { arriba: '#5f8a3e' });
-    for (let y = 3; y < M.alto - 1; y += 3.2 + rnd() * 1.5) {
-      c.caja(M.x0 - 0.3, y, M.z1 - 0.2, M.x1 + 0.3, y + 0.5 + rnd() * 0.6, M.z1 + 0.35, rnd() < 0.5 ? '#6f5c4a' : '#a08a72');
-    }
-    solido(M.x0, 0, M.z0, M.x1, M.alto - 0.6, M.z1);
-    // Piedras al pie y en el borde de arriba (una malla instanciada).
-    const rocas = [];
-    for (let x = M.x0 - 6; x < M.x1 + 6; x += 3 + rnd() * 4) {
-      rocas.push([x, 0.6, M.z1 + 1.5 + rnd() * 3, 1.5 + rnd() * 2.5]);
-      if (rnd() < 0.5) rocas.push([x, M.alto + 0.2, M.z1 - 1 - rnd() * 2, 0.6 + rnd()]);
-    }
-    for (let z = M.z0; z < M.z1; z += 4 + rnd() * 4) rocas.push([M.x1 + 1.5 + rnd() * 2, 0.6, z, 1.5 + rnd() * 2.5]);
-    const piedras = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshLambertMaterial({ color: '#8a8378' }), rocas.length);
-    const o = new THREE.Object3D();
-    rocas.forEach(([x, y, z, s], i) => {
-      o.position.set(x, y, z);
-      o.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
-      o.scale.set(s, s * 0.7, s);
-      o.updateMatrix();
-      piedras.setMatrixAt(i, o.matrix);
-    });
-    this.grupo.add(piedras);
-    // Arbustos y algún pino arriba, para que el galpón quede escondido.
-    for (let k = 0; k < 40; k++) {
-      const x = M.x0 + 8 + rnd() * (M.x1 - M.x0 - 16);
-      const z = M.z0 + 8 + rnd() * (M.z1 - M.z0 - 16);
-      if (Math.abs(x - CO.galpon.x) < CO.galpon.ancho / 2 + 22 && Math.abs(z - CO.galpon.z) < CO.galpon.fondo / 2 + 22) continue;
-      c.cil(1.6 + rnd() * 1.4, 0.05, 6 + rnd() * 5, '#2f6b33', x, M.alto, z, 7);
-      c.cil(0.35, 0.35, 1.2, '#5b4330', x, M.alto - 0.1, z, 5);
-    }
-
-    // La playa de las mansiones: arena, la franja mojada, y las olas (el mar es el de playa.js).
+  // La playa de las mansiones: arena, la franja mojada y las olas (el mar es el de playa.js).
+  playa() {
     const PZ = CALLE.z1;
     const ancho = CO.playa.x1 - CO.playa.x0;
     const xm = (CO.playa.x0 + CO.playa.x1) / 2;
@@ -179,55 +282,164 @@ export class Costa {
       return { m, fase: i / 3 };
     });
     this.grupo.add(arena, mojada, this.orilla, ...this.crestas.map((k) => k.m));
+  }
 
-    // Las mansiones: dos volúmenes blancos (el de arriba en voladizo), mucho vidrio, listones de
-    // madera, techos planos con alero, la pileta mirando al mar, reposeras, palmeras y el auto.
-    for (const ma of MANSIONES) {
-      const x = ma.x;
-      const z0 = PUERTA_Z + 2;
-      const z1 = PUERTA_Z + 24;
-      c.piso(x - 30, PZ + 0.5, x + 34, P.orilla - 8, 0.09, '#e9e4da'); // deck de piedra clara
-      c.caja(x - 16, 0, z0, x + 16, 8, z1, '#f6f5f2');
-      c.caja(x - 15.6, 0.4, z1 - 0.1, x + 15.6, 7.6, z1 + 0.15, '#bfe3f2', { lados: 'cristal' }); // ventanal al mar
-      c.caja(x - 7, 0.4, z0 - 0.15, x - 2, 7.6, z0 + 0.1, '#bfe3f2', { lados: 'cristal' });
-      c.caja(x + 2, 0.4, z0 - 0.15, x + 7, 7.6, z0 + 0.1, '#bfe3f2', { lados: 'cristal' });
-      c.caja(x - 12, 8, z0 - 3, x + 20, 15, z1 - 2, '#ffffff');
-      c.caja(x - 11.6, 8.4, z1 - 2.1, x + 19.6, 14.6, z1 - 1.8, '#bfe3f2', { lados: 'cristal' });
-      for (let k = 0; k < 14; k++) c.caja(x - 11 + k * 1.1, 8.6, z0 - 3.25, x - 10.6 + k * 1.1, 14.6, z0 - 3, ma.color); // listones
-      c.caja(x - 17, 15, z0 - 4, x + 21, 15.4, z1 - 1, '#e8e6e1'); // techo con alero
-      c.caja(x - 17, 8, z0 - 1, x + 17, 8.35, z1 + 2, '#e8e6e1');
-      c.caja(x - 1.6, 0, PUERTA_Z + 1.7, x + 1.6, 6.6, PUERTA_Z + 2.05, '#5a3a24'); // la puerta (madera)
-      c.caja(x + 2.2, 3.2, PUERTA_Z + 1.75, x + 2.5, 3.5, PUERTA_Z + 2.05, '#d4af37'); // el timbre
-      solido(x - 16, 0, z0, x + 16, 15.4, z1);
-      // Pileta (borde blanco y el agua), reposeras y sombrilla.
-      c.caja(x - 13, 0, z1 + 3, x + 9, 0.45, z1 + 13, '#f2f2f2');
-      c.piso(x - 12.2, z1 + 3.8, x + 8.2, z1 + 12.2, 0.46, '#2ec4e8');
-      for (let k = 0; k < 3; k++) {
-        c.caja(x + 12 + k * 3, 0, z1 + 4, x + 13.6 + k * 3, 0.55, z1 + 9, '#ffffff');
-        c.caja(x + 12 + k * 3, 0.55, z1 + 8, x + 13.6 + k * 3, 1.4, z1 + 9, '#ffffff');
+  // El barrio privado: la garita, la reja negra con pilares de piedra (con un portón por casa) y
+  // las cuatro mansiones.
+  barrio(c, rnd) {
+    const x0 = CO.playa.x0 + 20;
+    const x1 = CO.x1 - 6;
+    // La garita de seguridad (como la de la entrada de un barrio cerrado) con la barrera levantada.
+    const gx = x0 + 8;
+    c.caja(gx - 4, 0.1, REJA_Z + 1, gx + 4, 6.5, REJA_Z + 8, '#f1efe9');
+    c.caja(gx - 4.6, 6.5, REJA_Z + 0.4, gx + 4.6, 7.1, REJA_Z + 8.6, '#3a3d42');
+    c.caja(gx - 3, 2.6, REJA_Z + 0.95, gx + 3, 5.4, REJA_Z + 1.05, '#bfe3f2', { lados: 'cristal' });
+    c.caja(gx + 4.2, 3, REJA_Z + 0.6, gx + 4.5, 3.3, REJA_Z + 3, '#ffd23f', { lados: 'luz' });
+    this.solido(gx - 4, 0, REJA_Z + 1, gx + 4, 7, REJA_Z + 8);
+    // La reja: pilares de piedra cada 10, barrotes negros y un farolito arriba de cada pilar.
+    const huecos = MANSIONES.flatMap((m) => [[m.x - 3, m.x + 3], [ENTRADA(m).x0, ENTRADA(m).x1]]);
+    const enHueco = (a, b) => huecos.some(([h0, h1]) => b > h0 && a < h1);
+    for (let x = x0 + 16; x < x1; x += 10) {
+      if (enHueco(x - 1, x + 1)) continue;
+      c.caja(x - 0.7, 0, REJA_Z - 0.7, x + 0.7, 3.4, REJA_Z + 0.7, '#a59c8e');
+      c.caja(x - 0.85, 3.4, REJA_Z - 0.85, x + 0.85, 3.7, REJA_Z + 0.85, '#8d8476');
+      c.caja(x - 0.25, 3.7, REJA_Z - 0.25, x + 0.25, 4.2, REJA_Z + 0.25, '#fff2c8', { lados: 'luz' });
+      const sig = x + 10;
+      for (let b = x + 0.9; b < Math.min(sig, x1) - 0.8; b += 0.55) {
+        if (enHueco(b - 0.1, b + 0.1)) continue;
+        c.caja(b - 0.05, 0, REJA_Z - 0.05, b + 0.05, 2.9, REJA_Z + 0.05, '#17181a');
       }
-      c.cil(0.08, 0.08, 3, '#dddddd', x + 16, 0, z1 + 11, 5);
-      c.cil(2.4, 0.1, 0.8, ma.color, x + 16, 2.8, z1 + 11, 10);
-      for (const [px, pz] of [[x - 22, z0 + 2], [x - 20, z1 + 6], [x + 26, z0 + 6], [x + 24, z1 + 10]]) palmera(c, px, pz, 9 + rnd() * 4, rnd);
-      solido(x - 22.6, 0, z0 + 1.4, x - 21.4, 8, z0 + 2.6);
+      for (const y of [0.4, 2.6]) {
+        const tramos = [];
+        let a = x + 0.7;
+        const fin = Math.min(sig, x1) - 0.7;
+        for (const [h0, h1] of huecos.filter(([h0, h1]) => h1 > a && h0 < fin).sort((p, q) => p[0] - q[0])) { tramos.push([a, h0]); a = h1; }
+        tramos.push([a, fin]);
+        for (const [t0, t1] of tramos) if (t1 > t0) c.caja(t0, y, REJA_Z - 0.07, t1, y + 0.12, REJA_Z + 0.07, '#17181a');
+      }
     }
-    const materiales = {
-      liso: new THREE.MeshLambertMaterial({ vertexColors: true }),
-      luz: new THREE.MeshBasicMaterial({ vertexColors: true }),
-      cristal: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.35, depthWrite: false }),
-    };
-    this.grupo.add(c.armar(materiales));
+    // Choques de la reja, tramo por tramo, dejando los portones abiertos.
+    let a = x0 + 15;
+    for (const [h0, h1] of huecos) { this.solido(a, 0, REJA_Z - 0.4, h0, 3.4, REJA_Z + 0.4); a = h1; }
+    this.solido(a, 0, REJA_Z - 0.4, x1, 3.4, REJA_Z + 0.4);
+    for (const ma of MANSIONES) this.mansion(c, ma, rnd);
+  }
 
-    // Autos caros estacionados al costado de cada mansión (los modelos del concesionario).
-    for (const ma of MANSIONES) {
-      cargarAuto(AUTOS_POR_ID[ma.auto]).then((a) => {
-        a.position.set(ma.x + 25, 0.05, PUERTA_Z + 12);
-        a.rotation.y = Math.PI;
-        this.grupo.add(a);
-        const [mx, mz] = a.userData.medio;
-        solido(ma.x + 25 - mx, 0, PUERTA_Z + 12 - mz, ma.x + 25 + mx, 3, PUERTA_Z + 12 + mz);
-      });
+  // Una mansión: la entrada de autos (portón de rejas entre pilares, el auto) y la puerta con el
+  // timbre al frente; la casa según su estilo; atrás, el deck con la pileta mirando al mar,
+  // reposeras, sombrilla y palmeras (lejos de la entrada del auto).
+  mansion(c, ma, rnd) {
+    const x = ma.x;
+    const z0 = PUERTA_Z + 2; // el frente de la casa
+    const e = ENTRADA(ma);
+    c.piso(e.x0, REJA_Z, e.x1, PUERTA_Z + 14, 0.13, '#cfcac0'); // la entrada de autos (adoquín claro)
+    c.piso(x - 2.5, REJA_Z, x + 2.5, z0, 0.13, '#e6e0d4'); // el caminito a la puerta
+    for (const px of [e.x0 - 0.9, e.x1 + 0.9, x - 3.9, x + 3.9]) {
+      c.caja(px - 0.9, 0, REJA_Z - 0.9, px + 0.9, 4.2, REJA_Z + 0.9, '#a59c8e'); // pilares del portón
+      c.caja(px - 1.05, 4.2, REJA_Z - 1.05, px + 1.05, 4.5, REJA_Z + 1.05, '#8d8476');
+      c.caja(px - 0.3, 4.5, REJA_Z - 0.3, px + 0.3, 5.1, REJA_Z + 0.3, '#fff2c8', { lados: 'luz' });
+      this.solido(px - 0.9, 0, REJA_Z - 0.9, px + 0.9, 4.2, REJA_Z + 0.9);
     }
+    // El portón abierto (las dos hojas contra los pilares, adentro).
+    for (const [hx, s] of [[e.x0, 1], [e.x1, -1]]) {
+      for (let k = 0; k < 7; k++) c.caja(hx - 0.06, 0.2, REJA_Z + 0.6 + k * 0.6, hx + 0.06, 3.2, REJA_Z + 0.7 + k * 0.6, '#17181a');
+      c.caja(hx - 0.07 + s * 0, 2.9, REJA_Z + 0.5, hx + 0.07, 3.05, REJA_Z + 4.8, '#17181a');
+    }
+    // Ligustros recortados a lo largo de la reja, de adentro.
+    for (const [h0, h1] of [[x - 95, x - 6], [x + 6, e.x0 - 3], [e.x1 + 3, x + 100]]) {
+      if (h1 - h0 > 2) c.caja(h0, 0, REJA_Z + 1, h1, 2.2, REJA_Z + 2.8, '#3f7f34');
+    }
+    const estilos = [this.voladizo, this.piedraMadera, this.terrazas, this.pabellon];
+    const fondo = estilos[ma.estilo].call(this, c, x, z0);
+    // La puerta (madera, alta) y el timbre dorado.
+    c.caja(x - 1.6, 0.1, PUERTA_Z + 1.7, x + 1.6, 6.8, PUERTA_Z + 2.05, '#5a3a24');
+    c.caja(x + 2.3, 3.2, PUERTA_Z + 1.75, x + 2.6, 3.5, PUERTA_Z + 2.05, '#d4af37');
+    // Atrás: deck de madera, la pileta (borde blanco y el agua), reposeras y sombrilla.
+    const zd = fondo + 1.5;
+    c.piso(x - 30, fondo, x + 34, P.orilla - 9, 0.11, '#a07a52');
+    c.caja(x - 16, 0, zd, x + 8, 0.5, zd + 10, '#f2f2f2');
+    c.piso(x - 15.2, zd + 0.8, x + 7.2, zd + 9.2, 0.51, '#2ec4e8');
+    for (let k = 0; k < 3; k++) {
+      c.caja(x + 12 + k * 3.2, 0, zd + 1, x + 13.8 + k * 3.2, 0.6, zd + 6, '#ffffff');
+      c.caja(x + 12 + k * 3.2, 0.6, zd + 5, x + 13.8 + k * 3.2, 1.5, zd + 6, '#ffffff');
+    }
+    c.cil(0.08, 0.08, 3.2, '#dddddd', x + 24, 0, zd + 8, 5);
+    c.cil(2.6, 0.1, 0.8, '#efe6d2', x + 24, 3, zd + 8, 10);
+    for (const [px, pz] of [[x - 24, z0 + 2], [x - 26, zd + 7], [x + 36, zd + 2], [x - 10, REJA_Z + 5]]) {
+      palmera(c, px, pz, 10 + rnd() * 4, rnd);
+      this.solido(px - 0.6, 0, pz - 0.6, px + 0.6, 8, pz + 0.6);
+    }
+  }
+
+  // 1) La blanca en voladizo (como las casas de Miami): dos volúmenes blancos, el de arriba sale
+  // hacia la calle con listones de madera; ventanales enteros al mar y techo plano con alero.
+  voladizo(c, x, z0) {
+    const z1 = z0 + 20;
+    c.caja(x - 16, 0, z0, x + 12, 8, z1, '#f6f5f2');
+    c.caja(x - 15.6, 0.4, z1 - 0.1, x + 11.6, 7.6, z1 + 0.15, '#bfe3f2', { lados: 'cristal' });
+    c.caja(x - 12, 0.4, z0 - 0.15, x - 3, 7.6, z0 + 0.1, '#bfe3f2', { lados: 'cristal' });
+    c.caja(x - 13, 8, z0 - 4, x + 14, 15, z1 - 2, '#ffffff');
+    c.caja(x - 12.6, 8.4, z1 - 2.1, x + 13.6, 14.6, z1 - 1.8, '#bfe3f2', { lados: 'cristal' });
+    for (let k = 0; k < 20; k++) c.caja(x - 12 + k * 1.3, 8.6, z0 - 4.25, x - 11.6 + k * 1.3, 14.6, z0 - 4, '#b07a4a');
+    c.caja(x - 18, 15, z0 - 5, x + 16, 15.4, z1, '#e8e6e1');
+    c.caja(x - 17, 8, z0 - 1, x + 13, 8.35, z1 + 2, '#e8e6e1');
+    this.solido(x - 16, 0, z0, x + 12, 15.4, z1);
+    return z1;
+  }
+
+  // 2) Piedra y madera (como las casas de montaña modernas): planta baja de piedra en L, arriba un
+  // volumen de madera oscura con ventanas de marco negro, y una terraza con baranda de vidrio.
+  piedraMadera(c, x, z0) {
+    const z1 = z0 + 22;
+    c.caja(x - 18, 0, z0, x + 12, 8, z0 + 12, '#9a9184');
+    c.caja(x - 18, 0, z0 + 12, x - 4, 8, z1, '#9a9184');
+    c.caja(x - 3.8, 0.4, z0 + 12, x + 12, 7.6, z1, '#bfe3f2', { lados: 'cristal' });
+    c.caja(x - 16, 8, z0 + 2, x + 10, 15.5, z1 - 4, '#6b452a');
+    for (let k = 0; k < 5; k++) {
+      const wx = x - 14 + k * 5;
+      c.caja(wx, 9.5, z1 - 4.15, wx + 3.2, 14, z1 - 3.9, '#bfe3f2', { lados: 'cristal' });
+      c.caja(wx - 0.2, 9.3, z1 - 4.2, wx + 3.4, 9.5, z1 - 3.85, '#1b1c1e');
+    }
+    c.caja(x - 17, 15.5, z0 + 1, x + 11, 16, z1 - 3, '#2b2d30');
+    c.caja(x - 3.8, 8, z0 + 12, x + 12, 8.3, z1, '#8d8476');
+    c.caja(x - 3.8, 8.3, z1 - 0.1, x + 12, 9.6, z1 + 0.05, '#bfe3f2', { lados: 'cristal' });
+    c.caja(x - 3, 0.1, z0 - 0.1, x + 3, 7, z0 + 0.05, '#7a5a3a');
+    this.solido(x - 18, 0, z0, x + 12, 16, z1);
+    return z1;
+  }
+
+  // 3) Terrazas escalonadas (como las de la costa mediterránea): tres cajas blancas cada vez más
+  // chicas hacia el mar, cada techo es la terraza del de arriba, con barandas de vidrio.
+  terrazas(c, x, z0) {
+    const z1 = z0 + 22;
+    const pisos = [[x - 18, x + 14, z0, z1], [x - 14, x + 10, z0, z1 - 6], [x - 10, x + 6, z0, z1 - 12]];
+    pisos.forEach(([a, b, f, t], k) => {
+      const y = k * 6;
+      c.caja(a, y, f, b, y + 6, t, k === 1 ? '#f1ece2' : '#faf8f4');
+      c.caja(a + 0.4, y + 0.6, t - 0.1, b - 0.4, y + 5.4, t + 0.15, '#bfe3f2', { lados: 'cristal' });
+      c.caja(a, y + 6, f, b, y + 6.3, t + 1.5, '#e8e1d4');
+      c.caja(a, y + 6.3, t + 1.4, b, y + 7.4, t + 1.55, '#bfe3f2', { lados: 'cristal' });
+    });
+    c.caja(x + 6, 12.3, z0, x + 8, 16, z0 + 4, '#c9a27a');
+    this.solido(x - 18, 0, z0, x + 14, 18, z1);
+    return z1;
+  }
+
+  // 4) El pabellón de vidrio (como la Farnsworth o las casas de Mies): un techo plano enorme sobre
+  // columnas finas, una caja de vidrio adentro con los marcos negros, y un muro de piedra.
+  pabellon(c, x, z0) {
+    const z1 = z0 + 20;
+    c.caja(x - 20, 0, z0 - 2, x + 16, 0.7, z1 + 2, '#e8e4dc'); // la plataforma
+    c.caja(x - 15, 0.7, z0, x + 11, 8.2, z1, '#cfe9f5', { lados: 'cristal' });
+    for (let k = 0; k <= 6; k++) {
+      const cx = x - 15 + k * (26 / 6);
+      for (const zz of [z0, z1]) c.caja(cx - 0.12, 0.7, zz - 0.12, cx + 0.12, 8.2, zz + 0.12, '#1b1c1e');
+    }
+    for (const [cx, zz] of [[x - 19, z0 - 1], [x + 15, z0 - 1], [x - 19, z1 + 1], [x + 15, z1 + 1]]) c.caja(cx - 0.3, 0.7, zz - 0.3, cx + 0.3, 9, zz + 0.3, '#2f3437');
+    c.caja(x - 22, 9, z0 - 4, x + 18, 9.8, z1 + 4, '#2f3437'); // el techo que vuela
+    c.caja(x - 21, 0.7, z0 + 6, x - 15.2, 8.2, z0 + 14, '#a59c8e'); // muro de piedra
+    this.solido(x - 15, 0, z0, x + 11, 9.8, z1);
+    return z1 + 2;
   }
 
   // ---------- Los timbres ----------
@@ -257,7 +469,7 @@ export class Costa {
       const et = crearEtiqueta([{ texto: ma.nombre, tam: 56, color: '#ffffff' }], 4);
       et.sprite.position.y = 6.6;
       m.grupo.add(et.sprite);
-      m.grupo.position.set(ma.x - 0.3, 0.05, PUERTA_Z + 1.1); // en el umbral
+      m.grupo.position.set(ma.x - 0.3, 0.12, PUERTA_Z + 1.1); // en el umbral
       this.grupo.add(m.grupo);
       d = this.duenos[ma.id] = { m, cara: cab.frente.toDataURL(), t: 0 };
     }
