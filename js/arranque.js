@@ -4,9 +4,11 @@
 import { FIREBASE } from './red-config.js';
 import { conectarRed } from './red.js';
 
-const CLAVE_UID = 'vecibanda-uid';
-const CLAVE_NOMBRE = 'vecibanda-usuario';
-const CLAVE_SLOT = 'vecibanda-slot';
+import { PRUEBA, clave } from './entorno.js';
+
+const CLAVE_UID = clave('vecibanda-uid');
+const CLAVE_NOMBRE = clave('vecibanda-usuario');
+const CLAVE_SLOT = clave('vecibanda-slot');
 const leer = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin guardar */ } };
 const esperar = (ms) => new Promise((r) => setTimeout(() => r(null), ms));
@@ -52,7 +54,9 @@ function pedirNombre() {
   }
   // La vista ?completo (la mansión terminada, para mostrar) no juega en red ni pide nombre.
   const vista = param.has('completo') && !param.has('redlocal');
-  let nombre = (enCompu && param.get('nombre')) || leer(CLAVE_NOMBRE) || (vista ? 'Visitante' : null);
+  if (PRUEBA) document.title += ' (prueba)';
+  // En la copia de prueba, el mismo nombre que en el juego de verdad (si ya lo pusiste).
+  let nombre = (enCompu && param.get('nombre')) || leer(CLAVE_NOMBRE) || (PRUEBA && leer('vecibanda-usuario')) || (vista ? 'Visitante' : null);
   if (!nombre) {
     nombre = await pedirNombre();
     guardar(CLAVE_NOMBRE, nombre);

@@ -6,6 +6,7 @@ import { formato } from './util.js';
 import { crearEtiqueta } from './texturas.js';
 import { CATEGORIAS, NIVEL_MEDALLA } from '../data/taller.js';
 import { sfx } from './sfx.js';
+import { clave } from './entorno.js';
 
 // Autódromo Vecibanda Ring, a mitad de la autopista (abre con los autos, al 60%). Afuera, el
 // estadio estilo Allianz Arena: un óvalo enorme de almohadones romboidales (blanco de día, rojo de
@@ -232,7 +233,7 @@ const objetivos = new Map();
 // 2 y oro con todo al máximo. Sin mejorar el auto, el oro es casi imposible.
 // Son tres simulaciones por auto (en la Chromebook, un par de segundos para todos): se guardan en
 // el navegador con una firma de todo lo que las cambia, y se vuelven a calcular solo si algo cambió.
-const CLAVE_OBJETIVOS = 'vecibanda-objetivos';
+const CLAVE_OBJETIVOS = clave('vecibanda-objetivos');
 let guardados = null;
 export function objetivosDe(def) {
   if (!objetivos.has(def.id)) {

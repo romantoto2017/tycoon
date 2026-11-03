@@ -5,6 +5,8 @@
 //   chat/{id}        { uid, nombre, texto, t } (se leen los últimos 40)
 // Sin config (js/red-config.js) el juego anda solo, como siempre. Con ?redlocal se usa una red de
 // mentira entre pestañas del mismo navegador (para probar sin Firebase).
+import { clave, RAIZ_RED } from './entorno.js';
+
 const VERSION = '10.12.2';
 export const LOTES_TOTAL = 9;
 // Tepho y le shpet entraron primero desde el navegador y ahora juegan desde la app (para el juego
@@ -105,13 +107,13 @@ class RedFirebase {
 // cambios se avisan por BroadcastChannel.
 class RedLocal {
   constructor() {
-    this.canal = new BroadcastChannel('vecibanda-red');
+    this.canal = new BroadcastChannel(clave('vecibanda-red'));
     this.oyentes = { jugadores: [], pos: [], chat: [] };
     this.canal.onmessage = (e) => this.recibir(e.data);
   }
 
-  leer(k) { try { return JSON.parse(localStorage.getItem(`red:${k}`)) || {}; } catch { return {}; } }
-  escribir(k, v) { localStorage.setItem(`red:${k}`, JSON.stringify(v)); }
+  leer(k) { try { return JSON.parse(localStorage.getItem(clave(`red:${k}`))) || {}; } catch { return {}; } }
+  escribir(k, v) { localStorage.setItem(clave(`red:${k}`), JSON.stringify(v)); }
 
   recibir(m) {
     if (m.tipo === 'jugadores') this.oyentes.jugadores.forEach((cb) => cb(this.leer('jugadores')));
@@ -175,5 +177,7 @@ export async function conectarRed(config) {
     import(`https://www.gstatic.com/firebasejs/${VERSION}/firebase-database.js`),
   ]);
   const app = initializeApp(config);
-  return new RedFirebase(db, db.getDatabase(app));
+  // La copia de prueba usa su propia rama de la base (prueba/...): no toca a los 9 de verdad.
+  const ref = (base, p) => db.ref(base, RAIZ_RED ? (p ? `${RAIZ_RED}/${p}` : RAIZ_RED) : p);
+  return new RedFirebase({ ...db, ref }, db.getDatabase(app));
 }

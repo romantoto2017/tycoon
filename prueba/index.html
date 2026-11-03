@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#14161a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icono-192.png">
+  <title>Tycoon Vecibanda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <canvas id="juego"></canvas>
+
+  <div id="hud" class="oculto">
+    <button id="btn-config" class="btn-config" aria-label="Configuración" title="Configuración (Esc)">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button id="btn-chat" class="btn-chat oculto" aria-label="Chat" title="Chat (T)">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>
+      <span id="chat-punto" class="misiones-punto oculto" aria-hidden="true"></span>
+    </button>
+    <div id="chat" class="chat oculto" role="log" aria-live="polite" aria-label="Chat">
+      <div id="chat-conectados" class="chat-conectados"></div>
+      <ul id="chat-lista" class="chat-lista"></ul>
+      <form id="chat-form" class="chat-form" autocomplete="off">
+        <input id="chat-texto" class="chat-texto" type="text" maxlength="200" placeholder="Escribí algo..." aria-label="Mensaje">
+        <button class="chat-enviar" type="submit" aria-label="Enviar">➤</button>
+      </form>
+    </div>
+    <button id="btn-misiones" class="btn-misiones oculto" aria-label="Misiones" title="Misiones (M)">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h10a1 1 0 0 1 1 1v15H8a2 2 0 0 1-2-2V6"/><path d="M6 6a2 2 0 1 1 3-1.7"/><path d="M11 9l1.5 1.5L15.5 7.5"/><path d="M11 15h5"/></svg>
+      <span id="misiones-punto" class="misiones-punto oculto" aria-hidden="true"></span>
+    </button>
+    <div class="hud-centro">
+      <div class="caja-plata"><img id="icono-moneda" alt=""><span id="plata">0</span></div>
+      <div id="pps">+0/s</div>
+      <div id="progreso">Mansión 0%</div>
+    </div>
+    <div id="aviso" class="aviso oculto" role="status" aria-live="polite"></div>
+    <div id="karaoke" class="karaoke oculto" aria-live="off">
+      <p id="karaoke-actual" class="karaoke-actual"></p>
+      <p id="karaoke-siguiente" class="karaoke-siguiente"></p>
+    </div>
+    <div id="carrera" class="carrera oculto" aria-live="off">
+      <p id="carrera-auto" class="carrera-auto"></p>
+      <p class="carrera-vuelta">VUELTA <b id="carrera-vuelta">1</b></p>
+      <p id="carrera-tiempo" class="carrera-tiempo">0:00.000</p>
+      <dl class="carrera-datos">
+        <dt>Última</dt><dd id="carrera-ultima">–</dd>
+        <dt>Récord</dt><dd id="carrera-mejor">–</dd>
+        <dt>Próxima</dt><dd id="carrera-objetivo">–</dd>
+      </dl>
+      <p class="carrera-vel"><b id="carrera-vel">0</b> km/h</p>
+      <p id="carrera-fuera" class="carrera-fuera oculto">¡Por el pasto!</p>
+    </div>
+    <div id="semaforo" class="semaforo oculto" aria-hidden="true"><i></i><i></i><i></i></div>
+    <button id="btn-manejar" class="btn azul btn-manejar oculto">Manejar (E)</button>
+    <div id="barra" class="barra">
+      <button id="btn-arma" class="slot oculto" aria-pressed="false" title="Sacar / guardar el AK-47 (1)">
+        <span class="slot-num">1</span>
+        <svg viewBox="0 0 48 20" width="58" height="24" fill="currentColor" aria-hidden="true"><path d="M2 7h7l2-2h16v-1h2v1h11v2h6v2H38l-2 1H24l-3 1v3l-2 6h-4l2-7h-3l-1 4h-3l1-4H8l-6 2z"/></svg>
+        <span class="slot-nombre">AK-47</span>
+      </button>
+      <button id="btn-lechuga" class="slot oculto" aria-pressed="false" title="Lechuga (2)">
+        <span class="slot-num">2</span>
+        <svg viewBox="0 0 32 26" width="40" height="30" aria-hidden="true"><ellipse cx="16" cy="16" rx="14" ry="9" fill="#4f9a2c"/><ellipse cx="9" cy="13" rx="7" ry="7" fill="#62ad37"/><ellipse cx="23" cy="13" rx="7" ry="7" fill="#5ea935"/><ellipse cx="16" cy="12" rx="7.5" ry="8" fill="#b9dc72"/><path d="M16 6v12M12 9l4 4 4-4" stroke="#8fbf4f" stroke-width="1.4" fill="none"/></svg>
+        <span class="slot-nombre">Lechuga <span class="slot-cant">×0</span></span>
+      </button>
+    </div>
+    <button id="btn-agachar" class="btn-agachar oculto" aria-label="Agacharse (C)" aria-pressed="false" title="Agacharse (C)">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2.2"/><path d="M9 21l2-5-3-3 4-3 3 3 3 1"/><path d="M11 16h4l1 5"/></svg>
+      <span>Agacharse</span>
+    </button>
+    <button id="btn-derrapar" class="btn-agachar oculto" aria-label="Derrapar (Shift)" aria-pressed="false" title="Derrapar (mantené Shift)">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19c3-1 5-4 6-8M9 20c3-1 5-4 6-8"/><rect x="12.5" y="3" width="7" height="10" rx="2" transform="rotate(30 16 8)"/></svg>
+      <span>Derrapar</span>
+    </button>
+  </div>
+
+  <div id="menu" class="pantalla oculto">
+    <h1 class="titulo">TYCOON <span>VECIBANDA</span></h1>
+    <p class="subtitulo">La Vecibanda House</p>
+    <div class="menu-botones">
+      <button id="btn-jugar" class="btn verde grande">JUGAR</button>
+      <button id="btn-menu-personaje" class="btn azul">Elegir personaje</button>
+    </div>
+    <p id="aviso-menu" class="aviso-pantalla oculto" role="alert"></p>
+    <p id="menu-progreso" class="menu-progreso"></p>
+  </div>
+
+  <div id="seleccion" class="pantalla oculto">
+    <h1 class="titulo chico">TYCOON <span>VECIBANDA</span></h1>
+    <p class="subtitulo">Elegí tu personaje</p>
+    <div id="grilla-personajes"></div>
+    <button id="btn-volver-seleccion" class="btn gris volver">Volver</button>
+  </div>
+
+  <div id="config" class="pantalla oculto">
+    <div class="modal config">
+      <h2>Configuración</h2>
+      <label class="ajuste">Volumen general <input id="aj-general" type="range" min="0" max="100"></label>
+      <div class="ajuste">
+        <label for="aj-musica">Música</label>
+        <div class="fila-musica">
+          <input id="aj-musica" type="range" min="0" max="100">
+          <button id="btn-musica" class="btn-musica" type="button" aria-pressed="true" aria-label="Música encendida" title="Música on/off">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="parlante" d="M3 9h4l5-4v14l-5-4H3z"/>
+              <path class="ondas" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>
+              <path class="tachado" d="M16 9l6 6M22 9l-6 6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <label class="ajuste">Efectos de sonido <input id="aj-efectos" type="range" min="0" max="100"></label>
+      <label class="ajuste">Sensibilidad de cámara <input id="aj-sensibilidad" type="range" min="20" max="250"></label>
+      <label class="ajuste">
+        <span>Calidad de imagen <b id="aj-calidad-valor" class="valor">100%</b></span>
+        <input id="aj-calidad" type="range" min="50" max="100" step="5">
+        <small class="ayuda">Si el juego anda lento, bajala un poco.</small>
+      </label>
+      <div class="columna">
+        <button id="btn-cambiar-personaje" class="btn azul">Cambiar personaje</button>
+        <p id="aviso-config" class="aviso-pantalla oculto" role="alert"></p>
+        <button id="btn-salir-menu" class="btn gris">Salir al menú</button>
+        <button id="btn-reiniciar" class="btn rojo">Reiniciar partida</button>
+        <button id="btn-cerrar-config" class="btn verde">Volver al juego</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu-resto" class="pantalla menu-resto oculto" role="dialog" aria-modal="true" aria-labelledby="menu-resto-titulo">
+    <div class="carta-resto">
+      <header>
+        <h2 id="menu-resto-titulo">Lo de Lourdes</h2>
+        <p>¿Qué te sirvo hoy?</p>
+      </header>
+      <div id="platos" class="platos"></div>
+      <footer>
+        <span>Viene con un vaso de agua · No se paga</span>
+        <button id="btn-cerrar-resto" class="btn gris">Ahora no</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Tienda de ropa: catálogo del que atiende -->
+  <div id="catalogo" class="pantalla catalogo oculto" role="dialog" aria-modal="true" aria-labelledby="catalogo-titulo">
+    <div class="catalogo-caja">
+      <header>
+        <h2 id="catalogo-titulo">KICKS</h2>
+        <p id="catalogo-sub">Catálogo</p>
+        <button id="btn-cerrar-catalogo" class="cat-cerrar" aria-label="Cerrar">✕</button>
+      </header>
+      <div id="catalogo-lista" class="catalogo-lista"></div>
+    </div>
+  </div>
+
+  <!-- Ropero de la mansión: probarse y ponerse la ropa comprada -->
+  <div id="ropero" class="pantalla ropero oculto" role="dialog" aria-modal="true" aria-labelledby="ropero-titulo">
+    <div class="ropero-caja">
+      <div class="ropero-izq">
+        <h2 id="ropero-titulo">Ropero</h2>
+        <canvas id="ropero-vista" class="ropero-vista" aria-label="Cómo te queda"></canvas>
+        <div class="ropero-botones">
+          <button id="btn-ropero-listo" class="btn verde">Ponérmelo</button>
+          <button id="btn-ropero-cancelar" class="btn gris">Cancelar</button>
+        </div>
+      </div>
+      <div id="ropero-lista" class="ropero-lista"></div>
+    </div>
+  </div>
+
+  <!-- Gym Power Camp: panel mientras entrenás (no tapa el juego: va abajo) -->
+  <section id="panel-gym" class="panel-gym oculto" aria-label="Entrenando">
+    <header class="pg-cabeza">
+      <span class="pg-logo" aria-hidden="true"></span>
+      <h2 id="pg-nombre">Press de banca</h2>
+      <p class="pg-reps" aria-live="polite">Serie <b id="pg-serie">0</b><span>Total <i id="pg-reps">0</i></span></p>
+    </header>
+    <div class="pg-energia">
+      <span>Energía</span>
+      <div class="pg-barra" role="progressbar" aria-label="Energía para la serie"><i id="pg-energia"></i></div>
+    </div>
+    <div id="pg-lucha" class="pg-lucha oculto" aria-live="assertive">
+      <p id="pg-lucha-texto">¡Apretá rápido para subirla!</p>
+      <div class="pg-lucha-barra"><i id="pg-lucha-prog"></i></div>
+      <div class="pg-lucha-tiempo"><i id="pg-lucha-tiempo"></i></div>
+    </div>
+    <div id="pg-pesos" class="pg-pesos" role="group" aria-label="Peso"></div>
+    <div id="pg-bauti" class="pg-bauti oculto">
+      <div class="pg-barra" role="progressbar" aria-label="Progreso de Bauti"><i id="pg-barra"></i></div>
+      <span id="pg-bauti-texto"></span>
+    </div>
+    <div class="pg-botones">
+      <button id="pg-rep" class="pg-rep" type="button">Repetición</button>
+      <button id="pg-salir" class="btn gris" type="button">Salir (E)</button>
+    </div>
+    <p class="pg-ayuda">Mantené apretado (o la barra espaciadora) para seguir. Cerca del fallo, apretá rápido varias veces</p>
+  </section>
+
+  <!-- Misiones -->
+  <div id="autodromo" class="pantalla autodromo-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="autodromo-titulo">
+    <div class="panel-autodromo">
+      <header>
+        <h2 id="autodromo-titulo">VECIBANDA <span>RING</span></h2>
+        <p id="autodromo-info" class="autodromo-info"></p>
+        <p class="autodromo-sponsor">Presentado por <img src="assets/especiales/sancor_blanco.png" alt="Sancor Seguros"></p>
+        <button id="btn-cerrar-autodromo" class="cerrar-x" aria-label="Cerrar">✕</button>
+      </header>
+      <ul id="autodromo-autos" class="autodromo-autos"></ul>
+    </div>
+  </div>
+
+  <!-- Mapa: el minimapa en la esquina (se toca para abrir) y el mapa entero -->
+  <button id="minimapa" class="minimapa oculto" aria-label="Abrir el mapa (N)" title="Mapa (N)">
+    <canvas id="minimapa-lienzo" aria-hidden="true"></canvas>
+    <span class="minimapa-n" aria-hidden="true">N</span>
+    <span class="minimapa-abrir" aria-hidden="true">Mapa · N</span>
+  </button>
+  <div id="mapa" class="mapa oculto" role="dialog" aria-modal="true" aria-label="Mapa">
+    <canvas id="mapa-lienzo" class="mapa-lienzo"></canvas>
+    <div class="mapa-zoom">
+      <button id="mapa-mas" class="btn gris" aria-label="Acercar">+</button>
+      <button id="mapa-menos" class="btn gris" aria-label="Alejar">−</button>
+    </div>
+    <button id="btn-cerrar-mapa" class="cerrar-x mapa-cerrar" aria-label="Cerrar el mapa">✕</button>
+    <p class="mapa-ayuda">Arrastrá para moverte · rueda o pellizco para el zoom · N o Esc para cerrar</p>
+  </div>
+
+  <!-- Taller: el menú a la izquierda y, a la derecha, el auto en la escena (se gira arrastrando) -->
+  <div id="taller" class="taller oculto" role="dialog" aria-modal="true" aria-labelledby="taller-titulo">
+    <section class="taller-panel">
+      <header class="taller-cabeza">
+        <div>
+          <h2 id="taller-titulo">TALLER</h2>
+          <p id="taller-auto" class="taller-auto"></p>
+        </div>
+        <button id="btn-cerrar-taller" class="cerrar-x" aria-label="Salir del taller">✕</button>
+      </header>
+      <div class="taller-cuerpo">
+        <nav id="taller-pestanas" class="taller-pestanas" role="tablist" aria-label="Mejoras"></nav>
+        <div id="taller-contenido" class="taller-contenido" role="tabpanel"></div>
+      </div>
+    </section>
+    <section class="taller-vista">
+      <div id="taller-girar" class="taller-girar" title="Arrastrá para girar el auto"></div>
+      <div id="taller-partes" class="taller-partes" aria-label="Qué pintar"></div>
+      <div id="taller-stats" class="taller-stats" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <div id="misiones" class="pantalla misiones-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="misiones-titulo">
+    <div class="panel-misiones">
+      <header>
+        <h2 id="misiones-titulo">Misiones</h2>
+        <button id="btn-cerrar-misiones" class="cerrar-x" aria-label="Cerrar">✕</button>
+      </header>
+      <ul id="lista-misiones" class="lista-misiones"></ul>
+    </div>
+  </div>
+
+  <!-- Diálogo de historia: el personaje a la derecha y el texto ocupando abajo -->
+  <div id="dialogo" class="dialogo oculto" role="dialog" aria-modal="true" aria-labelledby="dialogo-nombre">
+    <div class="dialogo-personaje" aria-hidden="true">
+      <img id="dialogo-cara" alt="">
+      <div id="dialogo-cuerpo" class="dialogo-cuerpo"></div>
+    </div>
+    <div class="dialogo-caja">
+      <p id="dialogo-nombre" class="dialogo-nombre">Juanma</p>
+      <p id="dialogo-texto" class="dialogo-texto" aria-live="polite"></p>
+      <div id="dialogo-opciones" class="dialogo-opciones" role="group" aria-label="Respuestas" hidden></div>
+      <button id="dialogo-seguir" class="dialogo-seguir">Continuar ▸</button>
+    </div>
+  </div>
+
+  <div id="testamento" class="pantalla oculto">
+    <div class="pergamino" role="dialog" aria-labelledby="testamento-titulo">
+      <h2 id="testamento-titulo">Testamento</h2>
+      <p class="pergamino-texto">"La mesera está buena, y el que perdona camina por el agua, yo ni nadar se"</p>
+      <p class="pergamino-firma">— Santiago Scumburdi</p>
+      <button id="testamento-cerrar" class="btn gris">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="caja" class="pantalla oculto">
+    <div class="modal caja-fuerte" role="dialog" aria-labelledby="caja-titulo">
+      <h2 id="caja-titulo">Caja fuerte</h2>
+      <div class="caja-montos">
+        <div><small>En la caja</small><b id="caja-guardada"></b></div>
+        <div><small>En el bolsillo</small><b id="caja-bolsillo"></b></div>
+      </div>
+      <div class="caja-botones">
+        <button id="caja-guardar-todo" class="btn verde">Guardar todo</button>
+        <button id="caja-guardar-mitad" class="btn verde">Guardar la mitad</button>
+        <button id="caja-sacar-todo" class="btn azul">Sacar todo</button>
+        <button id="caja-sacar-mitad" class="btn azul">Sacar la mitad</button>
+      </div>
+      <button id="caja-cerrar" class="btn gris">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="confirmar" class="pantalla oculto">
+    <div class="modal">
+      <h2>¿Reiniciar partida?</h2>
+      <p>Si aceptás, se reinicia <b>TODO</b> tu progreso: la plata, la mansión y todos los objetos comprados. No se puede deshacer.</p>
+      <div class="fila">
+        <button id="btn-cancelar" class="btn gris">Cancelar</button>
+        <button id="btn-confirmar" class="btn rojo">Sí, reiniciar todo</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="final" class="pantalla oculto">
+    <div class="modal">
+      <h2 class="dorado">¡TERMINASTE LA VECIBANDA HOUSE!</h2>
+      <p id="final-tiempo"></p>
+      <button id="btn-final" class="btn verde">Seguir jugando</button>
+    </div>
+  </div>
+
+  <div id="sueno" class="sueno oculto" aria-hidden="true"><span>Zzz...</span></div>
+  <div id="secreta" class="secreta oculto" role="status" aria-live="assertive">
+    <img id="secreta-cara" class="secreta-cara" alt="" hidden>
+    <p class="secreta-chico">¡MISIÓN SECRETA CUMPLIDA!</p>
+    <p id="secreta-titulo" class="secreta-titulo"></p>
+    <p id="secreta-premio" class="secreta-premio"></p>
+  </div>
+  <div id="toasts"></div>
+
+  <div id="tactil" class="oculto">
+    <div id="stick-base"><div id="stick-knob"></div></div>
+    <button id="btn-disparar" class="oculto" aria-label="Disparar">
+      <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg>
+    </button>
+    <button id="btn-saltar" aria-label="Saltar">
+      <svg viewBox="0 0 24 24" width="44" height="44" fill="currentColor" aria-hidden="true"><path d="M12 3.5 4.5 11h4.75v9.5h5.5V11h4.75z"/></svg>
+    </button>
+  </div>
+
+  <div id="mira" class="oculto" aria-hidden="true"></div>
+
+  <div id="girar" aria-live="polite">
+    <svg viewBox="0 0 24 24" width="72" height="72" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M3 9a9 9 0 0 1 3-5M21 15a9 9 0 0 1-3 5"/></svg>
+    <p>Girá el celu para jugar</p>
+  </div>
+
+  <div id="cargando" class="pantalla">
+    <h1 class="titulo">TYCOON <span>VECIBANDA</span></h1>
+    <p id="msg-carga">Cargando...</p>
+  </div>
+
+  <div id="usuario" class="pantalla oculto">
+    <div class="modal usuario" role="dialog" aria-labelledby="usuario-titulo">
+      <h2 id="usuario-titulo">¿Cómo te llamás?</h2>
+      <p>Tu nombre de usuario: lo ven los demás arriba de tu cabeza.</p>
+      <input id="usuario-nombre" class="usuario-input" type="text" maxlength="20" autocomplete="nickname" placeholder="Fulanito Tanto" aria-label="Nombre de usuario">
+      <p id="usuario-aviso" class="usuario-aviso" role="alert"></p>
+      <button id="usuario-listo" class="btn verde grande">Listo</button>
+    </div>
+  </div>
+
+  <div id="errores"></div>
+
+  <script>
+    // Muestra errores en pantalla (útil en Chromebook, sin abrir la consola).
+    function mostrarError(msg) {
+      var box = document.getElementById('errores');
+      box.style.display = 'block';
+      box.textContent += msg + '\n';
+    }
+    window.addEventListener('error', function (e) { mostrarError('Error: ' + (e.message || e)); });
+    window.addEventListener('unhandledrejection', function (e) { mostrarError('Error: ' + (e.reason && e.reason.message || e.reason)); });
+    if (location.protocol === 'file:') {
+      document.getElementById('msg-carga').textContent =
+        'Este juego no se puede abrir con doble clic. Abrilo desde GitHub Pages (ver README).';
+    }
+  </script>
+  <script type="module" src="js/arranque.js"
+          onerror="mostrarError('No se pudo cargar el juego. ¿Tenés internet?')"></script>
+</body>
+</html>

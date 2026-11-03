@@ -352,3 +352,11 @@ Para la Chromebook: cada manzana es una sola malla por material (lo que no se ve
 - **El Humano** (`js/humano.js`, cara y ropa con `herramientas/humano.py`): fisura de saco oscuro gastado y camisa blanca sucia. Anda por la plaza de la ciudad **solo de noche** y, si te ve a pie, te pide plata (45 s de ingreso). Si no le das, se enoja: te persigue 30 s y te tira latas. Si le das, se va hasta la noche siguiente.
 - A la **tercera noche** que le das, te invita a **La Cachimba del Piojo** (`js/cachimba.js`): recién ahí aparece, bien apartada, al norte de la autopista (a mitad de camino a la ciudad), con un camino de tierra. En el mapa es un "?" hasta que vas; después dice el nombre.
 - Adentro: calles de barro con charcos, casillas de chapa y de ladrillo sin revocar (algunas a medio hacer), cables, basura, un auto quemado, tachos con fuego, villeros tatuados y armados, perros flacos y lastimados, El Humano en la entrada y a veces la Schwepa y Manu Mendez. Cada vez que entrás hay un **30% de que te roben toda la plata** (lo de la caja fuerte no).
+
+## Copia de prueba
+
+En `prueba/` hay una copia exacta del juego, publicada en la misma página con `/prueba/` al final (por ejemplo `https://romantoto2017.github.io/tycoon/prueba/`). Sirve para probar una actualización antes de que la vean todos:
+
+- **No toca el juego de verdad:** usa sus propias partidas guardadas (claves `prueba-...` en el navegador) y su propio lugar en Firebase (`prueba/...`, con sus 9 terrenos aparte). Todo eso sale de `js/entorno.js`, según si el juego corre desde `/prueba/`.
+- **Arranca con tu partida:** la primera vez, la copia toma una copia de lo que tenés guardado en el juego de verdad (y tu nombre). Lo que hagas después queda solo en la prueba.
+- `sh herramientas/copiar_prueba.sh` rehace la copia desde el juego; `sh herramientas/pasar_prueba.sh` pasa lo de `prueba/` al juego de verdad.

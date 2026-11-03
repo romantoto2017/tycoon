@@ -1,0 +1,506 @@
+// Piezas del terreno alrededor de la mansión (coordenadas del mundo, piso en y = 0).
+import { TERRENO as T, MANSION as M, PISCINA as P, CANCHA as C, GARAGE as G, PARRILLA as PA, GALPON as GA, GALPON_LUGARES, CALLE_Z } from './constantes.js';
+
+// Cascadas de la entrada: el agua sale de un canal de piedra que se apoya en dos pilares,
+// cae separada del muro (se ve el muro atrás) y llega a una pileta con espuma.
+export function cascadas(k, g) {
+  const piedra = k.tex('piedra', '#7a7d80', 3);
+  const oscuro = k.tex('panel', '#3a3f44', 3);
+  const borde = k.tex('concreto', '#a7aaad', 3);
+  const lomo = 17.4;
+  for (const s of [-1, 1]) {
+    const x0 = s > 0 ? 9 : -21;
+    const x1 = s > 0 ? 21 : -9;
+    const xc = (x0 + x1) / 2;
+    // Muro de fondo y pilares.
+    g.add(k.cajaDe(x0, 0, 4, x1, lomo, 4.8, piedra));
+    g.add(k.cajaDe(x0 - 1.2, 0, 4, x0, lomo + 2, 8.6, oscuro));
+    g.add(k.cajaDe(x1, 0, 4, x1 + 1.2, lomo + 2, 8.6, oscuro));
+    // Canal que lleva el agua arriba (con el agua visible) y su labio.
+    g.add(k.cajaDe(x0, lomo, 4, x1, lomo + 0.6, 8.6, oscuro));
+    g.add(k.cajaDe(x0, lomo + 0.6, 4, x1, lomo + 2, 4.5, oscuro));
+    g.add(k.noSolido(k.cajaDe(x0, lomo + 0.6, 4.5, x1, lomo + 1.5, 8.2, k.agua)));
+    g.add(k.noSolido(k.cajaDe(x0, lomo - 0.25, 8.2, x1, lomo + 1.55, 8.6, oscuro)));
+    // Lámina de agua que cae desde el labio.
+    const agua = k.cascada(x1 - x0, lomo - 1.1);
+    agua.position.set(xc, 0.9 + (lomo - 1.1) / 2, 8.75);
+    g.add(agua);
+    // Pileta, espuma y luces al pie.
+    g.add(k.cajaDe(x0 - 1.2, 0, 10.6, x1 + 1.2, 1.1, 11.2, borde));
+    g.add(k.cajaDe(x0 - 1.2, 0, 8.6, x0 - 0.6, 1.1, 10.6, borde));
+    g.add(k.cajaDe(x1 + 0.6, 0, 8.6, x1 + 1.2, 1.1, 10.6, borde));
+    g.add(k.noSolido(k.cajaDe(x0, 0.1, 4.8, x1, 0.9, 10.6, k.agua)));
+    g.add(k.noSolido(k.cajaDe(x0 + 0.1, 0.85, 8.3, x1 - 0.1, 1.1, 9.6, '#e1f5fe')));
+    for (let x = x0 + 1.5; x < x1; x += 3) g.add(k.noSolido(k.cajaDe(x - 0.3, 0.9, 5, x + 0.3, 1, 5.4, k.brillo('#bfe9ff'))));
+  }
+  // Cartel de "Se busca" pegado en el pilar de la cascada derecha, mirando al camino.
+  const seBusca = k.imagen('assets/especiales/se_busca.jpg', 1.5, 2);
+  seBusca.position.set(7.77, 3.3, 6.6);
+  seBusca.rotation.set(0, -Math.PI / 2, 0.05);
+  g.add(seBusca);
+}
+
+// Baseplate verde con cordón y el contorno de la mansión marcado en el piso.
+export function terreno(k, g) {
+  const ancho = T.x1 - T.x0;
+  const largo = T.z1 - T.z0;
+  const cx = (T.x0 + T.x1) / 2;
+  const cz = (T.z0 + T.z1) / 2;
+  g.add(k.baseplate(ancho, largo, cx, cz));
+  const borde = (x0, z0, x1, z1, alto, color) => g.add(k.noSolido(k.cajaDe(x0, 0, z0, x1, alto, z1, color)));
+  const cordon = k.tex('concreto', '#e4e2de', 3);
+  borde(T.x0 - 0.25, T.z0 - 0.25, T.x1 + 0.25, T.z0 + 0.25, 0.3, cordon);
+  borde(T.x0 - 0.25, T.z1 - 0.25, T.x1 + 0.25, T.z1 + 0.25, 0.3, cordon);
+  borde(T.x0 - 0.25, T.z0, T.x0 + 0.25, T.z1, 0.3, cordon);
+  borde(T.x1 - 0.25, T.z0, T.x1 + 0.25, T.z1, 0.3, cordon);
+  const l = 0.18;
+  borde(M.x0, M.z0 - l, M.x1, M.z0 + l, 0.08, '#ffffff');
+  borde(M.x0, M.z1 - l, M.x1, M.z1 + l, 0.08, '#ffffff');
+  borde(M.x0 - l, M.z0, M.x0 + l, M.z1, 0.08, '#ffffff');
+  borde(M.x1 - l, M.z0, M.x1 + l, M.z1, 0.08, '#ffffff');
+}
+
+export function camino(k, g) {
+  const losetas = k.tex('baldosa', '#dcd7cf', 2.5);
+  g.add(k.noSolido(k.cajaDe(-2.5, 0, 3, 2.5, 0.08, T.z1, losetas)));
+  g.add(k.noSolido(k.cajaDe(-2.5, 0, P.z1 + 7, 2.5, 0.08, M.z0, losetas)));
+  // Cercos bajos de arbustos recortados a los costados del camino, con algunas flores.
+  [-1, 1].forEach((s) => {
+    g.add(k.noSolido(k.cajaDe(s * 3 - 0.45, 0, 13, s * 3 + 0.45, 0.8, 52, '#3c7a3a')));
+    for (let z = 14.5; z < 52; z += 2.5) {
+      g.add(k.noSolido(k.cajaDe(s * 3 - 0.2, 0.8, z - 0.2, s * 3 + 0.2, 1.1, z + 0.2, ['#ffffff', '#f48fb1', '#ffe082'][(z | 0) % 3])));
+    }
+  });
+}
+
+export function cerca(k, g) {
+  const blanco = '#2b2f33';
+  const tramo = (eje, fijo, a0, a1) => {
+    for (const y of [0.7, 1.5]) {
+      if (eje === 'x') g.add(k.cajaDe(a0, y, fijo - 0.12, a1, y + 0.22, fijo + 0.12, blanco));
+      else g.add(k.cajaDe(fijo - 0.12, y, a0, fijo + 0.12, y + 0.22, a1, blanco));
+    }
+    for (let s = a0; s <= a1 + 0.01; s += 3) {
+      if (eje === 'x') g.add(k.noSolido(k.cajaDe(s - 0.18, 0, fijo - 0.18, s + 0.18, 2.1, fijo + 0.18, blanco)));
+      else g.add(k.noSolido(k.cajaDe(fijo - 0.18, 0, s - 0.18, fijo + 0.18, 2.1, s + 0.18, blanco)));
+    }
+  };
+  tramo('x', T.z0, T.x0, T.x1);
+  tramo('z', T.x0, T.z0, T.z1);
+  tramo('z', T.x1, T.z0, T.z1);
+  tramo('x', T.z1, T.x0, -4.5);
+  const cg = (G.x0 + G.x1) / 2;
+  tramo('x', T.z1, 4.5, cg - 7.5);
+  tramo('x', T.z1, cg + 7.5, T.x1);
+  // Portón de entrada con arco.
+  [-5.5, 4.5].forEach((x) => {
+    g.add(k.cajaDe(x, 0, T.z1 - 0.5, x + 1, 6, T.z1 + 0.5, k.tex('piedra', '#9a9590', 2)));
+    g.add(k.noSolido(k.cajaDe(x - 0.1, 6, T.z1 - 0.6, x + 1.1, 6.6, T.z1 + 0.6, '#ffc928')));
+  });
+  g.add(k.noSolido(k.cajaDe(-5.5, 6.6, T.z1 - 0.3, 5.5, 7.6, T.z1 + 0.3, '#c62828')));
+  const arco = k.cartel('VECIBANDA', 10, 1, '#ffd23f', '#c62828');
+  arco.position.set(0, 7.1, T.z1 + 0.32);
+  g.add(arco);
+}
+
+function arbol(k, g, x, z, s = 1) {
+  g.add(k.cajaDe(x - 0.6 * s, 0, z - 0.6 * s, x + 0.6 * s, 4 * s, z + 0.6 * s, '#7a5230'));
+  g.add(k.noSolido(k.cajaDe(x - 2.6 * s, 4 * s, z - 2.6 * s, x + 2.6 * s, 7.6 * s, z + 2.6 * s, '#2e7d32')));
+  g.add(k.noSolido(k.cajaDe(x - 1.7 * s, 7.6 * s, z - 1.7 * s, x + 1.7 * s, 9.6 * s, z + 1.7 * s, '#43a047')));
+}
+
+// Palmera: tronco de bloques levemente curvo y hojas caídas en abanico.
+function palmera(k, g, x, z, s = 1) {
+  let px = x;
+  let py = 0;
+  for (let i = 0; i < 6; i++) {
+    const h = 1.6 * s;
+    g.add(k.cajaDe(px - 0.45 * s, py, z - 0.45 * s, px + 0.45 * s, py + h, z + 0.45 * s, i % 2 ? '#8d6e4f' : '#7a5c40'));
+    py += h;
+    px += 0.2 * s;
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const hoja = k.noSolido(k.caja(0.7 * s, 0.15 * s, 5 * s, i % 2 ? '#3f8f3a' : '#57b04a', px + Math.sin(a) * 2.2 * s, py, z + Math.cos(a) * 2.2 * s));
+    hoja.rotation.set(0.4, a, 0, 'YXZ');
+    g.add(hoja);
+  }
+}
+
+export function jardin(k, g) {
+  [[-24, 9], [24, 9], [45.5, 27], [-46, 8], [18, -38], [-18, -38]].forEach(([x, z], i) => palmera(k, g, x, z, 0.95 + (i % 2) * 0.15));
+  [[-44, 48], [-24, 50], [40, 48], [68, 40], [66, -20], [36, -40], [-66, -60], [-30, -80], [0, -78], [12, -80], [-48, -60], [-20, -40]]
+    .forEach(([x, z], i) => arbol(k, g, x, z, 0.85 + (i % 3) * 0.15));
+  // Canteros contra el frente de la casa.
+  [[-42, -24], [24, 42]].forEach(([x0, x1]) => {
+    g.add(k.cajaDe(x0, 0, 3.4, x1, 0.6, 5.2, k.tex('concreto', '#b9b6b0', 3)));
+    for (let x = x0 + 0.8; x < x1; x += 1.6) {
+      g.add(k.noSolido(k.cajaDe(x - 0.4, 0.6, 3.9, x + 0.4, 1.3, 4.7, ['#e91e63', '#ffeb3b', '#ffffff', '#ff5722'][(x | 0) & 3])));
+    }
+  });
+}
+
+export function farolas(k, g) {
+  // Farol moderno: poste fino negro con una barra de luz arriba.
+  const farola = (x, z) => {
+    g.add(k.cajaDe(x - 0.12, 0, z - 0.12, x + 0.12, 5.6, z + 0.12, '#24282c'));
+    g.add(k.noSolido(k.cajaDe(x - 0.2, 5.6, z - 0.7, x + 0.2, 5.9, z + 0.7, '#24282c')));
+    g.add(k.noSolido(k.cajaDe(x - 0.14, 5.52, z - 0.6, x + 0.14, 5.6, z + 0.6, k.brillo('#ffe3a8'))));
+  };
+  [14, 22, 30, 38, 46].forEach((z) => { farola(-3.9, z); farola(3.9, z); });
+  [24, 34, 44].forEach((z) => farola(G.x1 - 3.5, z));
+}
+
+export function fuente(k, g) {
+  const cx = 30;
+  const cz = 36;
+  const piedra = k.tex('concreto', '#e0ddd8', 3);
+  g.add(k.cajaDe(cx - 4, 0, cz - 4, cx + 4, 1, cz - 3.4, piedra));
+  g.add(k.cajaDe(cx - 4, 0, cz + 3.4, cx + 4, 1, cz + 4, piedra));
+  g.add(k.cajaDe(cx - 4, 0, cz - 3.4, cx - 3.4, 1, cz + 3.4, piedra));
+  g.add(k.cajaDe(cx + 3.4, 0, cz - 3.4, cx + 4, 1, cz + 3.4, piedra));
+  g.add(k.noSolido(k.cajaDe(cx - 3.4, 0, cz - 3.4, cx + 3.4, 0.8, cz + 3.4, k.agua)));
+  g.add(k.cilindro(0.6, 0.8, 3, piedra, cx, 1.5, cz, 10));
+  g.add(k.cilindro(2, 1.2, 0.6, piedra, cx, 3.3, cz, 12));
+  g.add(k.noSolido(k.cilindro(1.8, 1.8, 0.1, '#4fc3f7', cx, 3.62, cz, 12)));
+  g.add(k.cilindro(0.3, 0.4, 1.2, piedra, cx, 4.2, cz, 8));
+  g.add(k.noSolido(k.esfera(0.6, '#4fc3f7', cx, 5.2, cz)));
+}
+
+export function piscina(k, g) {
+  const a = P.alto;
+  const borde = k.tex('baldosa', '#f1ede6', 2);
+  g.add(k.cajaDe(P.x0 - 3, 0, P.z1, P.x1 + 3, a, P.z1 + 3, borde));
+  g.add(k.cajaDe(P.x0 - 3, 0, P.z0 - 3, P.x1 + 3, a, P.z0, borde));
+  g.add(k.cajaDe(P.x0 - 3, 0, P.z0, P.x0, a, P.z1, borde));
+  g.add(k.cajaDe(P.x1, 0, P.z0, P.x1 + 3, a, P.z1, borde));
+  g.add(k.noSolido(k.cajaDe(P.x0, 0, P.z0, P.x1, 0.1, P.z1, k.tex('baldosa', '#5ec8f2', 1.5))));
+  g.add(k.noSolido(k.cajaDe(P.x0, 0.1, P.z0 + 0.05, P.x1, a - 0.25, P.z1 - 0.05, k.agua)));
+  // Escalones para subir al borde (del lado de la casa).
+  for (let i = 1; i <= 5; i++) {
+    const z1 = P.z1 + 7 - 0.8 * (i - 1);
+    g.add(k.cajaDe(-3, 0, z1 - 0.8, 3, (a / 5) * i, z1, i % 2 ? '#e0e0e0' : '#d5d5d5'));
+  }
+  // Escalerita para salir del agua.
+  [-1, 1].forEach((s) => g.add(k.noSolido(k.cajaDe(8 + s * 0.6 - 0.08, 0, P.z1 - 0.4, 8 + s * 0.6 + 0.08, a + 1.2, P.z1 - 0.25, '#b0bec5'))));
+  for (let y = 0.5; y < a; y += 0.6) g.add(k.noSolido(k.cajaDe(7.4, y, P.z1 - 0.4, 8.6, y + 0.08, P.z1 - 0.25, '#b0bec5')));
+}
+
+export function reposeras(k, g) {
+  const a = P.alto;
+  [[P.x0 - 2.6, P.x0 - 0.4], [P.x1 + 0.4, P.x1 + 2.6]].forEach(([x0, x1], lado) => {
+    [P.z0 + 4, P.z0 + 11].forEach((z, i) => {
+      g.add(k.cajaDe(x0, a, z, x1, a + 0.6, z + 4, '#ffffff'));
+      g.add(k.cajaDe(x0, a + 0.6, z + 3.2, x1, a + 1.8, z + 4, '#ffffff'));
+      g.add(k.noSolido(k.cajaDe(x0 + 0.2, a + 0.6, z + 0.6, x1 - 0.2, a + 0.7, z + 3, ['#ff7043', '#29b6f6', '#ffee58', '#ab47bc'][lado * 2 + i])));
+    });
+    const xc = (x0 + x1) / 2;
+    g.add(k.cajaDe(xc - 0.12, a, P.z0 + 7.4, xc + 0.12, a + 5, P.z0 + 7.6, '#9e9e9e'));
+    g.add(k.cono(2.6, 1.2, lado ? '#ffeb3b' : '#e53935', xc, a + 5.4, P.z0 + 7.5, 8));
+  });
+}
+
+export function trampolin(k, g) {
+  const a = P.alto;
+  g.add(k.cajaDe(-1.4, a, P.z0 - 2.8, 1.4, a + 0.8, P.z0 - 0.6, '#90a4ae'));
+  g.add(k.cajaDe(-0.9, a + 0.8, P.z0 - 2.4, 0.9, a + 1, P.z0 + 4, '#1e88e5'));
+}
+
+// Parrilla Vecibanda, como la de la foto: torre de ladrillo a la vista con la chimenea a la
+// izquierda, fogón revocado con la parrilla adentro, mesada de cemento, leñero abajo y la
+// chapita del tiraje arriba. Mira a +z (hacia la casa); adelante, mesa con bancos.
+export function parrilla(k, g) {
+  const ladrillo = k.tex('ladrillo', '#c9693f', 2);
+  const cemento = k.tex('concreto', '#e4d9c4', 2);
+  const revoque = '#ece2cf';
+  const fierro = '#1f2124';
+  const x0 = PA.x - 4;
+  const x1 = PA.x + 4;
+  const zf = PA.z; // frente
+  const zb = PA.z - 3.4; // fondo
+  const p = 1.1; // ancho de los pilares
+  const muro = (a, b, y0, y1, za, zb2, m = ladrillo) => g.add(k.cajaDe(a, y0, za, b, y1, zb2, m));
+  const capa = (a, b, y0, y1, za, zb2, m) => g.add(k.noSolido(k.cajaDe(a, y0, za, b, y1, zb2, m)));
+  // Patio de cemento.
+  capa(x0 - 1.5, x1 + 4, 0, 0.08, zb - 0.6, zf + 9, k.tex('concreto', '#cfc9c0', 3));
+  // Abajo: dos pilares, fondo y el leñero con troncos.
+  muro(x0, x0 + p, 0, 3.2, zb, zf);
+  muro(x1 - p, x1, 0, 3.2, zb, zf);
+  muro(x0 + p, x1 - p, 0, 3.2, zb, zb + 0.5);
+  capa(x0 + p, x1 - p, 0.08, 0.2, zb + 0.5, zf + 0.1, cemento);
+  for (let i = 0; i < 7; i++) {
+    const tronco = k.cilindro(0.22, 0.22, 2.4, i % 2 ? '#6d4c41' : '#8d6e63', x0 + p + 0.8 + (i % 4) * 0.48, 0.42 + Math.floor(i / 4) * 0.4, zb + 1.6, 8);
+    tronco.rotation.x = Math.PI / 2;
+    g.add(k.noSolido(tronco));
+  }
+  // Mesada de cemento que sobresale.
+  muro(x0 - 0.15, x1 + 0.15, 3.2, 3.6, zb, zf + 0.45, cemento);
+  // Arriba: pilares, fondo, dintel con la chapita del tiraje y la losa.
+  const yf = 6.4; // techo del fogón
+  muro(x0, x0 + p, 3.6, 7.6, zb, zf);
+  muro(x1 - p, x1, 3.6, 7.6, zb, zf);
+  muro(x0 + p, x1 - p, 3.6, 7.6, zb, zb + 0.5);
+  muro(x0 + p, x1 - p, yf, 7.6, zf - 1.2, zf);
+  muro(x0 - 0.1, x1 + 0.1, 7.6, 7.85, zb - 0.1, zf + 0.1, cemento);
+  // Adentro del fogón, revocado claro; marco de cemento alrededor de la boca.
+  capa(x0 + p, x1 - p, 3.6, yf, zb + 0.5, zb + 0.56, revoque);
+  capa(x0 + p, x0 + p + 0.06, 3.6, yf, zb + 0.5, zf - 0.1, revoque);
+  capa(x1 - p - 0.06, x1 - p, 3.6, yf, zb + 0.5, zf - 0.1, revoque);
+  capa(x0 + p, x1 - p, yf - 0.06, yf, zb + 0.5, zf - 1.2, revoque);
+  capa(x0 + p - 0.12, x1 - p + 0.12, yf - 0.12, yf + 0.1, zf - 0.08, zf + 0.06, cemento);
+  capa(x0 + p - 0.12, x0 + p + 0.08, 3.6, yf, zf - 0.08, zf + 0.06, cemento);
+  capa(x1 - p - 0.08, x1 - p + 0.12, 3.6, yf, zf - 0.08, zf + 0.06, cemento);
+  // Chapita del tiraje: cuadrado negro con la rueda.
+  capa(PA.x - 0.55, PA.x + 0.55, 6.45, 7.5, zf, zf + 0.06, fierro);
+  const rueda = k.cilindro(0.33, 0.33, 0.08, '#cfd3d6', PA.x, 6.98, zf + 0.12, 14);
+  rueda.rotation.x = Math.PI / 2;
+  g.add(k.noSolido(rueda));
+  const centro = k.cilindro(0.18, 0.18, 0.1, fierro, PA.x, 6.98, zf + 0.15, 10);
+  centro.rotation.x = Math.PI / 2;
+  g.add(k.noSolido(centro));
+  capa(PA.x - 0.04, PA.x + 0.04, 6.6, 7.36, zf + 0.16, zf + 0.2, '#cfd3d6');
+  // Chimenea sobre el pilar izquierdo, con sombrerito de cemento.
+  muro(x0, x0 + 2.2, 7.85, 12.6, zb, zf - 0.5);
+  muro(x0 - 0.25, x0 + 2.45, 12.6, 12.95, zb - 0.25, zf - 0.25, cemento);
+  capa(x0 + 0.5, x0 + 1.7, 12.95, 13.0, zb + 0.6, zf - 1.1, '#2b2b2b');
+  // Parrilla: brasas en el piso del fogón, la rejilla con patas y la carne.
+  capa(x0 + p + 0.4, x0 + p + 2.2, 3.6, 3.72, zb + 0.9, zf - 0.6, k.brillo('#ff6d00'));
+  for (let i = 0; i < 6; i++) capa(x0 + p + 0.5 + (i % 3) * 0.55, x0 + p + 0.85 + (i % 3) * 0.55, 3.66, 3.86, zb + 1.0 + Math.floor(i / 3) * 0.8, zb + 1.35 + Math.floor(i / 3) * 0.8, '#2d2a28');
+  const ra = x0 + p + 0.35;
+  const rb = x1 - p - 0.35;
+  const rz0 = zb + 0.8;
+  const rz1 = zf - 0.35;
+  const yr = 4.55;
+  for (const [a, b] of [[ra, ra + 0.1], [rb - 0.1, rb]]) capa(a, b, yr - 0.05, yr + 0.05, rz0, rz1, fierro);
+  for (const z of [rz0, rz1 - 0.1]) capa(ra, rb, yr - 0.05, yr + 0.05, z, z + 0.1, fierro);
+  for (let x = ra + 0.3; x < rb - 0.15; x += 0.28) capa(x - 0.03, x + 0.03, yr - 0.03, yr + 0.03, rz0, rz1, '#3a3d40');
+  for (const [x, z] of [[ra + 0.1, rz0 + 0.1], [rb - 0.1, rz0 + 0.1], [ra + 0.1, rz1 - 0.1], [rb - 0.1, rz1 - 0.1]]) capa(x - 0.05, x + 0.05, 3.6, yr, z - 0.05, z + 0.05, fierro);
+  // Manija para subir y bajar la parrilla.
+  capa(rb - 0.1, rb + 0.25, yr - 0.04, yr + 0.04, rz1 - 0.2, rz1 - 0.12, fierro);
+  for (let i = 0; i < 4; i++) {
+    const chori = k.cilindro(0.13, 0.13, 1.1, '#8d3b2f', ra + 0.8 + i * 0.4, yr + 0.15, (rz0 + rz1) / 2 - 0.3, 8);
+    chori.rotation.x = Math.PI / 2;
+    g.add(k.noSolido(chori));
+  }
+  capa(rb - 2.0, rb - 0.5, yr + 0.05, yr + 0.22, rz0 + 0.4, rz0 + 1.3, '#7b3b2a');
+  capa(rb - 2.2, rb - 0.8, yr + 0.05, yr + 0.2, rz1 - 1.0, rz1 - 0.3, '#6d2c22');
+  // Pared baja de ladrillo que sigue a la derecha (como en la foto).
+  muro(x1, x1 + 3.2, 0, 4.4, zb, zb + 0.6);
+  muro(x1, x1 + 3.2, 4.4, 4.6, zb - 0.05, zb + 0.65, cemento);
+  // Cartel arriba, a la derecha de la chimenea.
+  const c = k.cartel('PARRILLA VECIBANDA', 5.2, 1.05, '#ffd23f', '#3e2723');
+  c.position.set((x0 + 2.2 + x1) / 2, 8.75, zf - 0.3);
+  g.add(c);
+  for (const dx of [-1.8, 1.8]) capa((x0 + 2.2 + x1) / 2 + dx - 0.06, (x0 + 2.2 + x1) / 2 + dx + 0.06, 7.85, 8.25, zf - 0.36, zf - 0.24, '#3e2723');
+  // Mesa de madera con dos bancos adelante.
+  const mz = zf + 4.6;
+  muro(PA.x - 3, PA.x + 3, 1.8, 2.1, mz - 1.4, mz + 1.4, '#8d6e63');
+  for (const [x, z] of [[PA.x - 2.6, mz - 1.1], [PA.x + 2.6, mz - 1.1], [PA.x - 2.6, mz + 1.1], [PA.x + 2.6, mz + 1.1]]) capa(x - 0.15, x + 0.15, 0, 1.8, z - 0.15, z + 0.15, '#5d4037');
+  muro(PA.x - 3, PA.x + 3, 0, 1.1, mz - 2.5, mz - 1.8, '#6d4c41');
+  muro(PA.x - 3, PA.x + 3, 0, 1.1, mz + 1.8, mz + 2.5, '#6d4c41');
+}
+
+export function cancha(k, g) {
+  g.add(k.noSolido(k.cajaDe(C.x0, 0, C.z0, C.x1, 0.06, C.z1, k.tex('pasto', '#4fa64a', 8))));
+  const linea = (x0, z0, x1, z1) => g.add(k.noSolido(k.cajaDe(x0, 0.07, z0, x1, 0.09, z1, '#ffffff')));
+  linea(C.x0, C.z0, C.x1, C.z0 + 0.3);
+  linea(C.x0, C.z1 - 0.3, C.x1, C.z1);
+  linea(C.x0, C.z0, C.x0 + 0.3, C.z1);
+  linea(C.x1 - 0.3, C.z0, C.x1, C.z1);
+  const cz = (C.z0 + C.z1) / 2;
+  const cx = (C.x0 + C.x1) / 2;
+  linea(C.x0, cz - 0.15, C.x1, cz + 0.15);
+  g.add(k.noSolido(k.cilindro(4, 4, 0.02, '#ffffff', cx, 0.08, cz, 24)));
+  g.add(k.noSolido(k.cilindro(3.7, 3.7, 0.03, '#388e3c', cx, 0.09, cz, 24)));
+  // Escudo de La Dosis pintado en el círculo central (se lee desde las gradas).
+  const escudo = k.imagen('assets/especiales/ladosis_escudo.png', 7, 7);
+  escudo.rotation.order = 'YXZ';
+  escudo.rotation.set(-Math.PI / 2, -Math.PI / 2, 0);
+  escudo.position.set(cx, 0.12, cz);
+  g.add(escudo);
+  [C.z0, C.z1].forEach((z, i) => {
+    const s = i === 0 ? -1 : 1;
+    const zf = z + s * 0.2;
+    g.add(k.cajaDe(cx - 3.4, 0, zf - 0.2, cx - 3, 3.2, zf + 0.2, '#ffffff'));
+    g.add(k.cajaDe(cx + 3, 0, zf - 0.2, cx + 3.4, 3.2, zf + 0.2, '#ffffff'));
+    g.add(k.cajaDe(cx - 3.4, 3.2, zf - 0.2, cx + 3.4, 3.6, zf + 0.2, '#ffffff'));
+    g.add(k.cajaDe(cx - 3.2, 0, zf + s * 1.6 - 0.05, cx + 3.2, 3.2, zf + s * 1.6 + 0.05, k.red));
+  });
+}
+
+// Garage grande para el auto y la bóveda: piso de resina, luces en el techo y un taller.
+export function garage(k, g) {
+  const c = k.tex('estuco', '#f6f4ef', 3);
+  const A = G.alto;
+  const cx = (G.x0 + G.x1) / 2;
+  const P = 7; // medio ancho del portón
+  g.add(k.noSolido(k.cajaDe(G.x0, 0, G.z0, G.x1, 0.1, G.z1, k.tex('concreto', '#9aa1a7', 5))));
+  g.add(k.noSolido(k.cajaDe(cx - P, 0, G.z1, cx + P, 0.08, T.z1, k.tex('concreto', '#d9d6d0', 4))));
+  g.add(k.cajaDe(G.x0, 0, G.z0, G.x1, A, G.z0 + 0.5, c));
+  g.add(k.cajaDe(G.x0, 0, G.z0 + 0.5, G.x0 + 0.5, A, G.z1, c));
+  g.add(k.cajaDe(G.x1 - 0.5, 0, G.z0 + 0.5, G.x1, A, G.z1, c));
+  g.add(k.cajaDe(G.x0 + 0.5, 0, G.z1 - 0.5, cx - P, A, G.z1, c));
+  g.add(k.cajaDe(cx + P, 0, G.z1 - 0.5, G.x1 - 0.5, A, G.z1, c));
+  g.add(k.cajaDe(cx - P, 7.4, G.z1 - 0.5, cx + P, A, G.z1, c));
+  // Portón levantado y techo.
+  g.add(k.noSolido(k.cajaDe(cx - P + 0.2, 6.8, G.z1 - 0.45, cx + P - 0.2, 7.4, G.z1 - 0.05, k.tex('panel', '#5b636a', 2))));
+  g.add(k.cajaDe(G.x0 - 0.5, A, G.z0 - 0.5, G.x1 + 0.5, A + 0.6, G.z1 + 1.5, '#2b2f33'));
+  // Tiras de luz y franjas de estacionamiento.
+  for (let z = G.z0 + 4; z < G.z1 - 2; z += 6) g.add(k.noSolido(k.cajaDe(G.x0 + 3, A - 0.15, z, G.x1 - 3, A - 0.05, z + 0.4, k.brillo('#f4f8ff'))));
+  [cx - 6, cx + 6].forEach((x) => g.add(k.noSolido(k.cajaDe(x - 0.15, 0.1, 2, x + 0.15, 0.13, G.z1 - 2, '#f2c230'))));
+  // Taller en la pared del fondo: mesa, herramientas, estantes y cubiertas apiladas.
+  const fondo = G.z0 + 0.5;
+  g.add(k.cajaDe(cx - 2, 0, fondo, cx + 6, 2.4, fondo + 1.6, '#4a5056'));
+  g.add(k.noSolido(k.cajaDe(cx - 2.1, 2.4, fondo, cx + 6.1, 2.6, fondo + 1.7, '#8d6e4f')));
+  g.add(k.noSolido(k.cajaDe(cx - 2, 3.4, fondo, cx + 6, 6.4, fondo + 0.08, '#c62828')));
+  [[-1, '#ffc928'], [0.6, '#9e9e9e'], [2.2, '#1e88e5'], [3.8, '#9e9e9e'], [5, '#43a047']].forEach(([dx, col]) =>
+    g.add(k.noSolido(k.cajaDe(cx + dx, 4, fondo + 0.08, cx + dx + 0.3, 5.8, fondo + 0.2, col))));
+  for (let i = 0; i < 4; i++) {
+    const t = k.cilindro(1.1, 1.1, 0.75, '#1f2326', cx + 10, 0.4 + i * 0.78, fondo + 2, 16);
+    g.add(t);
+  }
+  // La Dosis: banderines sobre el taller y el escudo grande en la pared.
+  k.banderines(g, G.x0 + 1, fondo + 0.4, G.x1 - 1, fondo + 0.4, A - 0.4, 17, 1.3);
+  const escudo = k.imagen('assets/especiales/ladosis_escudo.png', 4.6, 4.6);
+  escudo.position.set(G.x0 + 0.52, 4.8, G.z0 + 9);
+  escudo.rotation.y = Math.PI / 2;
+  g.add(escudo);
+  const cartel = k.cartel('GARAGE', 6, 1.2, '#ffffff', '#455a64');
+  cartel.position.set(cx, 8.2, G.z1 + 0.02);
+  g.add(cartel);
+}
+
+// Galpón Vecibanda (como un galpón de campo): chapa acanalada clara sobre un zócalo de
+// hormigón, bordes y parantes verdes, techo a dos aguas, el portón corredizo corrido a un
+// costado y la boca abierta hacia la calle. Adentro, pórticos de hierro, chapas traslúcidas
+// arriba en los costados, luces y los lugares marcados para los autos.
+export function galpon(k, g) {
+  const { x0, x1, z0, z1, alto: A, cumbrera: C2, boca: [b0, b1] } = GA;
+  const cx = (x0 + x1) / 2;
+  const { THREE } = k;
+  const chapa = k.tex('chapa', '#eef0f2', 3.2);
+  const chapaTecho = k.tex('chapa', '#d9dde1', 3.2);
+  const hormigon = k.tex('concreto', '#b9b6ae', 3);
+  const verde = '#2e7d32';
+  const hierro = '#3b4046';
+  const e = 0.4; // espesor de las paredes
+  const ZOC = 1.4; // alto del zócalo de hormigón
+  // Piso y camino de hormigón hasta la calle.
+  g.add(k.noSolido(k.cajaDe(x0, 0, z0, x1, 0.1, z1, k.tex('concreto', '#a3a7ab', 5))));
+  g.add(k.noSolido(k.cajaDe(b0, 0, z1, b1, 0.08, CALLE_Z - 8, k.tex('concreto', '#cfcbc3', 4))));
+  // Pared con zócalo: hormigón abajo y chapa arriba.
+  const pared = (ax, az, bx, bz, y1 = A) => {
+    g.add(k.cajaDe(ax, 0, az, bx, ZOC, bz, hormigon));
+    g.add(k.cajaDe(ax, ZOC, az, bx, y1, bz, chapa));
+  };
+  pared(x0, z0, x0 + e, z1); // costados
+  pared(x1 - e, z0, x1, z1);
+  pared(x0 + e, z0, x1 - e, z0 + e); // fondo
+  pared(x0 + e, z1 - e, b0, z1); // frente, a los dos lados de la boca
+  pared(b1, z1 - e, x1 - e, z1);
+  g.add(k.cajaDe(b0, 9.4, z1 - e, b1, A, z1, chapa)); // arriba de la boca
+  // Hastiales (los triángulos de arriba, adelante y atrás).
+  const triangulo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(x0, A, 0), new THREE.Vector3(x1, A, 0), new THREE.Vector3(cx, C2, 0),
+  ]);
+  triangulo.computeVertexNormals();
+  const matHastial = new THREE.MeshLambertMaterial({ color: '#dfe2e5', side: THREE.DoubleSide });
+  for (const z of [z0, z1]) {
+    const t = new THREE.Mesh(triangulo, matHastial);
+    t.position.z = z;
+    g.add(k.noSolido(t));
+  }
+  // Techo a dos aguas, con un poco de alero, y la cumbrera.
+  const medio = (x1 - x0) / 2;
+  const largo = Math.hypot(medio, C2 - A) + 0.8;
+  const angulo = Math.atan2(C2 - A, medio);
+  for (const lado of [-1, 1]) {
+    const techo = k.cajaDe(-largo / 2, 0, z0 - 0.8, largo / 2, 0.25, z1 + 0.8, chapaTecho);
+    techo.position.set(cx + lado * (medio / 2), (A + C2) / 2 + 0.12, (z0 + z1) / 2);
+    techo.rotation.z = -lado * angulo;
+    g.add(k.noSolido(techo));
+  }
+  g.add(k.noSolido(k.cajaDe(cx - 0.5, C2, z0 - 0.8, cx + 0.5, C2 + 0.35, z1 + 0.8, '#b7bcc1')));
+  // Bordes y parantes verdes (esquinas, boca y abajo de los aleros).
+  for (const [x, z] of [[x0, z1], [x1, z1], [x0, z0], [x1, z0]]) {
+    g.add(k.noSolido(k.cajaDe(x - 0.3, 0, z - 0.3, x + 0.3, A, z + 0.3, verde)));
+  }
+  for (const x of [b0, b1]) g.add(k.noSolido(k.cajaDe(x - 0.25, 0, z1 - 0.5, x + 0.25, 9.4, z1 + 0.1, verde)));
+  g.add(k.noSolido(k.cajaDe(b0, 9.2, z1 - 0.5, b1, 9.5, z1 + 0.1, verde)));
+  for (const x of [x0 - 0.05, x1 + 0.05]) g.add(k.noSolido(k.cajaDe(x - 0.1, A - 0.25, z0, x + 0.1, A, z1, verde)));
+  // Portón corredizo: corrido hacia la izquierda, sobre su riel, adelante de la pared.
+  g.add(k.cajaDe(b0 - 15, 0, z1 + 0.2, b0 + 1, 9.2, z1 + 0.6, chapa));
+  g.add(k.noSolido(k.cajaDe(b0 - 15.3, 0, z1 + 0.15, b0 + 1.3, 0.35, z1 + 0.65, verde)));
+  g.add(k.noSolido(k.cajaDe(b0 - 15.3, 9.2, z1 + 0.15, b0 + 1.3, 9.5, z1 + 0.65, verde)));
+  g.add(k.noSolido(k.cajaDe(b0 - 16, 9.5, z1 + 0.2, b0 + 2, 9.7, z1 + 0.5, hierro))); // riel
+  // Bolsitas de arena rojas que traban el portón (como en la foto).
+  for (const x of [b0 - 13.5, b0 - 10.5, b1 + 1.6]) g.add(k.noSolido(k.cajaDe(x - 0.45, 0, z1 + 0.7, x + 0.45, 0.55, z1 + 1.4, '#d32f2f')));
+  // Adentro: pórticos de hierro cada 10 (columnas contra las paredes y cabriadas inclinadas).
+  for (let z = z0 + 5; z < z1 - 2; z += 10) {
+    for (const lado of [-1, 1]) {
+      const x = lado < 0 ? x0 + e : x1 - e - 0.5;
+      g.add(k.cajaDe(x, 0, z - 0.25, x + 0.5, A, z + 0.25, hierro));
+      const viga = k.cajaDe(-largo / 2, -0.6, -0.15, largo / 2, 0, 0.15, hierro);
+      viga.position.set(cx + lado * (medio / 2), (A + C2) / 2 - 0.2, z);
+      viga.rotation.z = -lado * angulo;
+      g.add(k.noSolido(viga));
+    }
+    g.add(k.noSolido(k.cajaDe(x0 + 3, A - 0.6, z - 0.2, x1 - 3, A - 0.45, z + 0.2, hierro))); // tensor
+    g.add(k.noSolido(k.cajaDe(cx - 8, A - 0.9, z - 0.25, cx + 8, A - 0.7, z + 0.25, k.brillo('#f4f8ff'))));
+  }
+  // Chapas traslúcidas arriba en los costados (dejan pasar la luz).
+  for (let z = z0 + 10; z < z1 - 4; z += 10) {
+    for (const x of [x0 - 0.03, x1 + 0.03]) g.add(k.noSolido(k.cajaDe(x - 0.04, A - 3.2, z - 1.4, x + 0.04, A - 0.8, z + 1.4, k.brillo('#e8eef2'))));
+  }
+  // Lugares para los autos: líneas amarillas y un tope en el fondo.
+  const pasoL = GALPON_LUGARES[1].x - GALPON_LUGARES[0].x;
+  for (let i = 0; i <= GALPON_LUGARES.length; i++) {
+    const x = GALPON_LUGARES[0].x - pasoL / 2 + i * pasoL;
+    g.add(k.noSolido(k.cajaDe(x - 0.15, 0.1, -30, x + 0.15, 0.13, -9, '#f2c230')));
+  }
+  for (const l of GALPON_LUGARES) g.add(k.noSolido(k.cajaDe(l.x - 1.6, 0.1, -31.5, l.x + 1.6, 0.4, -30.8, '#f2c230')));
+  // Cartel arriba de la boca.
+  const cartel = k.cartel('GALPÓN VECIBANDA', 13, 2, '#ffffff', verde);
+  cartel.position.set(cx, A + 1.6, z1 + 0.05);
+  g.add(cartel);
+}
+
+// Gradas de cemento con asientos de colores, techo y un marcador.
+export function gradas(k, g) {
+  const cemento = k.tex('concreto', '#cfccc6', 3);
+  const z0 = C.z0 + 4;
+  const z1 = C.z1 - 4;
+  const colores = ['#e53935', '#1e88e5', '#fdd835', '#43a047'];
+  for (let i = 0; i < 4; i++) {
+    const x1 = C.x0 - 1 - i * 1.6;
+    const x0 = x1 - 1.6;
+    g.add(k.cajaDe(x0, 0, z0, x1, 0.7 * (i + 1), z1, cemento));
+    for (let z = z0 + 0.4; z < z1 - 0.8; z += 1.2) {
+      g.add(k.noSolido(k.cajaDe(x1 - 0.9, 0.7 * (i + 1), z, x1 - 0.2, 0.7 * (i + 1) + 0.35, z + 0.9, colores[i])));
+    }
+  }
+  const atras = C.x0 - 1 - 4 * 1.6;
+  g.add(k.cajaDe(atras - 0.4, 0, z0, atras, 7.5, z1, cemento));
+  for (let z = z0; z <= z1; z += (z1 - z0) / 3) g.add(k.cajaDe(atras - 0.4, 0, z - 0.2, atras, 7.5, z + 0.2, '#24282c'));
+  g.add(k.noSolido(k.cajaDe(atras - 0.6, 7.5, z0 - 0.5, C.x0 - 0.4, 7.9, z1 + 0.5, '#24282c')));
+  // Marcador detrás del arco del fondo.
+  const cx = (C.x0 + C.x1) / 2;
+  [-4, 4].forEach((dx) => g.add(k.cajaDe(cx + dx - 0.2, 0, C.z0 - 2.6, cx + dx + 0.2, 6, C.z0 - 2.2, '#24282c')));
+  g.add(k.cajaDe(cx - 5.5, 5.5, C.z0 - 2.7, cx + 5.5, 9.5, C.z0 - 2.3, '#111214'));
+  const marcador = k.cartel('LA DOSIS 3 - 0 COCA', 10.5, 3.4, '#ffd23f', '#111214');
+  marcador.position.set(cx, 7.5, C.z0 - 2.28);
+  g.add(marcador);
+  [-7.6, 7.6].forEach((dx) => {
+    const e = k.imagen('assets/especiales/ladosis_escudo.png', 3.4, 3.4);
+    e.position.set(cx + dx, 7.5, C.z0 - 2.28);
+    g.add(e);
+  });
+  // La Dosis en las gradas: escudos en la pared del fondo y banderines en el techo.
+  [z0 + 7, z1 - 7].forEach((z) => {
+    const e = k.imagen('assets/especiales/ladosis_escudo.png', 4.4, 4.4);
+    e.position.set(atras + 0.02, 5.1, z);
+    e.rotation.y = Math.PI / 2;
+    g.add(e);
+  });
+  k.banderines(g, C.x0 - 0.5, z0, C.x0 - 0.5, z1, 7.45, 17, 1.25);
+}
