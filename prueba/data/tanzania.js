@@ -32,7 +32,7 @@ export const ITEMS_TZ = [
   { id: 'tz_mesa5', nombre: 'Mesa de cultivo 5', tipo: 'mesa', precio: 6.5 * T },
   { id: 'tz_prensa', nombre: 'Prensa y bolsitas', tipo: 'proceso', precio: 9 * T, valor: 2.5 },
   { id: 'tz_mesa6', nombre: 'Mesa de cultivo 6', tipo: 'mesa', precio: 13 * T },
-  { id: 'tz_furgoneta', nombre: 'Furgoneta de reparto', tipo: 'venta', precio: 18 * T, valor: 1.5 },
+  { id: 'tz_furgoneta', nombre: 'Camioneta de reparto', tipo: 'venta', precio: 18 * T, valor: 1.5 }, // se maneja (tanzania.js)
   { id: 'tz_luz4', nombre: 'Luces de cultivo 4', tipo: 'luz', precio: 25 * T, vel: 1.5 },
   { id: 'tz_mesa7', nombre: 'Mesa de cultivo 7', tipo: 'mesa', precio: 36 * T },
   { id: 'tz_laboratorio', nombre: 'Laboratorio', tipo: 'proceso', precio: 50 * T, valor: 3 },
@@ -48,4 +48,11 @@ export function ingresoTz(compras) {
   const vel = items.reduce((v, i) => v * (i.vel || 1), 1);
   const valor = items.reduce((v, i) => v * (i.valor || 1), 1);
   return (mesas * PLANTAS_POR_MESA * VALOR_PLANTA * valor * vel) / CICLO;
+}
+
+// Lo que vale una bolsita (una planta procesada con lo que tenés): la que agarrás del depósito
+// para fumar o vender por tu cuenta (Francis Jeremy, la Cachimba).
+export function precioBolsa(compras) {
+  const tiene = new Set(compras);
+  return VALOR_PLANTA * ITEMS_TZ.filter((i) => i.tipo === 'proceso' && tiene.has(i.id)).reduce((v, i) => v * i.valor, 1);
 }
