@@ -38,12 +38,15 @@ import { Playa } from './playa.js';
 import { Concesionario, Flota, Taller } from './auto.js';
 import { Autodromo, PISTA } from './autodromo.js';
 import { PLATOS } from './resto.js';
-import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD, PLAYA, AUTOS_DESDE, BARRIO, DX, CACHIMBA } from './constantes.js';
+import { RESTO, PARRILLA, GYM, MANSION, CALLE_Z, AUTOPISTA, AUTODROMO, CIUDAD, CONCESIONARIO, TALLER, GALPON, MONTANA, GARAGE, PISCINA, CANCHA, TP_CIUDAD, PLAYA, AUTOS_DESDE, BARRIO, DX, CACHIMBA, COSTA, LIMITE_MAPA } from './constantes.js';
 import { crearAK } from './arma.js';
 import { Lechugas, PRECIO_LECHUGA } from './lechugas.js';
 import { PRENDAS, PRENDA, SLOTS } from '../data/ropa.js';
 import { vestido } from './vestir.js';
 import { Probador } from './probador.js';
+import { NicoBaraja } from './nico.js';
+import { Costa, alturaCosta } from './costa.js';
+import { Tanzania } from './tanzania.js';
 
 async function iniciar() {
   // La fuente redonda tiene que estar lista antes de dibujar carteles.
@@ -123,7 +126,11 @@ async function iniciar() {
   tycoon.reconstruir();
   tycoon.lote.absorber(mundo.estaticos);
   colisiones.push(...mundo.choques);
+  // El piso natural: la montaña y, en la costa, el acantilado y la subida.
+  const alturaMontana = mundo.altura;
+  mundo.altura = (x, z) => Math.max(alturaMontana(x, z), alturaCosta(x, z));
   jugador.terreno = mundo.altura;
+  if (estado.costa) LIMITE_MAPA.x1 = COSTA.x1; // la costa ya está abierta (le pagaste a Nico)
   UI.prepararHUD();
   const ladron = new Ladron(escena, tycoon, UI);
   // Olga, Olivia y Pancho: se compran al 75%, se sientan afuera y cuidan la casa de la Schwepa.
@@ -151,6 +158,13 @@ async function iniciar() {
   // El Humano (de noche, en la ciudad) y su barrio, La Cachimba del Piojo (solo si te invitó).
   const humano = new Humano({ escena, ui: UI, estado, guardar: () => guardarAhora(), hora: () => hora(), ingreso: () => tycoon.ingresoPorSegundo || 0, pausar: (b) => { controles.activo = !b && modo === 'juego'; } });
   const cachimba = new Cachimba({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones });
+  // Nico Baraja (al 99% de la mansión) habilita la costa: las mansiones de lujo y el galpón de tanzania.
+  const pausarDialogo = (b) => { controles.activo = !b && modo === 'juego'; };
+  const nico = new NicoBaraja({ escena, estado, ui: UI, guardar: () => guardarAhora(), progreso: () => tycoon.progreso, pausar: pausarDialogo });
+  const costa = new Costa({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones, pausar: pausarDialogo });
+  const tanzania = new Tanzania({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones });
+  nico.alAbrir = () => { LIMITE_MAPA.x1 = COSTA.x1; };
+  tanzania.alComprar = (it) => { if (it.tipo === 'galpon') delete fotos.costa; }; // la foto del mapa, con el galpón
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
   const estatua = new Estatua({ escena, colisiones });
   const bar = new Bar({ ciudad, escena, estado, ui: UI, jugador, controles, guardar: () => guardarAhora(), ingreso: () => tycoon.ingresoPorSegundo || 0 });
@@ -189,8 +203,9 @@ async function iniciar() {
     autodromo: [AUTODROMO.x - 900, AUTOPISTA.z - 30, AUTODROMO.x + 900, AUTODROMO.z + 900],
     ciudad: [CIUDAD.x - RADIO_CIUDAD - 20, CIUDAD.z - RADIO_CIUDAD - 20, TALLER.x1 + 30, CIUDAD.z + RADIO_CIUDAD + 20],
     cachimba: [CACHIMBA.x0 - 20, CACHIMBA.z0 - 20, CACHIMBA.x1 + 20, AUTOPISTA.z - AUTOPISTA.medioAncho],
+    costa: [COSTA.x0 - 60, COSTA.meseta.z0 - 20, COSTA.x1 + 20, PLAYA.orilla + 12],
   };
-  const PX_MAPA = { barrio: globalThis.VECI?.red ? 1 : 1.6, autodromo: 0.9, ciudad: 1.5, cachimba: 1.2 }; // píxeles por unidad de cada foto
+  const PX_MAPA = { barrio: globalThis.VECI?.red ? 1 : 1.6, autodromo: 0.9, ciudad: 1.5, cachimba: 1.2, costa: 1 }; // píxeles por unidad de cada foto
   const fotos = {};
   const camMapa = new THREE.OrthographicCamera(-1, 1, 1, -1, 10, 2000);
   camMapa.up.set(0, 0, -1); // el norte (−z) arriba
@@ -216,7 +231,7 @@ async function iniciar() {
     // sacarla: sacarla recompila todos los materiales).
     const ocultos = [];
     escena.traverse((o) => { if (o.isSprite && o.visible) { o.visible = false; ocultos.push(o); } });
-    const lejos = [concesionario.grupo, taller.grupo, autodromo.grupo].filter((g) => !g.visible);
+    const lejos = [concesionario.grupo, taller.grupo, autodromo.grupo, costa.grupo, tanzania.grupo].filter((g) => g && !g.visible);
     for (const g of lejos) g.visible = true;
     const [near, far] = [escena.fog.near, escena.fog.far];
     mundo.paraMapa(true);
@@ -268,6 +283,7 @@ async function iniciar() {
     if (!fotos.barrio || (fotos.barrio.compras !== estado.compras.length && performance.now() - fotos.barrio.cuando > 90000)) return 'barrio';
     if (ciudad.lista && !fotos.ciudad) return 'ciudad';
     if (cachimba.grupo && estado.cachimba?.visitada && !fotos.cachimba) return 'cachimba';
+    if (costa.grupo && !fotos.costa) return 'costa';
     return null;
   };
   const centroPista = PISTA.puntos.reduce((a, q) => ({ x: a.x + q.x / PISTA.puntos.length, z: a.z + q.z / PISTA.puntos.length }), { x: 0, z: 0 });
@@ -296,6 +312,9 @@ async function iniciar() {
     },
     etiquetas: [
       etiqueta(MANSION, 'Mansión', 0, 0),
+      // La costa: "?" desde que Nico espera (99%), el nombre cuando le pagaste.
+      Object.assign(oculto(etiqueta({ x: (COSTA.x0 + COSTA.x1) / 2, z: COSTA.meseta.z0 + 40 }, 'La Costa', 0, 0), { x0: COSTA.x0, z0: COSTA.meseta.z0, x1: COSTA.x1, z1: PLAYA.orilla }, () => !estado.costa), { nada: () => !estado.costa && tycoon.progreso < COSTA.desde }),
+      Object.assign(etiqueta({ x: COSTA.galpon.x, z: COSTA.galpon.z }, 'Galpón de tanzania', 1, 0.15), { nada: () => !estado.tanzania?.compras?.includes('tz_galpon') }),
       // Hasta que El Humano te invita no está; después, "?" hasta que vas.
       Object.assign(oculto(etiqueta(CACHIMBA, 'La Cachimba del Piojo', 0, 0), CACHIMBA, () => !estado.cachimba?.visitada), { nada: () => !estado.cachimba }),
       oculto(etiqueta(centroPista, 'Autódromo Vecibanda Ring', 0, 0), margen(cajaPista, 70), () => progreso() < AUTOS_DESDE),
@@ -558,6 +577,14 @@ async function iniciar() {
   const accion = () => {
     if (conduciendo && !enHeli() && !autodromo.corriendo && taller.accion(jugador, vehiculo)) {
       if (taller.hacer(vehiculo)) controles.activo = false;
+      return;
+    }
+    if (!conduciendo && nico.accion(jugador)) {
+      nico.hacer();
+      return;
+    }
+    if (!conduciendo && costa.accion(jugador)) {
+      costa.hacer(jugador);
       return;
     }
     if (!conduciendo && pony.hacer(jugador, estado.personaje === 'bauti')) return;
@@ -1224,7 +1251,7 @@ async function iniciar() {
 
   // ?debug: juego.depurar.camaraLibre deja mover la cámara a mano (para sacar fotos).
   const depurar = { camaraLibre: false };
-  if (location.search.includes('debug')) window.juego = { renderer, depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, hilario, humano, cachimba, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
+  if (location.search.includes('debug')) window.juego = { renderer, depurar, estado, jugador, tycoon, controles, ir, camara, ladron, mazza, resto, gym, misiones, dufre, ottati, manu, banda, amarishuow, pony, estatua, mj, bar, hilario, humano, cachimba, nico, costa, tanzania, ciudad, casino, lucca, playa, concesionario, flota, karaoke, autodromo, taller, perros, lechugas, sacarLechuga, fotos: () => fotos, capturarMapa: (id) => capturarMapa(id) };
 
   // ---------- Cámara ----------
   const objetivo = new THREE.Vector3().copy(jugador.pos);
@@ -1358,7 +1385,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : nico.accion(jugador) || costa.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
@@ -1394,6 +1421,9 @@ async function iniciar() {
     hilario.actualizar(dt, jugador, modo === 'juego');
     humano.actualizar(dt, jugador, modo === 'juego', momento(hora()).noche, !conduciendo);
     cachimba.actualizar(dt, jugador, modo === 'juego');
+    nico.actualizar(dt, jugador);
+    costa.actualizar(dt, jugador);
+    tanzania.actualizar(dt, jugador);
     pony.actualizar(dt, jugador);
     if (modo === 'juego') mj?.actualizar(dt, { modo: conduciendo && vehiculo !== tycoon.heli ? 'auto' : pony.montado ? 'pony' : 'pie', vehiculo: conduciendo && vehiculo !== tycoon.heli ? vehiculo : null });
     banda.actualizar(dt, jugador, modo === 'juego' && !vistaCompleta, ladron);
@@ -1416,7 +1446,7 @@ async function iniciar() {
     mundo.actualizar(dt, hora(), estado.compras.includes('farolas') ? 1 : luzBarrio(), camara.position, luzGym);
     if (modo === 'juego') {
       estado.tiempoJugado += dt;
-      UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo, tycoon.progreso);
+      UI.actualizarHUD(estado.plata, tycoon.ingresoPorSegundo + tanzania.ingresoPorSegundo, tycoon.progreso);
       // Mapa: la próxima foto que falte (de a una) y el minimapa con dónde estás.
       esperaMapa -= dt;
       if (esperaMapa <= 0 && !UI.mapaAbierto()) {
