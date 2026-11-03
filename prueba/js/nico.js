@@ -58,7 +58,17 @@ export async function crearNico() {
         if (torso) g.drawImage(torso, 0, h * 0.04, w, h * 0.96);
         if (cuello) g.drawImage(cuello, w * 0.36, 0, w * 0.28, h * 0.06);
       });
-      malla.material = [lisa, lisa, lisa, lisa, basico(frente), lisa];
+      // La espalda: la misma tinta (otro pedazo, dado vuelta), así es del mismo tatuador.
+      const espalda = lienzo(256, 320, (g, w, h) => {
+        g.fillStyle = piel;
+        g.fillRect(0, 0, w, h);
+        if (torso) {
+          g.translate(w, 0);
+          g.scale(-1, 1);
+          g.drawImage(torso, 0, torso.height * 0.3, torso.width, torso.height * 0.7, w * 0.04, h * 0.06, w * 0.92, h * 0.9);
+        }
+      });
+      malla.material = [lisa, lisa, lisa, lisa, basico(frente), basico(espalda)];
       // La manga del brazo derecho (en el muñeco, el de la izquierda: mira hacia adelante):
       // el brazo hasta el codo y el antebrazo, alrededor (adelante, atrás y los costados).
       const vuelta = (mesh, img) => {
@@ -69,6 +79,11 @@ export async function crearNico() {
       vuelta(arriba, brazo);
       medio.material = lisa;
       vuelta(brazoI.codo.children.find((o) => o.isMesh), antebrazo);
+      // El otro brazo, con la manga espejada (la misma tinta del otro lado).
+      const espejo = (img) => img && (() => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.translate(img.width, 0); g.scale(-1, 1); g.drawImage(img, 0, 0); return c; })();
+      const [arribaD] = brazoD.children.filter((o) => o.isMesh);
+      vuelta(arribaD, espejo(brazo));
+      vuelta(brazoD.codo.children.find((o) => o.isMesh), espejo(antebrazo));
       // Las tres cadenas de oro, de más corta a más larga, colgando sobre el pecho.
       const arriba0 = malla.position.y + 1;
       [0.32, 0.42, 0.55].forEach((r, i) => {
@@ -87,10 +102,15 @@ export async function crearNico() {
   const jean = new THREE.TextureLoader().load('assets/ropa/nicobaraja_jean.jpg');
   jean.colorSpace = THREE.SRGBColorSpace;
   const matJean = new THREE.MeshLambertMaterial({ map: jean });
+  // Jorts anchos (como los de la foto): más gruesos que la pierna, pasan la rodilla y tapan la
+  // entrepierna.
   for (const pi of [m.partes.piernaI, m.partes.piernaD]) {
     pi.muslo.children.find((o) => o.isMesh).material = matJean;
     pi.rodilla.children.find((o) => o.isMesh).material = lisa;
+    pi.muslo.add(caja(1.12, 1.02, 1.12, matJean, 0, -0.5, 0));
+    pi.rodilla.add(caja(1.1, 0.38, 1.1, matJean, 0, -0.17, 0));
   }
+  m.grupo.add(caja(1.2, 0.75, 1.0, matJean, 0, 1.68, 0));
   return { m, cab };
 }
 
