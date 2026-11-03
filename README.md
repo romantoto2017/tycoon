@@ -360,7 +360,7 @@ En `prueba/` hay una copia exacta del juego, publicada en la misma página con `
 - **Solo con el link del dueño** (`…/prueba/#llave=…`): sin la llave muestra "404 · Página no encontrada". En el código está solo la huella SHA-256 de la llave (`HUELLA` en `js/entorno.js`), no la llave; el navegador que entró con el link la recuerda. Para cambiarla: otra llave, su huella en `HUELLA` y `copiar_prueba.sh`.
 - **No toca el juego de verdad:** usa sus propias partidas guardadas (claves `prueba-...` en el navegador) y su propio lugar en Firebase (`prueba/...`, con sus 9 terrenos aparte). Todo eso sale de `js/entorno.js`, según si el juego corre desde `/prueba/`.
 - **Arranca con tu partida:** la primera vez, la copia toma una copia de lo que tenés guardado en el juego de verdad (y tu nombre). Lo que hagas después queda solo en la prueba.
-- **Con `&completa` al final del link** (`…/prueba/#llave=…&completa`): la partida de la prueba queda con la mansión al 100% y 500T, guardada (para probar lo nuevo sin jugar todo).
+- **Con `?completa` en el link** (`…/prueba/?completa#llave=…`): la partida de la prueba queda con la mansión al 100% y 500T, guardada (para probar lo nuevo sin jugar todo).
 - `sh herramientas/copiar_prueba.sh` rehace la copia desde el juego; `sh herramientas/pasar_prueba.sh` pasa lo de `prueba/` al juego de verdad.
 
 ## Actualización en prueba: la costa y la tanzania
