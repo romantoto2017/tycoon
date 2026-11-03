@@ -363,6 +363,8 @@ export class Multijugador {
     this.alMorir = null; // main.js
     this.t = 0;
     red.enLinea(uid, nombre);
+    // Si te sacan de la partida mientras jugás, se recarga y el arranque ya no te deja entrar.
+    red.alExpulsado(uid, () => location.reload());
     red.alJugadores((js) => this.recibirJugadores(js));
     red.alPosiciones((id, p) => {
       if (id === uid) return;

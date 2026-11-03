@@ -81,7 +81,9 @@ Hasta 9 jugadores a la vez, cada uno con su terreno sobre la misma calle (los 8 
 - **Parrilla Vecibanda**: se compra al lado de lo de Lourdes y cada uno ve solo la suya (las mansiones de los demás no la muestran).
 - **Podio en el cielo** (atrás de las mansiones): los 3 con la mansión más avanzada, con su personaje, nombre y porcentaje.
 - Archivos: `js/arranque.js` (nombre, conexión y terreno, antes de cargar el juego), `js/red.js` (la base de datos), `js/multijugador.js` (los demás, sus mansiones, el podio y la puerta láser).
-- Sin config el juego anda solo, como siempre. La vista `?completo` no se conecta.
+- **Una sola partida**: si no hay lugar (los 9 ocupados), si no hay conexión o si te sacaron, no se puede jugar (no hay partida aparte para jugar solo). Lo guardado en el navegador queda para cuando entres.
+- **Sacados** (`SACADOS` en `js/red.js`, por nombre de usuario): Tepho y le shpet. El que entra los saca solo: les libera el terreno, borra sus datos y los anota en `expulsados/`.
+- `?completo`, `?redlocal`, `?uid=` y `?nombre=` andan solo en la compu (localhost), para probar.
 
 ### Cómo prenderlo (Firebase, gratis, una sola vez)
 

@@ -6,9 +6,11 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Plugins: solo ponytail anda solo. claude-mem no sirve en la web: su memoria se borra con el contenedor y sincronizarla pide cuenta paga (cmem.ai Pro) y una terminal.
 
 ## Pendiente
+- Sacar a Tepho y le shpet pasa cuando entra cualquiera al juego publicado (no se pudo tocar Firebase desde el contenedor).
 - Multijugador y chat: probados solo con la red local de prueba; con Firebase real lo prueba el dueño.
 
 ## Último trabajo
+- Una sola partida: sin lugar/conexión/sacado no se juega (arranque.js). Sacados por nombre: Tepho y le shpet (SACADOS en red.js, expulsados/ en Firebase). ?completo/?redlocal/?uid/?nombre solo en localhost.
 - Mapa negro/calor: foto del mapa en pedazos de 512 (antes ~50 MB de golpe), sin render 3D con el mapa abierto, lienzo del mapa se libera al cerrar; cuadros >1024 achicados (texturas 127→93 MB barrio, 179→135 ciudad); Constructor y Pila sueltan arrays al subir.
 - iPhone otra vez: la Cachimba se arma recién a <1000 de distancia (antes al cargar: pico de memoria); peatones y villeros con sinCara (se vacía también el frente). Canvas vivos ~37 MB.
 - Perros revividos vuelven a echar a la Schwepa 1 vez (defendio=false). paseoCiudad: vuelta a un grupo de manzanas al azar (no solo la plaza). Chat muestra 'Conectados (N)'.
