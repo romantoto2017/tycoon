@@ -109,7 +109,7 @@ export class Celular {
 
   // ---------- Panel ----------
   abrir() {
-    if (!this.estado.celular) return;
+    if (!this.estado.celular || this.estado.carcel) return;
     this.abierto = true;
     this.app = this.datos.pedidos.some((p) => !p.visto) ? 'tranzapp' : this.app;
     this.panel.classList.remove('oculto');
@@ -275,7 +275,7 @@ export class Celular {
   // ---------- Cada cuadro ----------
   // enVan: estás manejando la camioneta de reparto.
   actualizar(dt, jugador, enVan, velocidad) {
-    const tiene = !!this.estado.celular;
+    const tiene = !!this.estado.celular && !this.estado.carcel; // en cana te lo sacaron
     this.boton.classList.toggle('oculto', !tiene || this.modo() !== 'juego');
     if (!tiene) return;
     if (!this.marcado) { this.marcado = true; this.marcas(); this.punto(); }

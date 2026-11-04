@@ -1392,3 +1392,9 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
 .cel-ok { margin-top: 6px; font-size: 13px; color: #8ab4ff; font-weight: 700; }
 .cel-hecho { font-size: 12px; opacity: 0.7; margin: 4px 2px; }
 .cel-vacio { opacity: 0.6; text-align: center; margin-top: 40px; }
+
+/* ---------- C.O.M.C.A.R. (comcar.js) ---------- */
+.carcel-hud { position: absolute; top: calc(118px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); max-width: min(560px, 80vw); padding: 8px 14px; border-radius: 12px; background: rgba(240,124,24,0.92); color: #1a0f05; font: 700 14px var(--fuente); text-align: center; line-height: 1.35; pointer-events: none; }
+.carcel-fundido { position: fixed; inset: 0; z-index: 60; background: #000; display: grid; place-items: center; opacity: 0; transition: opacity 0.7s ease; pointer-events: none; }
+.carcel-fundido.visible { opacity: 1; }
+.carcel-fundido p { color: #fff; font: 700 22px var(--fuente); text-align: center; line-height: 1.5; max-width: 80vw; }

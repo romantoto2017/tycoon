@@ -5,7 +5,9 @@ import { vestido } from './vestir.js';
 import { PERSONAJES } from '../data/personajes.js';
 import { ITEMS } from './progresion.js';
 import { Lote } from './lote.js';
-import { Auto } from './auto.js';
+import { Auto, AutoComprado, AUTOS_POR_ID } from './auto.js';
+import { Helicoptero } from './helicoptero.js';
+import { CAMIONETA } from './tanzania.js';
 import { crearPony } from './pony.js';
 import { DX, SLOT, LOTES, loteLocal, MANSION, CANCHA, BARRIO, ALTO_PISO, SPAWN } from './constantes.js';
 import { sfx } from './sfx.js';
@@ -20,7 +22,9 @@ const ENVIO_INFO = 3;
 const SIN_NOTICIAS = 20; // segundos sin posición: se lo deja de mostrar
 const PIEZAS_POR_CUADRO = 6; // las mansiones de los demás se arman de a poco (no traba)
 const PODIO = { y: 175, z: -190, escala: 3.2 };
-const MODOS = { pie: 0, auto: 1, pony: 2 };
+const MODOS = { pie: 0, auto: 1, pony: 2, heli: 3 };
+// El modelo del auto que maneja el otro (c: id del auto; sin id, el Auto Deportivo).
+const defAuto = (c) => (c === 'camioneta' ? CAMIONETA : AUTOS_POR_ID[c]) || null;
 
 // Lo que se ve por fuera de una mansión (sin muebles, cuadros ni paredes de adentro).
 const AFUERA = ITEMS.filter((it) => it.tipo === 'construccion' && it.construir && !it.mueble
@@ -84,7 +88,7 @@ class Otro {
 
   ponerPos(p) {
     if (!p) { this.pos = null; return; }
-    this.pos = { x: p.x + DX, y: p.y, z: p.z, a: p.a || 0, v: p.v || 0, m: p.m || 0, t: performance.now() };
+    this.pos = { x: p.x + DX, y: p.y, z: p.z, a: p.a || 0, v: p.v || 0, m: p.m || 0, c: p.c || '', t: performance.now() };
     if (!this.actual) this.actual = { ...this.pos };
   }
 
@@ -98,6 +102,7 @@ class Otro {
     const ver = vivo && !tapado && this.modelo;
     this.grupo.visible = !!ver;
     if (this.auto) this.auto.grupo.visible = !!ver && p.m === MODOS.auto;
+    if (this.heli) this.heli.grupo.visible = !!ver && p.m === MODOS.heli;
     if (this.pony) this.pony.grupo.visible = !!ver && p.m === MODOS.pony;
     if (!ver) return;
     const a = this.actual;
@@ -112,9 +117,27 @@ class Otro {
     g.position.set(a.x, a.y, a.z);
     g.rotation.y = a.a;
     const m = this.modelo;
+    if (p.m === MODOS.heli) {
+      // En el helicóptero: el helicóptero con las aspas girando, y él adentro (no se ve).
+      if (!this.heli) this.heli = new Helicoptero(this.mj.escena, a.x, a.y, a.z, a.a);
+      this.heli.pos.set(a.x, a.y, a.z);
+      this.heli.angulo = a.a;
+      this.heli.rotor.rotation.y += 20 * dt;
+      this.heli.rotorCola.rotation.x += 30 * dt;
+      this.heli.colocar();
+      m.grupo.visible = false;
+      this.etiqueta.sprite.position.y = 9;
+      return;
+    }
     if (p.m === MODOS.auto) {
-      if (!this.auto) this.auto = new Auto(this.mj.escena, a.x, a.z, a.a);
-      this.auto.pos.set(a.x, 0, a.z);
+      // El mismo auto que maneja (el del concesionario, la camioneta o el Deportivo).
+      if (this.auto && this.autoDe !== p.c) { this.mj.escena.remove(this.auto.grupo); this.auto = null; }
+      if (!this.auto) {
+        const def = defAuto(p.c);
+        this.auto = def ? new AutoComprado(this.mj.escena, def, a.x, a.z, a.a) : new Auto(this.mj.escena, a.x, a.z, a.a);
+        this.autoDe = p.c;
+      }
+      this.auto.pos.set(a.x, a.y, a.z);
       this.auto.angulo = a.a;
       this.auto.colocar();
       m.grupo.visible = false;
@@ -143,6 +166,7 @@ class Otro {
     this.mj.escena.remove(this.grupo);
     if (this.auto) this.mj.escena.remove(this.auto.grupo);
     if (this.pony) this.mj.escena.remove(this.pony.grupo);
+    if (this.heli) this.mj.escena.remove(this.heli.grupo);
   }
 }
 
@@ -389,6 +413,11 @@ export class Multijugador {
     return mejor;
   }
 
+  // Te escapaste del COMCAR: los otros jugadores presos (conectados) se van con vos.
+  fugar() {
+    for (const [id, i] of Object.entries(this.jugadores)) if (id !== this.uid && i.preso && i.enLinea) this.red.golpe(id, { tipo: 'fuga', de: this.uid, nombre: this.nombre, t: Date.now() });
+  }
+
   pegar(o) { this.red.golpe(o.uid, { de: this.uid, nombre: this.nombre, t: Date.now() }); }
 
   // ---------- Chat (sin censura: lo que escribís es lo que ven todos) ----------
@@ -451,6 +480,7 @@ export class Multijugador {
       progreso: Math.round((this.tycoon.progreso || 0) * 1000) / 1000,
       compras: e.compras.join(','),
       ropa: (e.personaje && e.vestuario?.[e.personaje]) || null,
+      preso: !!e.carcel,
     };
   }
 
@@ -479,7 +509,7 @@ export class Multijugador {
     this.alMorir?.('aparece');
   }
 
-  // modo: 'pie' | 'auto' | 'pony'; vehiculo: el auto que manejás (o null).
+  // modo: 'pie' | 'auto' | 'pony' | 'heli'; vehiculo: el auto o el helicóptero que manejás (o null).
   actualizar(dt, { modo = 'pie', vehiculo = null } = {}) {
     this.t += dt;
     // Mandar dónde estás (en coordenadas compartidas) y, más de vez en cuando, tu info.
@@ -490,8 +520,9 @@ export class Multijugador {
       const x = vehiculo ? vehiculo.pos.x : j.pos.x;
       const z = vehiculo ? vehiculo.pos.z : j.pos.z;
       const a = vehiculo ? vehiculo.angulo : j.angulo;
-      const v = vehiculo ? Math.abs(vehiculo.vel) : Math.hypot(j.vel.x, j.vel.z);
-      const pos = { x: Math.round((x - DX) * 10) / 10, y: Math.round(j.pos.y * 10) / 10, z: Math.round(z * 10) / 10, a: Math.round(a * 100) / 100, v: Math.round(v), m: MODOS[modo] || 0 };
+      const v = vehiculo ? (typeof vehiculo.vel === 'number' ? Math.abs(vehiculo.vel) : Math.hypot(vehiculo.vel.x, vehiculo.vel.z)) : Math.hypot(j.vel.x, j.vel.z);
+      const y = vehiculo ? vehiculo.pos.y || 0 : j.pos.y;
+      const pos = { x: Math.round((x - DX) * 10) / 10, y: Math.round(y * 10) / 10, z: Math.round(z * 10) / 10, a: Math.round(a * 100) / 100, v: Math.round(v), m: MODOS[modo] || 0, c: modo === 'auto' ? vehiculo?.def?.id || '' : '' };
       const clave = JSON.stringify(pos);
       if (clave !== this.ultimaPos || this.t - (this.tPos || 0) > 5) {
         this.ultimaPos = clave;

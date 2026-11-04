@@ -136,3 +136,7 @@ export const COSTA = {
   precio: 2e11, // lo que pide Nico (200B)
   desde: 0.99, // la mansión al 99%
 };
+// El C.O.M.C.A.R. (la cárcel, js/comcar.js): en las afueras, al norte de la autopista, entre el
+// barrio y la Cachimba. Se entra por un camino desde la autopista (x: entrada). Adentro (de z1 - 27
+// para el norte) vive el que cae preso; la franja del sur es para las visitas.
+export const COMCAR = { x0: -1920 + DX, x1: -1500 + DX, z0: -440, z1: -170, entrada: -1710 + DX };

@@ -48,7 +48,7 @@ function cerro(x, z) {
 
 // El camino: sale del desvío y sube por la falda del oeste dando la vuelta hasta la cima (curva
 // suave entre estos puntos). Su altura sube de a poco con lo recorrido (unos 560 de largo: 5%).
-const PUNTOS = [[CO.bif, CALLE_Z], [CO.bif + 22, 34], [CO.bif + 68, -8], [CO.bif + 128, -58], [CO.bif + 168, -128], [CO.bif + 196, -196], [CO.bif + 258, -238], [CO.bif + 322, -226], [CO.bif + 360, -186], [CO.bif + 400, -140]];
+export const PUNTOS = [[CO.bif, CALLE_Z], [CO.bif + 22, 34], [CO.bif + 68, -8], [CO.bif + 128, -58], [CO.bif + 168, -128], [CO.bif + 196, -196], [CO.bif + 258, -238], [CO.bif + 322, -226], [CO.bif + 360, -186], [CO.bif + 400, -140]];
 const CAMINO = (() => {
   const curva = new THREE.CatmullRomCurve3(PUNTOS.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
   const pts = curva.getSpacedPoints(180);
