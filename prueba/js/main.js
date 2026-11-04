@@ -193,7 +193,7 @@ async function iniciar() {
   ] });
   // El C.O.M.C.A.R. (la cárcel) y la policía que te puede mandar ahí.
   const comcar = new Comcar({ escena, estado, ui: UI, guardar: () => guardarAhora(), colisiones, jugador, hora: () => hora(), pausar: pausarDialogo });
-  const policia = new Policia({ escena, estado, ui: UI, guardar: () => guardarAhora(), jugador, tanzania, comcar, pausar: pausarDialogo });
+  const policia = new Policia({ escena, estado, ui: UI, guardar: () => guardarAhora(), jugador, tanzania, comcar, pausar: pausarDialogo, colisiones });
   policia.alMarcar = (l) => UI.marcasMapa(l, 'policia');
   comcar.alEncarcelar = () => { if (conduciendo) { const v = vehiculo; if (v === tycoon.heli) v.prendido = false; conduciendo = false; vehiculo = null; jugador.conduciendo = false; jugador.contenedor.visible = true; jugador.sombra.visible = true; } if (pony.montado) pony.bajar(jugador); celular.cerrar(); };
   let relojVisitas = 0;

@@ -66,8 +66,11 @@ function patrullero() {
 }
 
 export class Policia {
-  constructor({ escena, estado, ui, guardar, jugador, tanzania, comcar, pausar }) {
+  constructor({ escena, estado, ui, guardar, jugador, tanzania, comcar, pausar, colisiones }) {
     Object.assign(this, { escena, estado, ui, guardar, jugador, tanzania, comcar, pausar });
+    // El patrullero es sólido (para los autos y a pie): su caja se mueve con él.
+    this.caja = new THREE.Box3();
+    colisiones.push(this.caja);
     this.ruta = recorrido();
     this.i = 1;
     this.auto = patrullero();
@@ -102,10 +105,19 @@ export class Policia {
     this.canas[0].grupo.add(et.sprite);
   }
 
+  cajaAuto() {
+    if (!this.estado.costa) { this.caja.makeEmpty(); return; }
+    const c = Math.abs(Math.cos(this.auto.rotation.y));
+    const s = Math.abs(Math.sin(this.auto.rotation.y));
+    const [hx, hz] = [c * 2.3 + s * 5.1, s * 2.3 + c * 5.1]; // medio ancho y medio largo, girados
+    this.caja.min.set(this.pos.x - hx, this.pos.y, this.pos.z - hz);
+    this.caja.max.set(this.pos.x + hx, this.pos.y + 4, this.pos.z + hz);
+  }
+
   actualizar(dt, jugador, conduciendo, jugando) {
     // La policía arranca recién cuando le pagaste a Nico (antes, ni patrullero ni punto en el mapa).
     this.auto.visible = !!this.estado.costa;
-    if (!this.estado.costa) { if (this.marcado) { this.marcado = false; this.alMarcar?.([]); } return; }
+    if (!this.estado.costa) { this.cajaAuto(); if (this.marcado) { this.marcado = false; this.alMarcar?.([]); } return; }
     this.marcado = true;
     this.reloj += dt;
     const [roja, azul] = this.auto.userData.mats;
@@ -130,6 +142,7 @@ export class Policia {
       this.pos.y = alturaCosta(this.pos.x, this.pos.z);
       this.auto.position.copy(this.pos);
     }
+    this.cajaAuto();
     // El punto rojo del mapa (2 veces por segundo).
     if (this.reloj - (this.ultimaMarca || -9) > 0.5) { this.ultimaMarca = this.reloj; this.alMarcar?.([{ x: this.pos.x, z: this.pos.z, color: '#ff3030' }]); }
     // ¿Te vio?
@@ -138,7 +151,8 @@ export class Policia {
     if (d > VE || Math.abs(jugador.pos.y - this.pos.y) > 8 || (this.estado.tiempoJugado || 0) < this.datos.proximo) return;
     this.datos.proximo = (this.estado.tiempoJugado || 0) + ESPERA;
     const sospecha = (this.tanzania.datos.encima || 0) > 0 || this.tanzania.dentro(jugador.pos);
-    if (Math.random() < (sospecha ? 0.75 : 0.3)) this.controlar(jugador, conduciendo);
+    if (sospecha || Math.random() < 0.6) this.controlar(jugador, conduciendo);
+    else this.datos.proximo = (this.estado.tiempoJugado || 0) + 30;
   }
 
   // El control: qué revisan según dónde estés, y si encuentran tanzania, en cana.
