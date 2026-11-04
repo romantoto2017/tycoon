@@ -80,6 +80,18 @@ export function alturaCosta(x, z) {
   return THREE.MathUtils.lerp(y, h, suave((d - MEDIO_CAMINO) / 12));
 }
 
+// Por dónde andan los autos en el cerro: el camino (con sus banquinas), la cima plana y las laderas suaves. Devuelve la
+// altura ahí, o null (afuera: el cerro frena al auto como la montaña).
+export function rutaCosta(x, z) {
+  if (x < CO.x0 || x > CO.x1 + 60 || z > CALLE.z0) return null;
+  const h = alturaCosta(x, z);
+  if (h < 0.5) return null; // al pie: el piso de siempre
+  if (alCamino(x, z)[0] < MEDIO_CAMINO + 3 || cerro(x, z) >= M.alto - 0.05) return h;
+  // Fuera del camino también se anda, salvo donde es muy empinado (la cara que da al mar).
+  const pend = (Math.abs(alturaCosta(x + 2, z) - alturaCosta(x - 2, z)) + Math.abs(alturaCosta(x, z + 2) - alturaCosta(x, z - 2))) / 4;
+  return pend < 0.45 ? h : null;
+}
+
 // Una palmera: tronco curvo de tramos y un penacho de hojas.
 function palmera(c, x, z, alto, rnd) {
   const inc = (rnd() - 0.5) * 0.5;

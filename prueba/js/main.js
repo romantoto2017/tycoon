@@ -46,7 +46,7 @@ import { vestido } from './vestir.js';
 import { Probador } from './probador.js';
 import { NicoBaraja } from './nico.js';
 import { PEDIR_COMPLETA } from './entorno.js';
-import { Costa, alturaCosta } from './costa.js';
+import { Costa, alturaCosta, rutaCosta } from './costa.js';
 import { Tanzania } from './tanzania.js';
 import { Fumar, Fumadores } from './fumar.js';
 import { Celular } from './celular.js';
@@ -1393,6 +1393,7 @@ async function iniciar() {
       jugador.pos.copy(tycoon.heli.pos);
     } else if (conduciendo) {
       vehiculo.terreno = mundo.altura;
+      vehiculo.ruta = rutaCosta;
       // En la autopista (la ciudad queda a 3 km) y en el autódromo, cada auto llega a su
       // velocidad máxima de verdad; en el barrio y en la ciudad, a su tope de calle.
       const enAutopista = ciudad.enAutopista(vehiculo.pos);

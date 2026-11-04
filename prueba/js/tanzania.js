@@ -29,7 +29,7 @@ const MESAS = [-26, -12, 2, 16].flatMap((x) => [[x, -11], [x, 3]]); // las 8 cam
 const ESTACION = {
   tz_galpon: [-AN - 20, 0],
   tz_cosecha: [32, 18], tz_secadero: [-6, 20], tz_picadora: [8, 20], tz_prensa: [20, 20], tz_laboratorio: [34, -8],
-  tz_contacto: [-24, -22], tz_furgoneta: [-26, 17],
+  tz_contacto: [-24, -22], tz_furgoneta: [-AN - 8, 19], // la camioneta, afuera: entre el galpón y el muro
   tz_luz1: [-19, -4], tz_luz2: [-5, -4], tz_luz3: [9, -4], tz_luz4: [23, -4],
 };
 const COBRAR = [-35, -12];
@@ -230,8 +230,8 @@ export class Tanzania {
         c.caja(x - 1, Y + 1.3, z + 0.5, x + 1, Y + 2.3, z + 0.6, '#6fa8ff', { lados: 'luz' });
         this.solido(x - 3, Y, z - 1.5, x + 3, Y + 1.2, z + 1.5);
       } else {
-        // La camioneta de reparto, estacionada adentro al lado del portón: se maneja.
-        const a = new AutoComprado(this.escena, CAMIONETA, x, z, Math.PI / 2);
+        // La camioneta de reparto, estacionada afuera al lado del portón: se maneja.
+        const a = new AutoComprado(this.escena, CAMIONETA, x, z, 0);
         a.pos.y = Y;
         a.colocar?.();
         this.colisiones.push(a.caja);

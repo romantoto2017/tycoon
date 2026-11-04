@@ -524,8 +524,8 @@ export class Auto {
     const [mx, mz] = this.medio || [2.1, 4.35]; // medio ancho y medio largo
     const hx = c * mx + s * mz;
     const hz = s * mx + c * mz;
-    this.caja.min.set(this.pos.x - hx, 0, this.pos.z - hz);
-    this.caja.max.set(this.pos.x + hx, 3.6, this.pos.z + hz);
+    this.caja.min.set(this.pos.x - hx, this.pos.y || 0, this.pos.z - hz);
+    this.caja.max.set(this.pos.x + hx, (this.pos.y || 0) + 3.6, this.pos.z + hz);
   }
 
   // ejes: { x: doblar (+ derecha), y: acelerar (+ adelante) }.
@@ -538,7 +538,7 @@ export class Auto {
     this.luzFreno(this.frenando);
     let choque = false;
     for (const b of colisiones) {
-      if (b === this.caja || b.max.y < 0.35 || b.min.y > 2.5) continue;
+      if (b === this.caja || b.max.y < (p.y || 0) + 0.35 || b.min.y > (p.y || 0) + 2.5) continue;
       const ox1 = p.x + RADIO - b.min.x;
       const ox2 = b.max.x - (p.x - RADIO);
       if (ox1 <= 0 || ox2 <= 0) continue;
@@ -549,12 +549,15 @@ export class Auto {
       else p.z += oz1 < oz2 ? -oz1 : oz2;
       choque = true;
     }
-    // El auto no sube la montaña: choca contra el pie.
-    if (this.terreno && this.terreno(p.x, p.z) > 0.8) {
+    // Por el camino del cerro de la costa y en su cima se sube (ruta: la altura ahí, o null).
+    const enRuta = this.ruta?.(p.x, p.z);
+    if (enRuta != null) p.y = enRuta;
+    // El auto no sube la montaña (ni el cerro fuera del camino): choca contra el pie.
+    else if (this.terreno && this.terreno(p.x, p.z) > 0.8) {
       p.x = antesX;
       p.z = antesZ;
       choque = true;
-    }
+    } else p.y = 0;
     if (choque) this.vel *= 0.4;
 
     for (const r of this.ruedas) r.rotation.x += (this.vel * dt) / RUEDA.r;
@@ -564,7 +567,7 @@ export class Auto {
 
   // Punto al costado del conductor, para bajarse.
   puntoBajada(salida) {
-    return salida.set(this.pos.x + Math.cos(this.angulo) * 3.6, 0, this.pos.z - Math.sin(this.angulo) * 3.6);
+    return salida.set(this.pos.x + Math.cos(this.angulo) * 3.6, this.pos.y || 0, this.pos.z - Math.sin(this.angulo) * 3.6);
   }
 }
 
