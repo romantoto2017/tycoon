@@ -178,7 +178,7 @@ async function iniciar() {
   cachimba.tanzania = tanzania; // El Humano también, en la Cachimba
   cachimba.pausar = pausarDialogo;
   costa.tanzania = tanzania; // los dueños de las mansiones te compran (y uno te da el celular)
-  const celular = new Celular({ estado, ui: UI, guardar: () => guardarAhora(), tanzania, ciudad, controles, modo: () => modo });
+  const celular = new Celular({ escena, estado, ui: UI, guardar: () => guardarAhora(), tanzania, ciudad, controles, modo: () => modo });
   celular.alCambiarMarcas = (lista) => UI.marcasMapa(lista);
   const fumadores = new Fumadores({ escena, estado, cabezas: () => [
     ...ciudad.peatones.map((p) => ({ cabeza: p.mod.partes.cabeza, piel: p.piel })),
@@ -625,6 +625,10 @@ async function iniciar() {
     }
     if (tanzania.accion(jugador)) {
       tanzania.hacer();
+      return;
+    }
+    if (celular.accion(jugador)) {
+      celular.hacer(jugador);
       return;
     }
     if (cachimba.accion(jugador)) {
@@ -1430,7 +1434,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : (bautiTrabado() && mj?.cercano(jugador.pos) ? `Pegarle a ${mj.cercano(jugador.pos).info.nombre || 'él'} (E)` : '') || nico.accion(jugador) || costa.accion(jugador) || tanzania.accion(jugador) || cachimba.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : (bautiTrabado() && mj?.cercano(jugador.pos) ? `Pegarle a ${mj.cercano(jugador.pos).info.nombre || 'él'} (E)` : '') || nico.accion(jugador) || costa.accion(jugador) || tanzania.accion(jugador) || celular.accion(jugador) || cachimba.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;

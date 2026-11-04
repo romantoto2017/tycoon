@@ -1,6 +1,10 @@
 import { CACHIMBA as CA, CIUDAD as C, PLAYA, CALLE_Z, COSTA } from './constantes.js';
 import { MANSIONES, PUERTA_Z } from './costa.js';
+import * as THREE from 'three';
 import { formato } from './util.js';
+import { crearPersonaje } from './personaje.js';
+import { cargarCabeza, crearEtiqueta } from './texturas.js';
+import { dibujarCara } from './ciudad.js';
 import { sfx } from './sfx.js';
 
 // El celular (te lo da el primer dueño de una mansión de la costa que te compra tanzania; costa.js):
@@ -10,7 +14,7 @@ import { sfx } from './sfx.js';
 // - Tranzapp (el WhatsApp trucho): gente de todo el juego te escribe pidiendo gramos, con la
 //   dirección. Aceptás y en el mapa aparece un punto azul exacto; llegás con la camioneta de
 //   reparto (tanzania.js) con los gramos encima (las bolsitas del depósito: 1 bolsita = 1 g) y se
-//   entrega sola al frenar ahí. Todo queda en estado.tranzapp.
+//   entrega sola al frenar ahí; a pie, con la E. En el lugar hay una columna de luz azul y el cliente. Todo queda en estado.tranzapp.
 const CADA = [30, 75]; // segundos entre un mensaje y otro (al azar en ese rango)
 const MAX_PEDIDOS = 4;
 const RADIO = 10; // a cuánto del punto se entrega
@@ -74,8 +78,8 @@ const PIDE = [
 ];
 
 export class Celular {
-  constructor({ estado, ui, guardar, tanzania, ciudad, controles, modo }) {
-    Object.assign(this, { estado, ui, guardar, tanzania, ciudad, controles, modo });
+  constructor({ escena, estado, ui, guardar, tanzania, ciudad, controles, modo }) {
+    Object.assign(this, { escena, estado, ui, guardar, tanzania, ciudad, controles, modo });
     const $ = (id) => document.getElementById(id);
     this.boton = $('btn-celular');
     this.panel = $('celular');
@@ -185,6 +189,75 @@ export class Celular {
     this.dibujar();
   }
 
+  // ---------- La entrega ----------
+  // El pedido aceptado más cerca (a menos de r).
+  pedidoCerca(jugador, r) {
+    return this.datos.pedidos.find((p) => p.aceptado && Math.hypot(jugador.pos.x - p.x, jugador.pos.z - p.z) < r) || null;
+  }
+
+  // A pie, con la E (main.js).
+  accion(jugador) {
+    const p = !jugador.conduciendo && this.pedidoCerca(jugador, 7);
+    return p ? `Entregar ${p.gramos} g a ${p.quien} (E)` : '';
+  }
+
+  hacer(jugador) { const p = this.pedidoCerca(jugador, 7); if (p) this.entregar(p, true); }
+
+  entregar(p, aPie = false) {
+    const d = this.datos;
+    const t = this.tanzania.datos;
+    if ((t.encima || 0) < p.gramos) {
+      if (aPie || !p.avisado) this.ui.toast(`${p.quien}: "¿Y? Me faltan ${p.gramos - (t.encima || 0)} g. Andá al depósito del galpón a buscar bolsitas"`, 'error', 4500);
+      p.avisado = true;
+      return;
+    }
+    t.encima -= p.gramos;
+    t.vendido = (t.vendido || 0) + p.gramos;
+    t.entregas = (t.entregas || 0) + 1;
+    this.estado.plata += p.paga;
+    d.pedidos.splice(d.pedidos.indexOf(p), 1);
+    d.chats.push(`${p.quien}: ${p.gramos} g entregados (+${formato(p.paga)})`);
+    this.guardar();
+    sfx.cobrar();
+    this.ui.toast(`¡Entregaste ${p.gramos} g a ${p.quien}! +${formato(p.paga)}`, 'plata', 4000);
+    this.marcas();
+  }
+
+  // En cada punto de entrega: una columna de luz azul (se ve de lejos) y la persona esperando, con
+  // su nombre arriba. Se arman al aceptar y se sacan al entregar.
+  verPuntos(dt, jugador) {
+    this.puntos ??= new Map();
+    const activos = new Set(this.datos.pedidos.filter((p) => p.aceptado).map((p) => p.id));
+    for (const [id, g] of this.puntos) if (!activos.has(id)) { this.escena.remove(g); this.puntos.delete(id); }
+    for (const p of this.datos.pedidos) {
+      if (!p.aceptado || this.puntos.has(p.id)) continue;
+      const g = new THREE.Group();
+      g.position.set(p.x, 0, p.z);
+      const haz = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#3d8bff', transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }));
+      haz.position.y = 30;
+      const aro = new THREE.Mesh(new THREE.RingGeometry(3, 3.6, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#3d8bff', transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
+      aro.position.y = 0.2;
+      const et = crearEtiqueta([{ texto: p.quien, tam: 56, color: '#8ab4ff' }, { texto: `espera ${p.gramos} g`, tam: 40 }], 5);
+      et.sprite.position.y = 7.4;
+      g.add(haz, aro, et.sprite);
+      this.escena.add(g);
+      this.puntos.set(p.id, g);
+      // La persona que espera (cara dibujada, ropa al azar).
+      const per = { id: `cliente${p.id % 6}`, nombre: ' ', sinFoto: true, sinCara: true, piel: ['#f1c27d', '#c68642', '#8d5524', '#e0ac69'][p.id % 4], pelo: '#2b1d14', remera: ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#212121'][p.id % 5], pantalon: '#37474f' };
+      cargarCabeza(per).then((cab) => {
+        if (!cab.dibujada) { dibujarCara(cab.frente, per.piel, per.pelo); cab.dibujada = true; }
+        const m = crearPersonaje(per, cab);
+        g.add(m.grupo);
+        g.userData.m = m;
+      });
+    }
+    // La gente mira hacia vos; la altura del piso (en el cerro de la costa, la del camino).
+    for (const g of this.puntos.values()) {
+      const m = g.userData.m;
+      if (m) { m.grupo.rotation.y = Math.atan2(jugador.pos.x - g.position.x, jugador.pos.z - g.position.z); m.animar(dt, 0, true); }
+    }
+  }
+
   marcas() { this.alCambiarMarcas?.(this.datos.pedidos.filter((p) => p.aceptado).map((p) => ({ x: p.x, z: p.z }))); }
 
   // ---------- Cada cuadro ----------
@@ -215,27 +288,11 @@ export class Celular {
         if (this.abierto) this.dibujar();
       }
     }
-    // Entregar: con la camioneta, frenando en el punto, con los gramos encima.
+    this.verPuntos(dt, jugador);
+    // Con la camioneta: se entrega sola al frenar en el punto (con los gramos encima).
     if (enVan && Math.abs(velocidad) < 4) {
-      for (const p of d.pedidos.filter((x) => x.aceptado)) {
-        if (Math.hypot(jugador.pos.x - p.x, jugador.pos.z - p.z) > RADIO) continue;
-        const t = this.tanzania.datos;
-        if ((t.encima || 0) < p.gramos) {
-          if (!p.avisado) { p.avisado = true; this.ui.toast(`${p.quien}: "¿Y? Me faltan ${p.gramos - (t.encima || 0)} g, volvé con todo"`, 'error', 4000); }
-          continue;
-        }
-        t.encima -= p.gramos;
-        t.vendido = (t.vendido || 0) + p.gramos;
-        t.entregas = (t.entregas || 0) + 1;
-        this.estado.plata += p.paga;
-        d.pedidos.splice(d.pedidos.indexOf(p), 1);
-        d.chats.push(`${p.quien}: ${p.gramos} g entregados (+${formato(p.paga)})`);
-        this.guardar();
-        sfx.cobrar();
-        this.ui.toast(`¡Entregaste ${p.gramos} g a ${p.quien}! +${formato(p.paga)}`, 'plata', 4000);
-        this.marcas();
-        break;
-      }
+      const p = this.pedidoCerca(jugador, RADIO);
+      if (p) this.entregar(p);
     } else for (const p of d.pedidos) p.avisado = false;
     // Con TanzaCoin abierto, el gráfico se mueve.
     if (this.abierto && this.app === 'coin' && (this.relojHistoria += dt) > 1) { this.relojHistoria = 0; this.dibujar(); }
