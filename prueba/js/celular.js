@@ -14,7 +14,8 @@ import { sfx } from './sfx.js';
 // - Tranzapp (el WhatsApp trucho): gente de todo el juego te escribe pidiendo gramos, con la
 //   dirección. Aceptás y en el mapa aparece un punto azul exacto; llegás con la camioneta de
 //   reparto (tanzania.js) con los gramos encima (las bolsitas del depósito: 1 bolsita = 1 g) y se
-//   entrega sola al frenar ahí; a pie, con la E. En el lugar hay una columna de luz azul y el cliente. Todo queda en estado.tranzapp.
+//   entrega sola al frenar ahí; a pie, con la E. Se le entrega a la persona en mano: los personajes
+//   del juego donde estén y los demás esperándote en la dirección. Todo queda en estado.tranzapp.
 const CADA = [30, 75]; // segundos entre un mensaje y otro (al azar en ese rango)
 const MAX_PEDIDOS = 4;
 const RADIO = 10; // a cuánto del punto se entrega
@@ -29,20 +30,20 @@ export function cotizacion(t) {
 function destinos(ciudad, estado) {
   const mz = (i, j, dx = 0, dz = -4) => { const m = ciudad.manzanaDe(i, j); return { x: C.x + (m.x0 + m.x1) / 2 + dx, z: C.z + m.z0 + dz }; };
   const lista = [
-    { quien: 'Hilario José', foto: '🛵', lugar: 'la plaza de la Ciudad Vecibanda, frente al banco', ...mz(3, 3) },
-    { quien: 'Lagatta', foto: '🍸', lugar: 'la puerta del Lagatta Bar', ...mz(4, 5) },
+    { quien: 'Hilario José', foto: '🛵', lugar: 'la Ciudad Vecibanda (anda en su hoverboard)', ref: 'hilario', ...mz(3, 3) },
+    { quien: 'Lagatta', foto: '🍸', lugar: 'la barra del Lagatta Bar', ref: 'lagatta', ...mz(4, 5) },
     { quien: 'Kevin', foto: '⛽', lugar: 'la estación de servicio de la ciudad', ...mz(6, 1) },
     { quien: 'Facu de KICKS', foto: '👟', lugar: 'la puerta de KICKS, en la ciudad', ...mz(3, 4) },
-    { quien: 'Francis Jeremy', foto: '🏄', lugar: 'la calle de la playa, frente al muelle', x: PLAYA.muelle.x, z: CALLE_Z + 4 },
-    { quien: 'Dufre', foto: '🚶', lugar: 'la vereda frente a tu mansión', x: 40, z: CALLE_Z - 3 },
-    { quien: 'Nico Baraja', foto: '🏎️', lugar: 'el final de la calle del barrio, donde está el Koenigsegg', x: COSTA.nico.x + 20, z: CALLE_Z },
-    ...MANSIONES.map((m) => ({ quien: m.nombre, foto: '🏖️', lugar: `el portón de la mansión de ${m.nombre.split(' ').slice(-1)[0]}, en la costa`, x: m.x + 23, z: PUERTA_Z - 12 })),
+    { quien: 'Francis Jeremy', foto: '🏄', lugar: 'la playa, en la orilla (acercate y sale del agua)', ref: 'francis', x: PLAYA.muelle.x - 32, z: PLAYA.orilla - 4 },
+    { quien: 'Dufre', foto: '🚶', lugar: 'donde esté paseando (la vereda de tu mansión o la plaza de la ciudad)', ref: 'dufre', x: 40, z: CALLE_Z - 7 },
+    { quien: 'Nico Baraja', foto: '🏎️', lugar: 'el final de la calle del barrio, al lado del Koenigsegg', ref: 'nico', x: COSTA.nico.x, z: COSTA.nico.z },
+    ...MANSIONES.map((m) => ({ quien: m.nombre, foto: '🏖️', look: m.look, lugar: `el portón de la mansión de ${m.nombre.split(' ').slice(-1)[0]}, en la costa`, x: m.x + 23, z: PUERTA_Z - 7.5 })),
   ];
   if (estado.cachimba?.visitada) {
     lista.push(
       { quien: 'Erik', foto: '🧢', lugar: 'La Cachimba del Piojo, al lado del tacho con fuego', x: CA.entrada - 4, z: CA.z0 + 52 },
       { quien: 'El Rengo Brian', foto: '🐕', lugar: 'La Cachimba del Piojo, la esquina del auto quemado', x: CA.entrada, z: CA.z0 + 102 },
-      { quien: 'El Humano', foto: '🥫', lugar: 'la entrada de La Cachimba del Piojo', x: CA.entrada + 3, z: CA.z1 - 8 },
+      { quien: 'El Humano', foto: '🥫', lugar: 'la entrada de La Cachimba del Piojo', ref: 'humano', x: CA.entrada + 3, z: CA.z1 - 4 },
     );
   }
   // Gente común: una casa de cada manzana de la ciudad y las casillas de la Cachimba (el nombre se
@@ -60,6 +61,7 @@ function destinos(ciudad, estado) {
   }
   return lista;
 }
+const REF_DE = { 'Nico Baraja': 'nico', 'Francis Jeremy': 'francis', 'Hilario José': 'hilario', 'El Humano': 'humano', Dufre: 'dufre', Lagatta: 'lagatta' };
 // Los que escriben sin ser nadie conocido (gente de la ciudad o de la Cachimba).
 const GENTE = ['El Tano', 'La Yesi', 'Brayan', 'El Facha', 'Maxi', 'Cele', 'El Gordo Rubén', 'La Tota', 'Thiago', 'Dylan', 'El Pela', 'Romina', 'El Chino', 'Nahuel', 'La Colo', 'Iván', 'El Ruso', 'Franco', 'Agus', 'Lauti', 'Mica', 'El Tucu', 'Jona', 'La Pato'];
 const VILLA = ['El Rata', 'Maicol', 'La Negra Sandra', 'Jhonatan', 'El Tuerto', 'Yanina', 'El Chapa', 'Brisa', 'El Moncho', 'Cristian "Pitufo"'];
@@ -223,27 +225,36 @@ export class Celular {
     this.marcas();
   }
 
-  // En cada punto de entrega: una columna de luz azul (se ve de lejos) y la persona esperando, con
-  // su nombre arriba. Se arman al aceptar y se sacan al entregar.
+  // A quién se le entrega: los personajes del juego (Nico, Francis, Hilario, El Humano, Dufre,
+  // Lagatta) en persona, donde estén (ubicar: main.js); los demás, una persona que te espera en la
+  // dirección del mensaje (con la ropa del dueño de la mansión si es uno de ellos).
   verPuntos(dt, jugador) {
     this.puntos ??= new Map();
     const activos = new Set(this.datos.pedidos.filter((p) => p.aceptado).map((p) => p.id));
     for (const [id, g] of this.puntos) if (!activos.has(id)) { this.escena.remove(g); this.puntos.delete(id); }
+    let movio = false;
     for (const p of this.datos.pedidos) {
-      if (!p.aceptado || this.puntos.has(p.id)) continue;
+      if (!p.aceptado) continue;
+      p.ref ??= REF_DE[p.quien]; // pedidos guardados antes de que se entregara en mano
+      if (p.ref) {
+        const o = this.ubicar?.(p.ref);
+        if (o) {
+          const v = o.getWorldPosition(this.tmp ??= new THREE.Vector3());
+          if (Math.hypot(v.x - p.x, v.z - p.z) > 3) movio = true;
+          p.x = v.x;
+          p.z = v.z;
+        }
+        continue;
+      }
+      if (this.puntos.has(p.id)) continue;
       const g = new THREE.Group();
       g.position.set(p.x, 0, p.z);
-      const haz = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#3d8bff', transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }));
-      haz.position.y = 30;
-      const aro = new THREE.Mesh(new THREE.RingGeometry(3, 3.6, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#3d8bff', transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
-      aro.position.y = 0.2;
-      const et = crearEtiqueta([{ texto: p.quien, tam: 56, color: '#8ab4ff' }, { texto: `espera ${p.gramos} g`, tam: 40 }], 5);
-      et.sprite.position.y = 7.4;
-      g.add(haz, aro, et.sprite);
+      const et = crearEtiqueta([{ texto: p.quien, tam: 56, color: '#ffffff' }], 4);
+      et.sprite.position.y = 6.6;
+      g.add(et.sprite);
       this.escena.add(g);
       this.puntos.set(p.id, g);
-      // La persona que espera (cara dibujada, ropa al azar).
-      const per = { id: `cliente${p.id % 6}`, nombre: ' ', sinFoto: true, sinCara: true, piel: ['#f1c27d', '#c68642', '#8d5524', '#e0ac69'][p.id % 4], pelo: '#2b1d14', remera: ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#212121'][p.id % 5], pantalon: '#37474f' };
+      const per = { id: p.look ? `dueno_${p.quien}` : `cliente${p.id % 6}`, nombre: ' ', sinFoto: true, sinCara: true, piel: ['#f1c27d', '#c68642', '#8d5524', '#e0ac69'][p.id % 4], pelo: '#2b1d14', remera: ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#212121'][p.id % 5], pantalon: '#37474f', ...(p.look || {}) };
       cargarCabeza(per).then((cab) => {
         if (!cab.dibujada) { dibujarCara(cab.frente, per.piel, per.pelo); cab.dibujada = true; }
         const m = crearPersonaje(per, cab);
@@ -251,7 +262,8 @@ export class Celular {
         g.userData.m = m;
       });
     }
-    // La gente mira hacia vos; la altura del piso (en el cerro de la costa, la del camino).
+    if (movio && (this.relojMarcas = (this.relojMarcas || 0) + 1) % 30 === 0) this.marcas(); // el punto del mapa lo sigue
+    // La gente que espera te mira.
     for (const g of this.puntos.values()) {
       const m = g.userData.m;
       if (m) { m.grupo.rotation.y = Math.atan2(jugador.pos.x - g.position.x, jugador.pos.z - g.position.z); m.animar(dt, 0, true); }

@@ -180,6 +180,11 @@ async function iniciar() {
   costa.tanzania = tanzania; // los dueños de las mansiones te compran (y uno te da el celular)
   const celular = new Celular({ escena, estado, ui: UI, guardar: () => guardarAhora(), tanzania, ciudad, controles, modo: () => modo });
   celular.alCambiarMarcas = (lista) => UI.marcasMapa(lista);
+  // Los personajes de verdad a los que se les entrega en mano (su grupo 3D, o null si no está armado).
+  celular.ubicar = (ref) => ({
+    nico: () => nico.nico?.grupo, francis: () => playa.francis?.m.grupo, hilario: () => hilario.modelo?.grupo,
+    humano: () => cachimba.humano?.grupo, dufre: () => dufre.modelo?.grupo, lagatta: () => bar.lagatta?.m.grupo,
+  })[ref]?.() || null;
   const fumadores = new Fumadores({ escena, estado, cabezas: () => [
     ...ciudad.peatones.map((p) => ({ cabeza: p.mod.partes.cabeza, piel: p.piel })),
     ...cachimba.gente.filter((m) => m.villero).map((m) => ({ cabeza: m.partes.cabeza, piel: m.piel })),
@@ -615,6 +620,10 @@ async function iniciar() {
       UI.toast(`¡Bauti le pegó a ${victima.info.nombre || 'alguien'} y lo mandó al cielo!`, 'plata');
       return;
     }
+    if (celular.accion(jugador)) { // entregar un pedido de Tranzapp va antes que charlar
+      celular.hacer(jugador);
+      return;
+    }
     if (!conduciendo && nico.accion(jugador)) {
       nico.hacer();
       return;
@@ -625,10 +634,6 @@ async function iniciar() {
     }
     if (tanzania.accion(jugador)) {
       tanzania.hacer();
-      return;
-    }
-    if (celular.accion(jugador)) {
-      celular.hacer(jugador);
       return;
     }
     if (cachimba.accion(jugador)) {
@@ -1434,7 +1439,7 @@ async function iniciar() {
     if (!enHeli()) tycoon.heli?.actualizar(dt, ejes, false, colisiones, mundo.altura); // las aspas frenan solas
     const texto = modo !== 'juego' || gym.entrenando || casino.jugando ? ''
       : conduciendo ? (enHeli() ? (tycoon.heli.apoyado ? 'Bajar del helicóptero (E)' : '') : autodromo.corriendo ? 'Salir del autódromo (E)' : taller.auto ? '' : taller.accion(jugador, vehiculo) || 'Bajar del auto (E)')
-      : (bautiTrabado() && mj?.cercano(jugador.pos) ? `Pegarle a ${mj.cercano(jugador.pos).info.nombre || 'él'} (E)` : '') || nico.accion(jugador) || costa.accion(jugador) || tanzania.accion(jugador) || celular.accion(jugador) || cachimba.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
+      : celular.accion(jugador) || (bautiTrabado() && mj?.cercano(jugador.pos) ? `Pegarle a ${mj.cercano(jugador.pos).info.nombre || 'él'} (E)` : '') || nico.accion(jugador) || costa.accion(jugador) || tanzania.accion(jugador) || cachimba.accion(jugador) || pony.accion(jugador) || estatua.accion(jugador) || (cercaCaja() ? 'Abrir la caja fuerte (E)' : '') || textoTP() || playa.accion(jugador) || casino.accion(jugador) || bar.accion(jugador) || lucca.accion(jugador) || ciudad.accion(jugador) || concesionario.accion(jugador) || autodromo.accion(jugador) || karaoke.accion(jugador) || misiones.accion(jugador) || gym.accion(jugador) || ottati.accion(jugador) || amarishuow.accion(jugador) || perros.accion(jugador) || (cercaDelAuto() ? 'Manejar (E)' : cercaDelHeli() ? 'Volar el helicóptero (E)' : resto.accion(jugador) || (arcadeCerca() ? 'Jugar al Geometry Dash (E)' : roperoCerca() ? 'Abrir ropero (E)' : camaCerca() ? 'Dormir (E)' : ''));
     const estadoAgachar = modo === 'juego' && puedeAgacharse && !conduciendo ? String(jugador.agachado) : '';
     if (estadoAgachar !== ultimoAgachar) {
       ultimoAgachar = estadoAgachar;
