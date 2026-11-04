@@ -193,6 +193,14 @@ export function crearCielo(escena) {
         luz.intensity = THREE.MathUtils.lerp(luz.intensity, 0.6, interior);
         escena.fog.near = THREE.MathUtils.lerp(escena.fog.near, 140, interior);
         escena.fog.far = THREE.MathUtils.lerp(escena.fog.far, 320, interior);
+      } else if (interior < 0) {
+        // Un lugar cerrado y oscuro (el galpón de tanzania): poca luz general, así resaltan las
+        // lámparas y las luces de cultivo.
+        const k = -interior;
+        hemi.color.lerp(tmp.set('#8fa0b8'), k);
+        hemi.groundColor.lerp(tmp.set('#2a2c30'), k);
+        hemi.intensity = THREE.MathUtils.lerp(hemi.intensity, 0.85, k);
+        luz.intensity = THREE.MathUtils.lerp(luz.intensity, 0.08, k);
       }
 
       sol.visible = m.sol <= 1;

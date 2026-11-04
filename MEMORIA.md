@@ -6,11 +6,12 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Plugins: solo ponytail anda solo. claude-mem no sirve en la web: su memoria se borra con el contenedor y sincronizarla pide cuenta paga (cmem.ai Pro) y una terminal.
 
 ## Pendiente
-- Aprobar los números de la tanzania (data/tanzania.js) y pasar prueba/ al juego con herramientas/pasar_prueba.sh.
+- Aprobar los números de la tanzania (data/tanzania.js): están en el juego con la propuesta.
 - Liberar el terreno viejo de Tepho y le shpet pasa cuando entra cualquiera al juego publicado (Firebase no se puede tocar desde el contenedor).
 - Multijugador y chat: probados solo con la red local de prueba; con Firebase real lo prueba el dueño.
 
 ## Último trabajo
+- PASADO AL JUEGO (pasar_prueba.sh, ahora sin borrar assets): costa, tanzania, celular/Tranzapp, COMCAR, policía, autos visibles en multi. Partidas viejas cargan igual (mismas claves). prueba/ queda igual al juego para la próxima actu.
 - COMCAR rediseñado: 2 pabellones de 3 pisos (H=7.4) enfrentados con patio interno, fachada azul/blanca con torres INR M4, rejas como planos con textura (reja()), carteles pintados en pared, torres de piedra, bandera. Gente y policía solo con estado.costa. Sin fuga automática de otros presos; visitas reales = posiciones de red + aviso (enSalaVisitas).
 - EN PRUEBA: autos/heli de los demás se ven (pos.c = id del auto, m=3 heli). COMCAR (comcar.js, COMCAR en constantes): cárcel con presos esposados, guardias, Módulo 4, comedor, baños, patio, visitas; 8 pasos de fuga con el Extravirgen (túnel) o soborno a Benítez; estado.carcel. Policía (policia.js): patrullero con punto rojo en el mapa, controla y te encarcela si llevás tanzania.
 - Tranzapp: pedidos de gente común (una casa por manzana de la ciudad, 12 casillas de la Cachimba; nombres GENTE/VILLA en celular.js), cada 30-75 s, hasta 4.

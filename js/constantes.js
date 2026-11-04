@@ -120,3 +120,23 @@ export const LIMITE_MAPA = { x0: CIUDAD.x - 480, x1: 2300 + DX, z0: -520, z1: 10
 // de camino a la ciudad. Solo existe cuando El Humano te invita. Se entra por un camino de tierra
 // que sale de la autopista (x del camino: entrada).
 export const CACHIMBA = { x0: -2790 + DX, x1: -2550 + DX, z0: -420, z1: -240, entrada: -2670 + DX };
+// ---------- La costa (zona nueva, la habilita Nico Baraja por 200B) ----------
+// Sigue la calle del barrio hacia el este. Pasando la barrera se bifurca: el ramal recto sigue por
+// abajo, junto a la playa de las mansiones de lujo; el ramal en curva sube al acantilado, donde
+// está la parcela del galpón de tanzania (escondido arriba, mirando al mar). Ver js/costa.js.
+export const COSTA = {
+  x0: 2260 + DX, x1: 3460 + DX, // de la barrera al final
+  barrera: 2254 + DX, // donde termina la calle del barrio (BARRIO.x1)
+  nico: { x: 2236 + DX, z: CALLE_Z - 11 }, // donde espera Nico, apoyado en el Koenigsegg
+  bif: 2560 + DX, // donde se abre el camino en dos
+  meseta: { x0: 2880 + DX, x1: 3200 + DX, z0: -220, z1: -40, alto: 30 }, // la cima plana del cerro
+  falda: { o: 290, e: 250, n: 170, s: 92 }, // cuánto baja el cerro hacia cada lado (al mar, empinado)
+  galpon: { x: 3045 + DX, z: -130, ancho: 84, fondo: 56 }, // el galpón de tanzania (en la cima)
+  playa: { x0: 2560 + DX, x1: 3460 + DX }, // la arena de las mansiones (de la calle a la orilla)
+  precio: 2e11, // lo que pide Nico (200B)
+  desde: 0.99, // la mansión al 99%
+};
+// El C.O.M.C.A.R. (la cárcel, js/comcar.js): en las afueras, al norte de la autopista, entre el
+// barrio y la Cachimba. Se entra por un camino desde la autopista (x: entrada). Adentro (de z1 - 27
+// para el norte) vive el que cae preso; la franja del sur es para las visitas.
+export const COMCAR = { x0: -1920 + DX, x1: -1500 + DX, z0: -440, z1: -170, entrada: -1710 + DX };

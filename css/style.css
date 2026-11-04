@@ -841,6 +841,9 @@ html, body {
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 .btn-chat:hover { filter: brightness(1.25); }
+/* Fumar tanzania (fumar.js): abajo del botón de configuración, solo con bolsitas encima. */
+.btn-fumar { position: absolute; top: calc(62px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); width: 44px; height: 44px; padding: 0; font-size: 22px; background: var(--panel); border: 2px solid #8e5ee0; border-radius: 12px; cursor: pointer; pointer-events: auto; }
+.btn-fumar:active { transform: translateY(2px); }
 .btn-chat:active { transform: translateY(2px); }
 .btn-chat:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
 .btn-chat[aria-pressed="true"] { background: var(--azul); }
@@ -1358,3 +1361,40 @@ body.en-taller #hud > :not(.hud-centro) { visibility: hidden; }
 .dialogo-num { flex: 0 0 26px; height: 26px; border-radius: 50%; background: #ea580c; color: #fff; display: grid; place-items: center; font-size: 15px; }
 @media (max-height: 500px) { .dialogo-opcion { min-height: 38px; font-size: 15px; padding: 5px 10px; } .dialogo-opciones { gap: 5px; } }
 @media (prefers-reduced-motion: reduce) { .dialogo-opcion { transition: none; } .dialogo-opcion:hover { transform: none; } }
+
+/* ---------- Celular (celular.js): TanzaCoin y Tranzapp ---------- */
+.btn-celular { position: absolute; top: calc(114px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); width: 44px; height: 44px; padding: 0; font-size: 22px; background: var(--panel); border: 2px solid #25d366; border-radius: 12px; cursor: pointer; pointer-events: auto; }
+.btn-celular.con-mensaje::after { content: ''; position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; border-radius: 50%; background: #25d366; border: 2px solid #fff; }
+.celular { position: fixed; right: calc(16px + env(safe-area-inset-right)); bottom: 12px; z-index: 25; pointer-events: auto; }
+.celular-marco { width: min(300px, 80vw); height: min(560px, 86vh); padding: 14px 10px; border-radius: 34px; background: #0d0d10; border: 3px solid #3a3d44; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+.celular-pantalla { width: 100%; height: 100%; border-radius: 24px; overflow-y: auto; background: linear-gradient(160deg, #2b1d4a, #101826); color: #fff; font-family: var(--fuente); padding: 8px 10px; box-sizing: border-box; }
+.cel-barra { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; opacity: 0.85; margin-bottom: 14px; }
+.cel-apps { display: flex; gap: 22px; justify-content: center; margin-top: 30px; }
+.cel-app { background: none; border: 0; color: #fff; font: 700 13px var(--fuente); display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+.cel-icono { position: relative; width: 62px; height: 62px; border-radius: 16px; display: grid; place-items: center; font-size: 30px; }
+.cel-badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; border-radius: 10px; background: #ff3b30; font-size: 13px; display: grid; place-items: center; }
+.cel-pie { margin-top: 18px; font-size: 13px; opacity: 0.8; text-align: center; }
+.cel-titulo { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; margin-bottom: 10px; color: #c9a6ff; }
+.cel-titulo.verde { color: #25d366; }
+.cel-volver { background: rgba(255,255,255,0.12); border: 0; color: #fff; width: 30px; height: 30px; border-radius: 50%; font-size: 20px; cursor: pointer; }
+.cel-precio { font-size: 30px; font-weight: 800; color: #ffd23f; }
+.cel-precio small { font-size: 14px; color: #ccc; }
+.cel-var { font-weight: 700; margin: 4px 0 8px; }
+.cel-var.sube { color: #3ddc84; } .cel-var.baja { color: #ff5252; }
+#cel-grafico { width: 100%; border-radius: 12px; }
+.cel-chat { background: rgba(255,255,255,0.08); border-radius: 14px; padding: 8px 10px; margin-bottom: 8px; }
+.cel-chat.aceptado { border: 2px solid #1f6fff; }
+.cel-de { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.cel-avatar { width: 26px; height: 26px; border-radius: 50%; background: #2e3b33; display: grid; place-items: center; font-size: 15px; }
+.cel-msj { font-size: 14px; line-height: 1.3; background: #1f2c34; border-radius: 0 10px 10px 10px; padding: 6px 8px; margin-top: 4px; }
+.cel-paga { color: #8dff6a; }
+.cel-aceptar { margin-top: 6px; width: 100%; padding: 8px; border: 0; border-radius: 10px; background: #25d366; color: #0b1f12; font: 800 14px var(--fuente); cursor: pointer; }
+.cel-ok { margin-top: 6px; font-size: 13px; color: #8ab4ff; font-weight: 700; }
+.cel-hecho { font-size: 12px; opacity: 0.7; margin: 4px 2px; }
+.cel-vacio { opacity: 0.6; text-align: center; margin-top: 40px; }
+
+/* ---------- C.O.M.C.A.R. (comcar.js) ---------- */
+.carcel-hud { position: absolute; top: calc(118px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); max-width: min(560px, 80vw); padding: 8px 14px; border-radius: 12px; background: rgba(240,124,24,0.92); color: #1a0f05; font: 700 14px var(--fuente); text-align: center; line-height: 1.35; pointer-events: none; }
+.carcel-fundido { position: fixed; inset: 0; z-index: 60; background: #000; display: grid; place-items: center; opacity: 0; transition: opacity 0.7s ease; pointer-events: none; }
+.carcel-fundido.visible { opacity: 1; }
+.carcel-fundido p { color: #fff; font: 700 22px var(--fuente); text-align: center; line-height: 1.5; max-width: 80vw; }

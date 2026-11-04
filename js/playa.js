@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { PLAYA as P, LOTES, loteLocal } from './constantes.js';
+import { PLAYA as P, LOTES, loteLocal, COSTA } from './constantes.js';
 import { crearPersonaje } from './personaje.js';
 import { cargarCabeza, cargarImagen, crearEtiqueta, liberarAlSubir } from './texturas.js';
 import { aleatorio } from './util.js';
@@ -25,7 +25,8 @@ import { sfx } from './sfx.js';
 // plano con un shader corto.
 
 const O = P.orilla;
-const Y_AGUA = 0.32;
+const FRANCIS_PAGA = 1.8; // lo que paga Francis por cada bolsita de tanzania (veces lo que vale)
+export const Y_AGUA = 0.32;
 const ANCHO_PLAYA = P.x1 - P.x0;
 const SPOT = { x: P.muelle.x - 32, z: O - 3.6 }; // donde se para Francis cuando sale del agua
 
@@ -77,7 +78,7 @@ class Pila {
 }
 
 // ---------- Texturas ----------
-const texArena = () => textura(lienzo(256, 256, (g, w) => {
+export const texArena = () => textura(lienzo(256, 256, (g, w) => {
   g.fillStyle = '#f2e3c0';
   g.fillRect(0, 0, w, w);
   const rnd = aleatorio(4);
@@ -96,7 +97,7 @@ const texArena = () => textura(lienzo(256, 256, (g, w) => {
   }
 }), true);
 // Arena mojada cerca del agua: más oscura, que se funde con la seca.
-const texMojada = () => textura(lienzo(4, 128, (g, w, h) => {
+export const texMojada = () => textura(lienzo(4, 128, (g, w, h) => {
   const gr = g.createLinearGradient(0, 0, 0, h);
   gr.addColorStop(0, 'rgba(180,150,105,0)');
   gr.addColorStop(0.6, 'rgba(176,146,102,0.55)');
@@ -105,7 +106,7 @@ const texMojada = () => textura(lienzo(4, 128, (g, w, h) => {
   g.fillRect(0, 0, w, h);
 }));
 // Espuma: franja blanca deshilachada con burbujas, transparente en los bordes.
-const texEspuma = () => textura(lienzo(512, 64, (g, w, h) => {
+export const texEspuma = () => textura(lienzo(512, 64, (g, w, h) => {
   const rnd = aleatorio(9);
   for (let i = 0; i < 900; i++) {
     const x = rnd() * w;
@@ -521,7 +522,7 @@ export class Playa {
     // Fuera de la playa (los costados de la bahía): la orilla es de piedras.
     const rocas = [];
     for (let x = P.mar.x0; x < P.mar.x1; x += 5) {
-      if (x > P.x0 - 4 && x < P.x1 + 4) continue;
+      if ((x > P.x0 - 4 && x < P.x1 + 4) || (x > COSTA.playa.x0 - 4 && x < COSTA.playa.x1 + 4)) continue; // arena (también la de la costa)
       rocas.push([x + rnd() * 3, O - 1 + rnd() * 3, 0.8 + rnd() * 1.4]);
     }
     const geoRoca = new THREE.DodecahedronGeometry(1, 0);
@@ -732,13 +733,13 @@ export class Playa {
 
   accion(jugador) {
     if (!this.cerca(jugador)) return '';
-    return this.perrosDesbloqueados() ? 'Hablar con Francis Jeremy (E)' : 'Saludar a Francis Jeremy (E)';
+    return this.perrosDesbloqueados() || this.conTanzania() ? 'Hablar con Francis Jeremy (E)' : 'Saludar a Francis Jeremy (E)';
   }
 
   // Devuelve true si abrió la charla (main.js frena los controles hasta que termina).
   hacer(jugador, alTerminar) {
     if (!this.cerca(jugador)) return false;
-    if (!this.perrosDesbloqueados()) {
+    if (!this.perrosDesbloqueados() && !this.conTanzania()) {
       this.hablar(una(FRASES));
       sfx.salto();
       return false;
@@ -746,6 +747,9 @@ export class Playa {
     this.charla(alTerminar);
     return true;
   }
+
+  // Llevás bolsitas de tanzania encima (main.js le pasa el tycoon: this.tanzania).
+  conTanzania() { return (this.tanzania?.datos.encima || 0) > 0; }
 
   // La charla: con opciones. Para la pócima hay que contarle lo de los perros y no rechazarla;
   // las otras ramas terminan en nada.
@@ -767,12 +771,27 @@ export class Playa {
       this.ui.toast('Conseguiste la pócima de Francis: dásela a un perro tirado (una por vez)', 'plata', 5000);
       return terminar();
     };
+    // Venderle tanzania: paga más que en el galpón (FRANCIS_PAGA veces lo que vale cada bolsita).
+    const tanzania = async () => {
+      const n = this.tanzania.datos.encima;
+      const r = await decir([`¿Tanzania? ¿Vos? Nooo mano, no te puedo creer. A ver, mostrame...`, `Uuuh, mirá el color de esos cogollos violeta. Esto es de la buena, mano. Te las compro todas: ${n} bolsitas.`], [
+        ['Dale, son tuyas', 'si'],
+        ['Mejor no, me las guardo', 'no'],
+      ]);
+      if (r !== 'si') { await decir(['Bueno mano, vos sabés. Si cambiás de idea, acá estoy en el agua.']); return terminar(); }
+      this.tanzania.vender(FRANCIS_PAGA);
+      sfx.brillo();
+      await decir(['Trato, mano. Esto me lo fumo mirando el atardecer arriba de la tabla. MUAJAJAJAJAJ', 'Traeme más cuando tengas, eh. #under']);
+      return terminar();
+    };
     (async () => {
       const r1 = await decir(['Qué onda mano, ¿qué hacés por acá? Vamo a surfear esas olas.'], [
         ['Vine a mirar el mar nomás', 'mar'],
         ['¿Me enseñás a surfear?', 'surf'],
         ['Ando medio bajón', 'bajon'],
+        ...(this.conTanzania() ? [['Te traje algo… tanzania', 'tanzania']] : []),
       ]);
+      if (r1 === 'tanzania') return tanzania();
       if (r1 === 'mar') { await decir(['El mar cura todo, mano. Todo menos la policía. POLICÍA, ¡ABRA LA PUERTA! jajaja']); return terminar(); }
       if (r1 === 'surf') { await decir(['Primero hay que sentir la ola, mano. La ola te elige a vos.', 'Hoy no, que está picado. #under']); return terminar(); }
       if (r1 !== 'bajon') return terminar();
@@ -808,7 +827,8 @@ export class Playa {
   actualizar(dt, jugador, noche, aPie) {
     this.reloj += dt;
     const t = this.reloj;
-    const enBarrio = Math.abs(jugador.pos.x) < 1600 && jugador.pos.z > -400;
+    const x = jugador.pos.x;
+    const enBarrio = (Math.abs(x) < 1600 || (x > COSTA.x0 - 900 && x < COSTA.x1 + 600)) && jugador.pos.z > -400; // el mar sigue en la costa
     this.grupo.visible = enBarrio;
     if (!enBarrio) return;
     this.uT.value = t;

@@ -17,6 +17,9 @@ import { sfx } from './sfx.js';
 // remera o con la ropa rota), perros flacos y lastimados, El Humano en la entrada y a veces la
 // Schwepa y Manu Mendez. Cada vez que entrás hay un 30% de que te roben toda la plata.
 const ROBO = 0.3;
+const VILLERO_COMPRA = 10; // gramos que te compra cada villero de una vez
+const VILLERO_PAGA = 1.3;
+const HUMANO_PAGA = 1.5; // lo que paga El Humano por cada bolsita de tanzania (veces lo que vale)
 const CALLE_X = CA.entrada; // la calle principal (de barro), sigue al camino de tierra
 const CRUCES = [CA.z0 + 55, CA.z0 + 120]; // las dos calles que la cruzan
 const enCalle = (x0, z0, x1, z1) => (x1 > CALLE_X - 7 && x0 < CALLE_X + 7) || CRUCES.some((z) => z1 > z - 6 && z0 < z + 6);
@@ -291,6 +294,8 @@ export class Cachimba {
     m.grupo.rotation.y = a;
     extra?.(m);
     this.grupo.add(m.grupo);
+    m.piel = p.piel;
+    m.villero = !!p.sinCara;
     this.gente.push(m);
     return m;
   }
@@ -358,6 +363,38 @@ export class Cachimba {
     if (ahora && !this.adentro) this.entrar();
     if (!this.dentro(p, 40)) this.adentro = false;
     if (ahora && this.robo > 0 && (this.robo -= dt) <= 0) this.robar();
+  }
+
+  // Venderle tanzania a El Humano (la que llevás encima: tanzania.js). Paga más que el galpón.
+  accion(jugador) {
+    const h = this.humano?.grupo;
+    if (!h || jugador.conduciendo || !((this.tanzania?.datos.encima || 0) > 0)) return '';
+    if (Math.hypot(jugador.pos.x - h.position.x, jugador.pos.z - h.position.z) < 5) return 'Venderle tanzania a El Humano (E)';
+    return this.villeroCerca(jugador.pos) ? 'Venderle tanzania al villero (E)' : '';
+  }
+
+  // Un villero a menos de 4 (cada uno compra de a poco: VILLERO_COMPRA, a VILLERO_PAGA).
+  villeroCerca(p) {
+    return this.gente.find((m) => m.villero && Math.hypot(p.x - m.grupo.position.x, p.z - m.grupo.position.z) < 4) || null;
+  }
+
+  async hacer(jugador) {
+    if (jugador && this.villeroCerca(jugador.pos) && Math.hypot(jugador.pos.x - this.humano.grupo.position.x, jugador.pos.z - this.humano.grupo.position.z) >= 5) {
+      const n = Math.min(this.tanzania.datos.encima, VILLERO_COMPRA);
+      const m = this.tanzania.vender(VILLERO_PAGA, n);
+      this.ui.toast(`Villero: "Gracias, pa. Esto me salva la semana" (${n} g, +${formato(m)})`, 'plata', 4000);
+      return;
+    }
+    const n = this.tanzania.datos.encima;
+    const cara = (await cargarCabeza(HUMANO)).frente.toDataURL();
+    const decir = (lineas, opciones) => new Promise((res) => this.ui.dialogo({ nombre: HUMANO.nombre, cara, remera: HUMANO.remera, lineas, opciones, alElegir: res, alTerminar: () => res(-1) }));
+    this.pausar?.(true);
+    const r = await decir(['¿Qué traés ahí, amigo? …¿Eso es tanzania? ¡La puta madre, amigo!', `Acá en la Cachimba esto vuela. Te compro las ${n} bolsitas, ya mismo.`], ['Dale, vendelas', 'No, después']);
+    if (r === 0) {
+      this.tanzania.vender(HUMANO_PAGA);
+      await decir(['Sos un capo, amigo. Volvé cuando quieras, que acá siempre hay quien compre.']);
+    }
+    this.pausar?.(false);
   }
 
   entrar() {

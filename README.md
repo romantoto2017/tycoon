@@ -363,9 +363,9 @@ En `prueba/` hay una copia exacta del juego, publicada en la misma página con `
 - **Con `?completa` en el link** (`…/prueba/?completa#llave=…`): la partida de la prueba queda con la mansión al 100% y 500T, guardada (para probar lo nuevo sin jugar todo).
 - `sh herramientas/copiar_prueba.sh` rehace la copia desde el juego; `sh herramientas/pasar_prueba.sh` pasa lo de `prueba/` al juego de verdad.
 
-## Actualización en prueba: la costa y la tanzania
+## La costa, la tanzania y el C.O.M.C.A.R.
 
-Todo esto está **solo en la copia de prueba** (`prueba/`); se pasa al juego con `herramientas/pasar_prueba.sh` cuando el dueño lo apruebe.
+Se hizo y probó en la copia de prueba y ya está en el juego (los archivos están en `js/` y `data/`; donde dice `prueba/js/...` es lo mismo en `js/`). Incluye la cárcel (`js/comcar.js`) y la policía (`js/policia.js`), que arranca recién cuando le pagás a Nico.
 
 - **Nico Baraja** (`prueba/js/nico.js`): con la mansión al 99% aparece al final de la calle del barrio, apoyado en su Koenigsegg Agera, al lado de la barrera de la costa. Por 200B te habilita el negocio: saca la barrera y queda guardado (`estado.costa`). Su cuerpo está escaneado de la foto con `herramientas/nicobaraja.py` (la tinta de los tatuajes del pecho, la panza, la manga del brazo derecho y el cuello, sobre la piel del juego), con las cadenas de oro en 3D, el short de jean, el cinto trenzado y las Jordan.
 - **La costa** (`prueba/js/costa.js`, medidas en `COSTA` de `constantes.js`): la calle sigue y se bifurca. El ramal recto va por abajo, junto a una playa con olas y cuatro mansiones de lujo (pileta, palmeras, autos caros). El ramal en curva sube el acantilado hasta la parcela del galpón.

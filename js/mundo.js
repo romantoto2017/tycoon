@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { caja, matTex, aleatorio } from './util.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { LIMITE_MAPA, TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU, GALPON as GA, BARRIO, DX, LOTES, loteLocal } from './constantes.js';
+import { LIMITE_MAPA, TERRENO as T, CALLE_Z, RESTO as R, PARRILLA as PA, GYM, MONTANA as MO, BOSQUE_CUSI as BO, CUSI_ESCONDIDO as CU, GALPON as GA, BARRIO, DX, LOTES, loteLocal, COSTA } from './constantes.js';
 import { crearCielo } from './cielo.js';
 
 // Largo del barrio (en x): de la autopista hasta pasando el último terreno (BARRIO).
@@ -16,13 +16,14 @@ export function crearMundo(escena) {
 
   // Pasto general (el baseplate del terreno es la primera compra). Llega hasta el gym.
   // Pasto general: del barrio hasta pasando la Ciudad Vecibanda (la autopista va por arriba).
-  const ancho = LIMITE_MAPA.x1 - LIMITE_MAPA.x0 + 1000;
+  const x1 = Math.max(LIMITE_MAPA.x1, COSTA.x1); // hasta pasando la costa (aunque esté cerrada)
+  const ancho = x1 - LIMITE_MAPA.x0 + 1000;
   // Dividido en pedazos de 100: con dos triángulos gigantes la profundidad pierde precisión y
   // el pasto tapa la autopista (que está apenas arriba).
   // De z −1100 a 1500: llega hasta pasando el autódromo.
   const pasto = new THREE.Mesh(new THREE.PlaneGeometry(ancho, 2600, Math.ceil(ancho / 100), 26), matTex('pastoLibre', '#79b957', 6));
   pasto.rotation.x = -Math.PI / 2;
-  pasto.position.set((LIMITE_MAPA.x0 + LIMITE_MAPA.x1) / 2, 0, 200);
+  pasto.position.set((LIMITE_MAPA.x0 + x1) / 2, 0, 200);
   escena.add(pasto);
 
   // Bloques quietos del barrio: main.js los pasa al lote para dibujarlos juntos.

@@ -1379,7 +1379,7 @@ export class Ciudad {
       // Recorre la vereda alrededor de su manzana, por el medio de la vereda.
       const r = { x0: m.x0 + 2.8, x1: m.x1 - 2.8, z0: m.z0 + 2.8, z1: m.z1 - 2.8 };
       const perimetro = 2 * (r.x1 - r.x0 + r.z1 - r.z0);
-      const peaton = { mod, r, perimetro, s: rnd() * perimetro, vel: (3.2 + rnd() * 2.2) * (rnd() < 0.5 ? 1 : -1), pausa: 0 };
+      const peaton = { piel: p.piel, mod, r, perimetro, s: rnd() * perimetro, vel: (3.2 + rnd() * 2.2) * (rnd() < 0.5 ? 1 : -1), pausa: 0 };
       this.grupo.add(mod.grupo);
       this.peatones.push(peaton);
       this.moverPeaton(peaton, 0);

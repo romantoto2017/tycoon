@@ -4,6 +4,10 @@
 export const PRUEBA = !!globalThis.location?.pathname.includes('/prueba/'); // sin location: node (herramientas)
 export const clave = (k) => (PRUEBA ? `prueba-${k}` : k);
 export const RAIZ_RED = PRUEBA ? 'prueba' : '';
+// Link de la prueba con "?completa" (…/prueba/?completa#llave=…): la partida de la prueba queda con
+// la mansión al 100% y plata para probar lo nuevo (guardada). Va antes del # para que la página se
+// recargue aunque ya esté abierta (si solo cambia lo de después del #, el navegador no recarga).
+export const PEDIR_COMPLETA = PRUEBA && ['search', 'hash'].some((k) => new URLSearchParams(globalThis.location?.[k].slice(1)).has('completa'));
 
 // La prueba se abre solo con el link del dueño (…/prueba/#llave=…): acá está la huella (SHA-256) de la
 // llave, no la llave. La primera vez queda recordada en ese navegador. Sin llave: "no encontrada".

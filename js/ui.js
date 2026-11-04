@@ -842,7 +842,10 @@ export function abrirTaller(d) {
 // completa (se arrastra y se hace zoom con la rueda, pellizcando o con + y −). Abajo de todo va el plano dibujado (calles, autopista, la pista, la ciudad) y
 // arriba las fotos desde arriba de cada zona, que saca main.js (capturarMapa) con todo lo que hay.
 // mapa: { zonas: [{ x0, z0, x1, z1, canvas }], plano: { ... }, etiquetas: [{ x, z, texto, nivel }] }
-const MAPA = { zonas: [], plano: null, etiquetas: [], pos: { x: 0, z: 0 }, angulo: 0 };
+const MAPA = { zonas: [], plano: null, etiquetas: [], pos: { x: 0, z: 0 }, angulo: 0, marcas: {} };
+const THREE_clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+// Puntos en el mapa por grupo (las entregas de Tranzapp, el patrullero): [{ x, z, color? }].
+export function marcasMapa(lista, grupo = 'tranzapp') { MAPA.marcas[grupo] = lista; }
 const PASTO = '#5e8e3f'; // el mismo verde que el pasto en las fotos
 
 function dibujarMapa(g, w, h, vista, chico = false) {
@@ -943,6 +946,15 @@ function dibujarMapa(g, w, h, vista, chico = false) {
     g.strokeText(texto, x, y);
     g.fillStyle = e.nivel === 0 ? '#ffd23f' : '#ffffff';
     g.fillText(texto, x, y);
+  }
+  // Las entregas pendientes: punto azul con borde blanco (en el borde del minimapa si quedan lejos).
+  for (const m of Object.values(MAPA.marcas).flat()) {
+    const mx = THREE_clamp(X(m.x), 8, w - 8);
+    const mz = THREE_clamp(Z(m.z), 8, h - 8);
+    g.fillStyle = m.color || '#1f6fff';
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 2.5;
+    g.beginPath(); g.arc(mx, mz, chico ? 5 : 8, 0, Math.PI * 2); g.fill(); g.stroke();
   }
   // Vos: la flecha (para donde mirás o manejás), con un anillo para encontrarla fácil.
   const px = X(MAPA.pos.x);
