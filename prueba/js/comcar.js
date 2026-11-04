@@ -19,7 +19,7 @@ import { sfx } from './sfx.js';
 // Si caés preso (la policía, policia.js), tu vida pasa a ser acá adentro: no podés salir ni hacer
 // nada afuera; la rutina del día (patio, comedor, baños, celda de noche) y las misiones para salir:
 // conocer al Extravirgen (su cara: herramientas/extravirgen.py) y escaparse juntos por un túnel, o
-// sobornar al guardia. Otros jugadores presos se ven y se escapan con vos; los de afuera te pueden
+// sobornar al guardia. Otros jugadores presos se ven (cada uno se escapa por su cuenta); los de afuera te pueden
 // visitar en la sala (el lado de afuera se entra desde el portón). Todo en estado.carcel.
 const W = CC.x1 - CC.x0;
 const X = (u) => CC.x0 + u; // de la esquina noroeste de la cárcel al mundo
@@ -27,7 +27,13 @@ const Z = (v) => CC.z0 + v;
 const VIS = { x0: CC.entrada - 22, x1: CC.entrada + 22, z0: CC.z1 - 44, rejas: CC.z1 - 30, z1: CC.z1 - 16 }; // sala de visitas
 // Donde vive el preso (no puede salir de acá).
 export const ADENTRO = { x0: X(12), x1: X(W - 12), z0: Z(12), z1: VIS.rejas - 0.5 };
-const MOD = { x0: X(20), x1: X(200), z0: Z(22), z1: Z(64), galeria: 6 }; // el Módulo 4
+const H = 7.4; // alto de cada piso (3 m: 1 m = 2,47)
+const PISOS = 3;
+// El Módulo 4 (como la foto del patio interno): dos pabellones de 3 pisos enfrentados, cada uno con
+// celdas y su galería enrejada de arriba a abajo; en el medio, el patio de cemento con el charco.
+const MOD = { x0: X(20), x1: X(200), z0: Z(20), z1: Z(38), galeria: 6 }; // pabellón A (el tuyo, celdas mirando al sur)
+const PAB_B = { z0: Z(62), z1: Z(80) }; // pabellón B (celdas mirando al norte); su cara sur es la fachada
+const PATIO_INT = { z0: MOD.z1, z1: PAB_B.z0 };
 const CELDA = 11; // ancho de cada celda
 const N_CELDAS = Math.floor((MOD.x1 - MOD.x0 - 12) / CELDA);
 const COM = { x0: X(225), x1: X(305), z0: Z(22), z1: Z(64) }; // comedor
@@ -38,7 +44,7 @@ const TU_CELDA = 6; // la 7
 const SU_CELDA = 7; // la 8 (la del Extravirgen, donde está el túnel)
 const TUNEL = (() => { const c = celda(SU_CELDA); return { x: c.x0 + 3, z: c.z0 + 4 }; })();
 const SALIDA = { x: celda(SU_CELDA).x0 + 3, z: CC.z0 - 14 }; // del otro lado del alambrado norte
-const GUARDIA_PUERTA = { x: MOD.x1 + 4, z: MOD.z1 + 3 };
+const GUARDIA_PUERTA = { x: MOD.x1 + 5, z: (PATIO_INT.z0 + PATIO_INT.z1) / 2 }; // en la reja de entrada al pabellón
 export const EXTRAVIRGEN = { id: 'extravirgen', nombre: 'El Extravirgen', foto: 'extravirgen.jpeg', recorte: [0.5, 0.5, 1], piel: '#e0b296', pelo: '#1c1612', peinado: 'liso', remera: '#f07c18', pantalon: '#f07c18', mangasLargas: true };
 
 // La rutina del día (por la hora del ciclo de día y noche): qué toca y dónde.
@@ -83,27 +89,57 @@ const texPared = (color) => tex(128, 128, (g, w, h) => {
   g.fillStyle = color;
   g.fillRect(0, 0, w, h);
   const r = aleatorio(color.length * 7);
-  for (let i = 0; i < 24; i++) {
-    g.fillStyle = `rgba(${60 + r() * 40},${55 + r() * 30},${40 + r() * 20},${0.08 + r() * 0.18})`;
+  for (let i = 0; i < 9; i++) {
+    g.fillStyle = `rgba(${60 + r() * 40},${55 + r() * 30},${40 + r() * 20},${0.04 + r() * 0.07})`;
     g.beginPath(); g.ellipse(r() * w, r() * h, 6 + r() * 22, 4 + r() * 16, r() * 3, 0, Math.PI * 2); g.fill();
   }
   const gr = g.createLinearGradient(0, h * 0.7, 0, h);
   gr.addColorStop(0, 'rgba(60,50,40,0)');
-  gr.addColorStop(1, 'rgba(60,50,40,0.45)');
+  gr.addColorStop(1, 'rgba(60,50,40,0.22)');
   g.fillStyle = gr;
   g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 8; i++) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(r() * w, r() * h, 3 + r() * 8, 2 + r() * 5); } // desconchado
+  for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(r() * w, r() * h, 3 + r() * 8, 2 + r() * 5); } // desconchado
 }, true);
-const texCartel = (texto, sub) => tex(512, 128, (g, w, h) => {
+// Reja: un barrote vertical y dos travesaños (transparente entre medio). Se repite por los UV.
+const texReja = () => tex(32, 128, (g, w, h) => {
+  g.fillStyle = '#2f3b47';
+  g.fillRect(w / 2 - 3, 0, 6, h);
+  g.fillRect(0, 6, w, 6);
+  g.fillRect(0, h - 12, w, 6);
+}, true);
+// Piedra (las torres, como las de la imagen de referencia): bloques grises con junta.
+const texPiedra = () => tex(128, 128, (g, w, h) => {
+  g.fillStyle = '#8e8a84';
+  g.fillRect(0, 0, w, h);
+  const r = aleatorio(9);
+  for (let f = 0; f < 8; f++) for (let k = -1; k < 4; k++) {
+    const t = 150 + Math.floor(r() * 40);
+    g.fillStyle = `rgb(${t},${t - 4},${t - 10})`;
+    g.fillRect(k * 40 + (f % 2) * 20 + 2, f * 16 + 2, 36, 12);
+  }
+}, true);
+const texCartel = (texto, sub, color = '#1d4fa0') => tex(512, 128, (g, w, h) => {
   g.fillStyle = 'rgba(0,0,0,0)';
   g.fillRect(0, 0, w, h);
-  g.fillStyle = '#1d4fa0';
+  g.fillStyle = color;
   g.font = '900 88px Arial, sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText(texto, w / 2, sub ? 52 : h / 2);
   if (sub) { g.font = '700 32px Arial, sans-serif'; g.fillStyle = '#333'; g.fillText(sub, w / 2, 108); }
 });
+
+// Un paño de reja (plano vertical con la textura repetida por los UV, así todas usan la misma).
+function reja(mat, x0, z0, x1, z1, y0, y1) {
+  const largo = Math.hypot(x1 - x0, z1 - z0);
+  const g = new THREE.PlaneGeometry(largo, y1 - y0);
+  const uv = g.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (largo / 0.55), uv.getY(i) * ((y1 - y0) / 3.6));
+  const m = new THREE.Mesh(g, mat);
+  m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  m.rotation.y = -Math.atan2(z1 - z0, x1 - x0);
+  return m;
+}
 
 export class Comcar {
   constructor({ escena, estado, ui, guardar, colisiones, jugador, hora, pausar }) {
@@ -118,6 +154,8 @@ export class Comcar {
 
   get preso() { return !!this.estado.carcel; }
   get c() { return this.estado.carcel; }
+  // En la sala de visitas (del lado que sea).
+  enSalaVisitas(p) { return p.x > VIS.x0 && p.x < VIS.x1 && p.z > VIS.z0 && p.z < VIS.z1; }
   dentro(p, m = 0) { return p.x > CC.x0 - m && p.x < CC.x1 + m && p.z > CC.z0 - m && p.z < CC.z1 + m; }
 
   solido(x0, y0, z0, x1, y1, z1) {
@@ -136,7 +174,10 @@ export class Comcar {
       luz: new THREE.MeshBasicMaterial({ vertexColors: true }),
       blanca: new THREE.MeshLambertMaterial({ vertexColors: true, map: texPared('#e9e6df') }),
       celeste: new THREE.MeshLambertMaterial({ vertexColors: true, map: texPared('#5fb7d8') }),
+      gris: new THREE.MeshLambertMaterial({ vertexColors: true, map: texPared('#c9ccd0') }),
+      piedra: new THREE.MeshLambertMaterial({ vertexColors: true, map: texPiedra() }),
     };
+    this.matReja = new THREE.MeshLambertMaterial({ map: texReja(), transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
     // El piso: pasto seco afuera, tierra en el patio, cemento sucio adentro; el camino de entrada.
     c.piso(CC.x0 - 30, CC.z0 - 30, CC.x1 + 30, CC.z1 + 20, 0.04, '#7b8a4e');
     c.piso(CC.x0 + 8, CC.z0 + 8, CC.x1 - 8, CC.z1 - 8, 0.06, '#8d8a80');
@@ -163,17 +204,23 @@ export class Comcar {
       c.caja(x - t, 0.08, z - t * 0.7, x + t, 0.08 + t * 0.4, z + t * 0.7, basura[i % basura.length]);
     }
     this.grupo.add(c.armar(mats));
-    // Los carteles: MODULO 4 en la fachada y A1 1-10 sobre la reja del pabellón.
-    const cartel = (t, w, h, x, y, z, ry = 0) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
+    // Los carteles, pintados sobre la pared (pegados, como en las fotos): MODULO 4 en la franja azul
+    // de la fachada, INR M4 en la torre, A1 1-10 arriba de la reja del pabellón y el de la garita.
+    const pintado = (t, w, h, x, y, z, ry = 0) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
       m.position.set(x, y, z);
       m.rotation.y = ry;
       this.grupo.add(m);
     };
-    cartel(texCartel('MODULO 4'), 22, 5.5, (MOD.x0 + MOD.x1) / 2, 15.2, MOD.z1 + 0.35);
-    cartel(texCartel('A1  1-10'), 7, 1.8, MOD.x1 + 0.4, 6.4, MOD.z1 - MOD.galeria / 2, Math.PI / 2);
-    cartel(texCartel('C.O.M.C.A.R.', 'Centro de Rehabilitación'), 20, 5, CC.entrada + 16, 6, CC.z1 + 1.2);
-    this.poblar(rnd);
+    const xm = (MOD.x0 + MOD.x1) / 2;
+    pintado(texCartel('MODULO 4', null, '#f4f4f0'), 26, 6.5, xm - 32, H - 3.2, PAB_B.z1 + 0.46);
+    pintado(texCartel('INR', 'M 4'), 6.5, 3.2, xm - 9, H * PISOS + 3, PAB_B.z1 + 6.06);
+    pintado(texCartel('A1  1-10'), 7, 1.8, MOD.x1 + 1.06, H + 1.6, (PATIO_INT.z0 + PATIO_INT.z1) / 2, Math.PI / 2);
+    pintado(texCartel('C.O.M.C.A.R.', 'INR'), 4.6, 1.15, CC.entrada + 10.5, 3, CC.z1 + 7.06);
+    this.reja = (x0, z0, x1, z1, y0, y1) => this.grupo.add(reja(this.matReja, x0, z0, x1, z1, y0, y1));
+    this.rejas();
+    // La gente aparece recién cuando abre la costa (antes, la cárcel se ve vacía).
+    this.rnd = rnd;
   }
 
   // Doble alambrado con postes de material inclinados y concertina arriba; el portón de entrada.
@@ -220,69 +267,148 @@ export class Comcar {
   }
 
   // Torres de vigilancia en las esquinas (de material blanco, como las de la foto).
+  // Torres de vigilancia de piedra (como la imagen de referencia), más altas, y el mástil con la
+  // bandera de Uruguay en la entrada.
   torres(c) {
     for (const [x, z] of [[CC.x0 + 3, CC.z0 + 3], [CC.x1 - 3, CC.z0 + 3], [CC.x0 + 3, CC.z1 - 3], [CC.x1 - 3, CC.z1 - 3]]) {
-      c.caja(x - 2.5, 0, z - 2.5, x + 2.5, 14, z + 2.5, '#e9e6df', { lados: 'blanca' });
-      c.caja(x - 3.2, 14, z - 3.2, x + 3.2, 17.5, z + 3.2, '#e9e6df', { lados: 'blanca' });
-      for (const [dx, dz] of [[0, 3.25], [0, -3.25], [3.25, 0], [-3.25, 0]]) c.caja(x + dx - (dz ? 1.6 : 0.05), 15, z + dz - (dx ? 1.6 : 0.05), x + dx + (dz ? 1.6 : 0.05), 16.8, z + dz + (dx ? 1.6 : 0.05), '#1b1e22');
-      c.caja(x - 3.6, 17.5, z - 3.6, x + 3.6, 18, z + 3.6, '#5a5c60');
-      this.solido(x - 2.5, 0, z - 2.5, x + 2.5, 14, z + 2.5);
+      c.caja(x - 3, 0, z - 3, x + 3, 22, z + 3, '#ffffff', { lados: 'piedra' });
+      c.caja(x - 3.8, 22, z - 3.8, x + 3.8, 22.6, z + 3.8, '#8e8a84');
+      for (const [a, b] of [[-3.6, -3.4], [3.4, 3.6]]) { c.caja(x + a, 22.6, z - 3.6, x + b, 26, z - 3.4, '#5a5c60'); c.caja(x + a, 22.6, z + 3.4, x + b, 26, z + 3.6, '#5a5c60'); }
+      c.caja(x - 3.6, 22.6, z - 3.6, x + 3.6, 23.8, z + 3.6, '#8e8a84'); // pretil
+      c.caja(x - 4.2, 26, z - 4.2, x + 4.2, 26.6, z + 4.2, '#3a3d40'); // techo
+      c.caja(x - 0.3, 26.6, z - 0.3, x + 0.3, 27.4, z + 0.3, '#ffe8a0', { lados: 'luz' }); // reflector
+      this.solido(x - 3, 0, z - 3, x + 3, 22, z + 3);
     }
+    // Mástil y bandera (franjas blancas y celestes, el sol en el cuadrado de arriba).
+    const mx = CC.entrada - 14;
+    const mz = CC.z1 + 6;
+    c.cil(0.15, 0.2, 16, '#d8d8d8', mx, 0, mz, 6);
+    for (let k = 0; k < 9; k++) c.caja(mx + 0.2, 15.8 - k * 0.5, mz - 0.03, mx + 6.2, 16.3 - k * 0.5, mz + 0.03, k % 2 ? '#2f7bd6' : '#ffffff');
+    c.caja(mx + 0.2, 13.8, mz - 0.04, mx + 2.4, 16.3, mz + 0.04, '#ffffff');
+    c.cil(0.6, 0.6, 0.1, '#f2c12e', mx + 1.3, 15, mz + 0.05, 12);
   }
 
-  // El Módulo 4: dos pisos, la fachada enrejada (las galerías, como la foto), el pabellón por dentro
-  // con las celdas (cama de material, letrina, lavatorio y charco) y la reja con el cartel A1.
+  // El Módulo 4: los dos pabellones de 3 pisos enfrentados (celdas, galerías y losas), el patio
+  // interno con el charco, la fachada del pabellón B que da al patio grande (abajo azul, arriba
+  // blanco con ventanas y dos torres, como la foto) y las celdas de tu piso por dentro (como en el
+  // Roblox: paredes grises, cama, inodoro, pileta y la reja). Las rejas: rejas() (planos con textura).
   modulo(c, rnd) {
     const { x0, x1, z0, z1, galeria } = MOD;
-    const alto = 8;
-    const zc = z1 - galeria; // el frente de las celdas (detrás, el pasillo)
-    // Paredes de afuera: atrás, los costados y el piso de arriba; celeste abajo como en la foto.
-    c.caja(x0, 0, z0, x1, alto * 2, z0 + 0.5, '#5fb7d8', { lados: 'celeste' });
-    c.caja(x0, 0, z0, x0 + 0.5, alto * 2, z1, '#e9e6df', { lados: 'blanca' });
-    c.caja(x1 - 0.5, 0, z0, x1, alto * 2, zc, '#e9e6df', { lados: 'blanca' });
-    c.caja(x1 - 0.5, alto, zc, x1, alto * 2, z1, '#e9e6df', { lados: 'blanca' });
-    this.solido(x0, 0, z0, x1, alto * 2, z0 + 0.5);
-    this.solido(x0, 0, z0, x0 + 0.5, alto * 2, z1);
-    this.solido(x1 - 0.5, 0, z0, x1, alto * 2, zc);
-    // Losa del primer piso, techo y la cornisa blanca (con el cartel).
-    c.caja(x0, alto, z0, x1, alto + 0.5, z1, '#cfcbc2', { abajo: true });
-    c.caja(x0 - 0.3, alto * 2, z0 - 0.3, x1 + 0.3, alto * 2 + 0.6, z1 + 0.3, '#e9e6df', { lados: 'blanca' });
-    c.caja(x0, alto * 2 - 2.5, z1 - 0.1, x1, alto * 2, z1 + 0.25, '#e9e6df', { lados: 'blanca' });
-    // Las celdas: paredes de material celeste, la reja abierta, cama, letrina, lavatorio, charco.
+    const alto = H * PISOS;
+    const zc = z1 - galeria; // frente de las celdas del A
+    const bc = PAB_B.z0 + galeria; // frente de las celdas del B
+    // Pabellón A: pared de atrás, los costados, losas y techo; las galerías con su baranda.
+    c.caja(x0, 0, z0, x1, alto, z0 + 0.6, '#e9e6df', { lados: 'blanca' });
+    c.caja(x0, 0, z0, x0 + 0.6, alto, z1, '#e9e6df', { lados: 'blanca' });
+    c.caja(x1 - 0.6, 0, z0, x1, alto, z1, '#e9e6df', { lados: 'blanca' });
+    this.solido(x0, 0, z0, x1, alto, z0 + 0.6);
+    this.solido(x0, 0, z0, x0 + 0.6, alto, z1);
+    this.solido(x1 - 0.6, 0, z0, x1, alto, z1 - 3.5);
+    for (let p = 1; p <= PISOS; p++) c.caja(x0, H * p - 0.4, z0, x1, H * p, z1, '#b9b5ac', { abajo: true });
+    c.caja(x0 - 0.4, alto, z0 - 0.4, x1 + 0.4, alto + 0.8, z1 + 0.4, '#e9e6df', { lados: 'blanca' });
+    // Pabellón B (macizo: no se entra) con su techo.
+    c.caja(x0, 0, PAB_B.z0, x1, alto, PAB_B.z1, '#e9e6df', { lados: 'blanca' });
+    c.caja(x0 - 0.4, alto, PAB_B.z0 - 0.4, x1 + 0.4, alto + 0.8, PAB_B.z1 + 0.4, '#e9e6df', { lados: 'blanca' });
+    this.solido(x0, 0, PAB_B.z0, x1, alto, PAB_B.z1);
+    // Frentes de celdas de los pisos de arriba del A y de todo el B: abajo celeste, arriba blanco,
+    // puertas de chapa gris con la mirilla (como la foto del pasillo).
+    const frente = (z, s, desdePiso) => {
+      for (let p = desdePiso; p < PISOS; p++) {
+        const y = H * p;
+        c.caja(x0, y, z - 0.3, x1, y + H * 0.45, z + 0.3, '#5fb7d8', { lados: 'celeste' });
+        c.caja(x0, y + H * 0.45, z - 0.3, x1, y + H - 0.4, z + 0.3, '#e9e6df', { lados: 'blanca' });
+        for (let n = 0; n < N_CELDAS; n++) {
+          const dx = x0 + 2 + n * CELDA + 3;
+          c.caja(dx, y + 0.1, z + s * 0.32, dx + 3.6, y + 5.8, z + s * 0.36, '#6b7078');
+          c.caja(dx + 1.2, y + 3.8, z + s * 0.37, dx + 2.4, y + 4.6, z + s * 0.39, '#1b1e22');
+        }
+      }
+    };
+    frente(zc, 1, 1);
+    frente(bc, -1, 0);
+    // Las galerías: el pasillo de cada piso con su borde.
+    for (let p = 1; p < PISOS; p++) {
+      c.caja(x0, H * p - 0.4, PAB_B.z0, x1, H * p, bc, '#b9b5ac', { abajo: true });
+      c.caja(x0, H * p, z1 - 0.3, x1, H * p + 1.1, z1, '#b9b5ac');
+      c.caja(x0, H * p, PAB_B.z0, x1, H * p + 1.1, PAB_B.z0 + 0.3, '#b9b5ac');
+    }
+    // Columnas de las galerías.
+    for (let x = x0; x <= x1; x += 15) for (const z of [z1 - 0.3, PAB_B.z0]) c.caja(x - 0.4, 0, z, x + 0.4, alto, z + 0.3, '#d8d4c8');
+    // Patio interno: cemento gastado, el charco largo en el medio y basura; la pared del oeste.
+    c.piso(x0, PATIO_INT.z0, x1 + 6, PATIO_INT.z1, 0.09, '#9a968c');
+    c.piso(x0 + 6, (PATIO_INT.z0 + PATIO_INT.z1) / 2 - 1.4, x1 - 20, (PATIO_INT.z0 + PATIO_INT.z1) / 2 + 1.6, 0.1, '#5e6560');
+    c.caja(x0 - 0.6, 0, PATIO_INT.z0, x0, alto, PATIO_INT.z1, '#e9e6df', { lados: 'blanca' });
+    this.solido(x0 - 0.6, 0, PATIO_INT.z0, x0, alto, PATIO_INT.z1);
+    // Al este, el muro con la reja de entrada (el cartel A1 arriba).
+    c.caja(x1, 0, PATIO_INT.z0, x1 + 1, H * 2, PATIO_INT.z0 + 5, '#e9e6df', { lados: 'blanca' });
+    c.caja(x1, 0, PATIO_INT.z1 - 5, x1 + 1, H * 2, PATIO_INT.z1, '#e9e6df', { lados: 'blanca' });
+    c.caja(x1, H + 0.2, PATIO_INT.z0 + 5, x1 + 1, H * 2, PATIO_INT.z1 - 5, '#e9e6df', { lados: 'blanca' });
+    this.solido(x1, 0, PATIO_INT.z0, x1 + 1, H * 2, PATIO_INT.z0 + 5);
+    this.solido(x1, 0, PATIO_INT.z1 - 5, x1 + 1, H * 2, PATIO_INT.z1);
+    // Tus celdas por dentro (planta baja del A): paredes grises, cama azul, inodoro, pileta, ventana.
     for (let n = 0; n < N_CELDAS; n++) {
       const k = celda(n);
-      c.caja(k.x1, 0, z0, k.x1 + 0.6, alto, zc, '#5fb7d8', { lados: 'celeste' });
-      this.solido(k.x1, 0, z0, k.x1 + 0.6, alto, zc);
-      c.caja(k.x0, 0, zc - 0.3, k.x0 + 3, alto, zc, '#5fb7d8', { lados: 'celeste' }); // pared del frente (puerta a la derecha)
-      c.caja(k.x0 + 7, 0, zc - 0.3, k.x1, alto, zc, '#5fb7d8', { lados: 'celeste' });
-      this.solido(k.x0, 0, zc - 0.3, k.x0 + 3, alto, zc);
-      this.solido(k.x0 + 7, 0, zc - 0.3, k.x1, alto, zc);
-      c.caja(k.x0 + 3, 6.8, zc - 0.3, k.x0 + 7, alto, zc, '#5fb7d8', { lados: 'celeste' });
-      for (let b = 0; b < 7; b++) c.caja(k.x0 + 7.3 + b * 0.18, 0, zc + 0.05 + b * 0.5, k.x0 + 7.4 + b * 0.18, 6.6, zc + 0.15 + b * 0.5, '#3a4a5a'); // la reja abierta
-      c.caja(k.x0 + 0.6, 0, k.z0 + 0.6, k.x0 + 3.2, 1.6, k.z0 + 7.5, '#a8a49a'); // la cama de material
-      c.caja(k.x0 + 0.7, 1.6, k.z0 + 0.7, k.x0 + 3.1, 1.85, k.z0 + 7.4, ['#6d5a42', '#4a5a6a', '#7a6a5a'][n % 3]); // el colchón finito
-      c.cil(0.5, 0.5, 1.1, '#9a968c', k.x1 - 1.6, 0, k.z0 + 1.6, 8); // la letrina
-      c.caja(k.x1 - 2.6, 2.4, k.z0 + 3.2, k.x1 - 0.6, 2.7, k.z0 + 5, '#b8b4aa'); // el lavatorio
-      c.piso(k.x0 + 3.6, k.z0 + 4, k.x0 + 6.4 + rnd() * 2, k.z0 + 7 + rnd() * 2, 0.1, '#5a5a4c'); // el charco
-      c.caja(k.x0 + 1, 5, k.z0 + 0.5, k.x0 + 3, 6.5, k.z0 + 0.6, '#f2f6ff', { lados: 'luz' }); // la ventanita alta
-      this.solido(k.x0 + 0.6, 0, k.z0 + 0.6, k.x0 + 3.2, 1.8, k.z0 + 7.5);
+      c.caja(k.x1, 0, z0, k.x1 + 0.6, H, zc, '#c9ccd0', { lados: 'gris' });
+      this.solido(k.x1, 0, z0, k.x1 + 0.6, H, zc);
+      c.caja(k.x0, 0, zc - 0.3, k.x0 + 3, H, zc + 0.3, '#5fb7d8', { lados: 'celeste' });
+      c.caja(k.x0 + 7, 0, zc - 0.3, k.x1, H, zc + 0.3, '#5fb7d8', { lados: 'celeste' });
+      c.caja(k.x0 + 3, 6.1, zc - 0.3, k.x0 + 7, H, zc + 0.3, '#5fb7d8', { lados: 'celeste' });
+      this.solido(k.x0, 0, zc - 0.3, k.x0 + 3, H, zc + 0.3);
+      this.solido(k.x0 + 7, 0, zc - 0.3, k.x1, H, zc + 0.3);
+      c.caja(k.x0 + 2.9, 0, zc - 0.35, k.x0 + 3.1, 6.1, zc + 0.35, '#2f3b47'); // marco de la reja
+      c.caja(k.x0 + 6.9, 0, zc - 0.35, k.x0 + 7.1, 6.1, zc + 0.35, '#2f3b47');
+      c.caja(k.x0 + 2.9, 5.9, zc - 0.35, k.x0 + 7.1, 6.1, zc + 0.35, '#2f3b47');
+      c.caja(k.x0 + 0.5, 0, k.z0 + 0.5, k.x0 + 3.2, 1.3, k.z0 + 6.5, '#9aa0a6'); // cama
+      c.caja(k.x0 + 0.6, 1.3, k.z0 + 0.6, k.x0 + 3.1, 1.6, k.z0 + 6.4, ['#3f6fb0', '#4a5a6a', '#6d5a42'][n % 3]);
+      c.caja(k.x0 + 0.7, 1.6, k.z0 + 0.7, k.x0 + 3, 1.9, k.z0 + 1.8, '#e8e6e0'); // almohada
+      c.cil(0.55, 0.5, 1.1, '#f2f2f2', k.x1 - 1.6, 0, k.z0 + 1.8, 10); // inodoro
+      c.caja(k.x1 - 2.2, 1.1, k.z0 + 0.7, k.x1 - 1, 2.4, k.z0 + 1, '#f2f2f2');
+      c.caja(k.x1 - 2.4, 2.4, k.z0 + 4, k.x1 - 0.7, 2.8, k.z0 + 6, '#f2f2f2'); // pileta
+      c.caja(k.x1 - 1.9, 0, k.z0 + 4.6, k.x1 - 1.2, 2.4, k.z0 + 5.4, '#e2e2e2');
+      c.caja(k.x0 + 3.5, 5, z0 + 0.62, k.x0 + 6.5, 6.5, z0 + 0.7, '#f2f6ff', { lados: 'luz' }); // ventanita
+      c.piso(k.x0 + 3.6, k.z0 + 3.6, k.x0 + 6 + rnd() * 2, k.z0 + 6 + rnd() * 2, 0.1, '#7a7a6c'); // charco
+      this.solido(k.x0 + 0.5, 0, k.z0 + 0.5, k.x0 + 3.2, 1.9, k.z0 + 6.5);
     }
-    // La fachada enrejada: barrotes de piso a techo en la galería de abajo y de arriba.
-    for (let x = x0 + 0.6; x < x1 - 0.5; x += 0.55) {
-      for (const y0 of [0, alto + 0.5]) c.caja(x - 0.04, y0, z1 - 0.06, x + 0.04, y0 + alto - (y0 ? 0.5 : 0), z1, '#3a4a5a');
+    // La fachada (cara sur del B, que da al patio grande): abajo ladrillo azul, arriba blanco con
+    // las ventanas en fila y, en el medio, las dos torres blancas.
+    const fz = PAB_B.z1;
+    c.caja(x0, 0, fz, x1, H, fz + 0.4, '#3f6fb8', { lados: 'celeste' });
+    c.caja(x0, H, fz, x1, alto, fz + 0.4, '#e9e6df', { lados: 'blanca' });
+    for (let p = 1; p < PISOS; p++) for (let x = x0 + 4; x < x1 - 4; x += 6) c.caja(x, H * p + 2, fz + 0.4, x + 2.6, H * p + 5.4, fz + 0.5, '#2a2e33');
+    const xm = (x0 + x1) / 2;
+    for (const dx of [-9, 9]) {
+      c.caja(xm + dx - 4, 0, fz, xm + dx + 4, alto + 8, fz + 6, '#f2f0ea', { lados: 'blanca' });
+      c.caja(xm + dx - 4.3, alto + 8, fz - 0.3, xm + dx + 4.3, alto + 8.6, fz + 6.3, '#d8d4c8');
+      this.solido(xm + dx - 4, 0, fz, xm + dx + 4, alto + 8, fz + 6);
     }
-    for (const y of [1.1, 4, 7.4, alto + 1.6, alto + 4.5, alto + 7.2]) c.caja(x0, y, z1 - 0.1, x1, y + 0.12, z1, '#3a4a5a');
-    this.solido(x0, 0, z1 - 0.3, x1 - 7, alto, z1 + 0.1);
-    // La reja de entrada al pabellón (al este, con el cartel A1 1-10), abierta de día.
-    for (let b = 0; b < 8; b++) c.caja(x1 + 0.2 + b * 0.5, 0, z1 - 0.3, x1 + 0.3 + b * 0.5, 7, z1 - 0.2, '#2b3a4a');
-    // Arriba: ropa colgada en la reja, toallas, una antena hecha con alambre.
-    for (let i = 0; i < 26; i++) {
+    c.caja(xm - 5, 0, fz + 0.4, xm + 5, H, fz + 6, '#3f6fb8', { lados: 'celeste' }); // el cuerpo de entrada
+    c.caja(xm - 2.5, 0.1, fz + 6, xm + 2.5, 6, fz + 6.1, '#2a2e33'); // la puerta
+    c.caja(xm - 6, H, fz - 0.2, xm + 6, H + 0.6, fz + 7, '#d8d4c8'); // alero
+    this.solido(xm - 5, 0, fz, xm + 5, H, fz + 6);
+    // Ropa colgada en las galerías y manchas de humedad.
+    for (let i = 0; i < 40; i++) {
+      const lado = i % 2;
+      const z = lado ? z1 + 0.25 : PAB_B.z0 - 0.25;
+      const p = 1 + (i % PISOS);
       const x = x0 + 3 + rnd() * (x1 - x0 - 6);
-      c.caja(x, alto + 2 + rnd() * 3, z1 + 0.05, x + 0.8 + rnd() * 1.2, alto + 4.5 + rnd() * 2, z1 + 0.15, ['#f2f2ee', '#c0392b', '#2b6cb0', '#d4b06a', '#3a3d40'][i % 5]);
+      c.caja(x, H * p - 3.2 + rnd(), z - 0.05, x + 0.9 + rnd() * 1.2, H * p - 1 + rnd(), z + 0.05, ['#f2f2ee', '#c0392b', '#2b6cb0', '#d4b06a', '#3a3d40', '#f07c18'][i % 6]);
     }
-    for (let i = 0; i < 10; i++) c.caja(x0 + 4 + rnd() * (x1 - x0 - 8), 2 + rnd() * 3, z1 + 0.05, x0 + 5 + rnd() * (x1 - x0 - 8), 4 + rnd() * 2, z1 + 0.15, '#e8e2d4');
-    // Manchas de humedad grandes en la fachada.
-    for (let i = 0; i < 14; i++) { const x = x0 + rnd() * (x1 - x0); c.caja(x, alto * 2 - 4, z1 - 0.02, x + 3 + rnd() * 6, alto * 2 - 0.5, z1 + 0.27, '#9a948a'); }
+    for (let i = 0; i < 18; i++) { const x = x0 + rnd() * (x1 - x0); c.caja(x, alto - 5, fz + 0.41, x + 3 + rnd() * 6, alto - 0.5, fz + 0.45, '#a8a49a'); }
+  }
+
+  // Las rejas (planos con la misma textura): las galerías de los dos pabellones de arriba a abajo
+  // (abajo, con la puerta del pabellón A al este), las puertas de las celdas abiertas contra la
+  // pared y la reja de entrada al pabellón.
+  rejas() {
+    const { x0, x1, z1, galeria } = MOD;
+    const zc = z1 - galeria;
+    const alto = H * PISOS;
+    this.reja(x0, z1 - 0.15, x1 - 10, z1 - 0.15, 0, alto);
+    this.reja(x1 - 10, z1 - 0.15, x1, z1 - 0.15, H, alto);
+    this.reja(x0, PAB_B.z0 + 0.15, x1, PAB_B.z0 + 0.15, 0, alto);
+    this.solido(x0, 0, z1 - 0.4, x1 - 10, H, z1 + 0.1);
+    for (let n = 0; n < N_CELDAS; n++) { const k = celda(n); this.reja(k.x0 + 7.1, zc + 0.45, k.x0 + 11, zc + 0.45, 0, 5.9); } // abiertas, contra el frente
+    this.reja(x1 + 1, PATIO_INT.z0 + 5, x1 + 8, PATIO_INT.z0 + 5, 0, H); // la reja de entrada, abierta contra el muro
   }
 
   comedor(c, rnd) {
@@ -371,11 +497,11 @@ export class Comcar {
   }
 
   // ---------- La gente ----------
-  async persona(p, x, z, a, extra) {
+  async persona(p, x, z, a, extra, y = 0.05) {
     const cab = await cargarCabeza(p);
     if (p.sinFoto && !cab.dibujada) { dibujarCara(cab.frente, p.piel, p.pelo); cab.dibujada = true; }
     const m = crearPersonaje(p, cab);
-    m.grupo.position.set(x, 0.05, z);
+    m.grupo.position.set(x, y, z);
     m.grupo.rotation.y = a;
     extra?.(m);
     this.grupo.add(m.grupo);
@@ -389,11 +515,12 @@ export class Comcar {
     for (let n = 0; n < 34; n++) {
       const p = { id: `preso${n % 6}`, nombre: ' ', sinFoto: true, sinCara: true, piel: pieles[n % pieles.length], pelo: ['#151010', '#3e2723', '#2b2b2b'][n % 3], peinado: n % 3 ? 'liso' : 'rapado', remera: '#f07c18', pantalon: '#f07c18', mangasLargas: true, cuerpo: n % 9 === 0 ? 'gordo' : undefined };
       let x, z;
-      const lugar = n < 18 ? 'patio' : n < 26 ? 'celda' : n < 30 ? 'comedor' : 'reja';
+      const lugar = n < 16 ? 'patio' : n < 22 ? 'celda' : n < 26 ? 'comedor' : 'galeria';
+      let y = 0.05;
       if (lugar === 'patio') { x = PATIO.x0 + 10 + rnd() * (PATIO.x1 - PATIO.x0 - 20); z = PATIO.z0 + 6 + rnd() * (PATIO.z1 - PATIO.z0 - 12); }
       else if (lugar === 'celda') { const k = celda((n * 3) % N_CELDAS === TU_CELDA || (n * 3) % N_CELDAS === SU_CELDA ? 1 : (n * 3) % N_CELDAS); x = k.x0 + 5; z = k.z0 + 5 + rnd() * 3; }
       else if (lugar === 'comedor') { x = COM.x0 + 14 + rnd() * 50; z = COM.z0 + 12.2 + (n % 4) * 7.5; }
-      else { x = MOD.x0 + 10 + rnd() * 150; z = MOD.z1 + 1.5; }
+      else { const piso = 1 + (n % 2); y = H * piso + 0.05; x = MOD.x0 + 10 + rnd() * 150; z = n % 4 < 2 ? MOD.z1 - 2 : PAB_B.z0 + 2; } // en las galerías de arriba, contra la reja
       const m = await this.persona(p, x, z, rnd() * 6, (mm) => {
         // Las esposas: un aro en cada muñeca y la cadenita entre las dos.
         for (const b of [mm.partes.brazoI, mm.partes.brazoD]) {
@@ -404,7 +531,7 @@ export class Comcar {
         const cadena = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.08), new THREE.MeshLambertMaterial({ color: '#9aa0a6' }));
         cadena.position.set(-0.5, -0.88, 0.25);
         mm.partes.brazoD.codo.add(cadena);
-      });
+      }, y);
       this.gente.push({ m, preso: true, camina: lugar === 'patio', dest: null, vel: 2.4 + rnd() * 1.4 });
     }
     // Guardias: uniforme azul, gorra, algunos con escopeta. Uno en cada lugar y el de la reja.
@@ -412,27 +539,20 @@ export class Comcar {
     const cabG = await cargarCabeza(G);
     if (!cabG.dibujada) { dibujarCara(cabG.frente, G.piel, G.pelo); cabG.dibujada = true; }
     this.caraGuardia = cabG.frente.toDataURL(); // para los diálogos (antes de que se vacíe)
-    const puestos = [[GUARDIA_PUERTA.x, GUARDIA_PUERTA.z, Math.PI, true], [COM.x0 + 6, COM.z1 - 6, 0.5, false], [BAN.x1 - 6, BAN.z1 - 6, -0.5, false], [PATIO.x0 + 4, PATIO.z0 + 4, 0.8, true], [PATIO.x1 - 4, PATIO.z1 - 4, -2.4, true], [VIS.x1 - 3, VIS.z0 + 3, -1.6, false], [CC.entrada + 4, CC.z1 + 4, 0, true]];
+    const puestos = [[GUARDIA_PUERTA.x, GUARDIA_PUERTA.z, -Math.PI / 2, false], [COM.x0 + 6, COM.z1 - 6, 0.5, false], [BAN.x1 - 6, BAN.z1 - 6, -0.5, false], [PATIO.x0 + 4, PATIO.z0 + 4, 0.8, true], [PATIO.x1 - 4, PATIO.z1 - 4, -2.4, true], [VIS.x1 - 3, VIS.z0 + 3, -1.6, false], [CC.entrada + 4, CC.z1 + 4, 0, true]];
     for (const [x, z, a, arma] of puestos) {
       const m = await this.persona(G, x, z, a, (mm) => {
         const gorra = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.32, 1.5), new THREE.MeshLambertMaterial({ color: '#141a2a' }));
         gorra.position.set(0, 0.8, 0.08);
         mm.partes.cabeza.add(gorra);
         if (arma) { const ak = crearAK(); ak.position.set(0, -1.9, 0); ak.rotation.x = Math.PI / 2; mm.manoD.add(ak); mm.apuntar = true; }
+        else { const baston = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.6, 6), new THREE.MeshLambertMaterial({ color: '#111111' })); baston.position.set(0, -1.9, 0.5); baston.rotation.x = Math.PI / 2.4; mm.manoD.add(baston); }
       });
       this.gente.push({ m, guardia: true });
-      if (x === GUARDIA_PUERTA.x) {
-        this.benitez = m;
-        const et = crearEtiqueta([{ texto: 'Guardia Benítez', tam: 52, color: '#9ec5ff' }], 4);
-        et.sprite.position.y = 6.6;
-        m.grupo.add(et.sprite);
-      }
+      if (x === GUARDIA_PUERTA.x) this.benitez = m;
     }
     // El Extravirgen (de naranja, sin esposas: tiene sus contactos).
     this.ev = await this.persona(EXTRAVIRGEN, PATIO.x0 + 60, PATIO.z0 + 8, 0);
-    const et = crearEtiqueta([{ texto: EXTRAVIRGEN.nombre, tam: 56, color: '#ffd23f' }], 4);
-    et.sprite.position.y = 6.6;
-    this.ev.grupo.add(et.sprite);
     this.listo = true;
   }
 
@@ -558,12 +678,9 @@ export class Comcar {
     await this.fundido('Benítez te saca por la puerta de atrás…', () => { this.estado.carcel = null; this.ponerAfuera(); });
     this.liberar('Saliste del C.O.M.C.A.R. (sobornaste al guardia). El Extravirgen se quedó adentro');
   }
-
-  // La fuga: por el túnel con el Extravirgen; salen del otro lado del alambrado norte. Los otros
-  // jugadores presos que estén cerca se van con vos (alFuga: multijugador).
-  async escapar(conOtro = false) {
+  // La fuga: por el túnel con el Extravirgen. Cada jugador preso se escapa por su cuenta (haciendo sus pasos).
+  async escapar() {
     sfx.susto();
-    if (!conOtro) this.alFuga?.(); // los otros presos de verdad se escapan con vos
     await this.fundido('Te metés en el túnel con el Extravirgen…<br>Arrastrándose en el barro, por debajo del alambrado…', () => { this.estado.carcel = null; this.ponerAfuera(); });
     this.estado.extravirgenLibre = true;
     this.liberar('¡Te escapaste del C.O.M.C.A.R. con el Extravirgen!');
@@ -590,6 +707,7 @@ export class Comcar {
     }
     if (this.hud) this.hud.classList.toggle('oculto', !this.preso);
     if (!this.grupo) return;
+    if (this.estado.costa && !this.poblando) { this.poblando = true; this.poblar(this.rnd); } // la gente, recién con la costa abierta
     this.grupo.visible = this.dentro(p, 700);
     if (!cerca && !this.preso) return;
     this.reloj += dt;
@@ -640,9 +758,6 @@ export class Comcar {
     const pj = otros[Math.floor(Math.random() * otros.length)];
     const silla = this.sillas[Math.floor(Math.random() * this.sillas.length)];
     const m = await this.persona(pj, silla.x, silla.zVisita, Math.PI);
-    const et = crearEtiqueta([{ texto: `${pj.nombre} (visita)`, tam: 52, color: '#8dff6a' }], 4);
-    et.sprite.position.y = 6.6;
-    m.grupo.add(et.sprite);
     this.visita = { m, p: pj, silla };
     this.ui.toast(`Guardia: "¡Tenés visita! ${pj.nombre} te espera en la sala"`, 'plata', 5000);
   }

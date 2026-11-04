@@ -103,6 +103,10 @@ export class Policia {
   }
 
   actualizar(dt, jugador, conduciendo, jugando) {
+    // La policía arranca recién cuando le pagaste a Nico (antes, ni patrullero ni punto en el mapa).
+    this.auto.visible = !!this.estado.costa;
+    if (!this.estado.costa) { if (this.marcado) { this.marcado = false; this.alMarcar?.([]); } return; }
+    this.marcado = true;
     this.reloj += dt;
     const [roja, azul] = this.auto.userData.mats;
     const on = Math.floor(this.reloj * 4) % 2;

@@ -196,7 +196,8 @@ async function iniciar() {
   const policia = new Policia({ escena, estado, ui: UI, guardar: () => guardarAhora(), jugador, tanzania, comcar, pausar: pausarDialogo });
   policia.alMarcar = (l) => UI.marcasMapa(l, 'policia');
   comcar.alEncarcelar = () => { if (conduciendo) { const v = vehiculo; if (v === tycoon.heli) v.prendido = false; conduciendo = false; vehiculo = null; jugador.conduciendo = false; jugador.contenedor.visible = true; jugador.sombra.visible = true; } if (pony.montado) pony.bajar(jugador); celular.cerrar(); };
-  comcar.alFuga = () => mj?.fugar();
+  let relojVisitas = 0;
+  const visitasAvisadas = new Set();
   const fumar = new Fumar({ escena, estado, ui: UI, guardar: () => guardarAhora(), jugador, tanzania, puede: () => modo === 'juego' && controles.activo && !conduciendo });
   tanzania.alComprar = (it) => { if (it.tipo === 'galpon') delete fotos.costa; }; // la foto del mapa, con el galpón
   const pony = new Pony({ escena, estado, ui: UI, guardar: () => guardarAhora() });
@@ -409,7 +410,6 @@ async function iniciar() {
   if (mj) {
     // Bauti trabado (100% musculoso) le pega a otro jugador y lo tira al cielo; acá, cuando te toca a vos.
     mj.alGolpe = (g) => {
-      if (g.tipo === 'fuga') { if (comcar.preso) { UI.toast(`¡${g.nombre} se escapa y te lleva!`, 'plata'); comcar.escapar(true); } return; }
       if (conduciendo || pony.montado) return;
       jugador.vel.y = 190; // con gravedad 196: unos 90 de alto
       jugador.pos.y += 0.5;
@@ -1497,6 +1497,18 @@ async function iniciar() {
     tanzania.actualizar(dt, jugador);
     fumar.actualizar(dt);
     comcar.actualizar(dt, jugador);
+    // Visitas de verdad: un pibe en la sala de visitas del lado de afuera y otro preso adentro se ven
+    // por la reja (sus posiciones ya viajan por la red); acá solo el aviso a los dos.
+    if (mj && (relojVisitas += dt) > 2) {
+      relojVisitas = 0;
+      for (const o of mj.otros.values()) {
+        if (!o.grupo.visible || !o.actual || visitasAvisadas.has(o.uid)) continue;
+        const enSala = (q) => comcar.enSalaVisitas(q);
+        if (comcar.preso && enSala(o.actual)) { visitasAvisadas.add(o.uid); UI.toast(`¡${o.info.nombre || 'Alguien'} te vino a visitar! Andá a la sala de visitas`, 'plata', 5000); }
+        else if (!comcar.preso && o.info.preso && enSala(jugador.pos)) { visitasAvisadas.add(o.uid); UI.toast(`${o.info.nombre || 'Alguien'} está preso: esperalo en la reja de la sala`, 'info', 5000); }
+      }
+      if (!comcar.preso && !comcar.enSalaVisitas(jugador.pos)) visitasAvisadas.clear();
+    }
     policia.actualizar(dt, jugador, conduciendo, modo === 'juego' && controles.activo);
     fumadores.actualizar(dt, jugador);
     celular.actualizar(dt, jugador, conduciendo && vehiculo === tanzania.autos[0], vehiculo?.vel || 0);

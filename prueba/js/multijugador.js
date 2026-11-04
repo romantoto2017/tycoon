@@ -413,11 +413,6 @@ export class Multijugador {
     return mejor;
   }
 
-  // Te escapaste del COMCAR: los otros jugadores presos (conectados) se van con vos.
-  fugar() {
-    for (const [id, i] of Object.entries(this.jugadores)) if (id !== this.uid && i.preso && i.enLinea) this.red.golpe(id, { tipo: 'fuga', de: this.uid, nombre: this.nombre, t: Date.now() });
-  }
-
   pegar(o) { this.red.golpe(o.uid, { de: this.uid, nombre: this.nombre, t: Date.now() }); }
 
   // ---------- Chat (sin censura: lo que escribís es lo que ven todos) ----------
