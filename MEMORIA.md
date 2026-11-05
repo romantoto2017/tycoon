@@ -31,3 +31,4 @@ Notas entre sesiones (las sesiones web no se acuerdan de nada solas). Leer al em
 - Regla nueva en CLAUDE.md: no romper el progreso de los jugadores.
 - Multijugador con Firebase (proyecto vecibandatycoon) y chat con globo sobre la cabeza.
 - Música con loop natural.
+- 10º terreno (LOTES[9] = -230, al final para no mover a nadie) para el amigo de la compu; LOTES_TOTAL=10: con los 10 ocupados la partida queda cerrada.

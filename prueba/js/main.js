@@ -233,7 +233,7 @@ async function iniciar() {
   // cosas) y la ciudad cuando termina de armarse (antes se ve su plano dibujado). En ui.js se
   // dibujan el minimapa y el mapa grande, arriba del plano (calles, autopista, pista, ciudad).
   const ZONAS_MAPA = {
-    // Con multijugador, el barrio entero (los 9 terrenos), con menos detalle.
+    // Con multijugador, el barrio entero (los 10 terrenos), con menos detalle.
     barrio: globalThis.VECI?.red ? [BARRIO.x0 - 10, -365, BARRIO.x1 + 10, 190] : [-660 + DX, -365, 335, 190],
     autodromo: [AUTODROMO.x - 900, AUTOPISTA.z - 30, AUTODROMO.x + 900, AUTODROMO.z + 900],
     ciudad: [CIUDAD.x - RADIO_CIUDAD - 20, CIUDAD.z - RADIO_CIUDAD - 20, TALLER.x1 + 30, CIUDAD.z + RADIO_CIUDAD + 20],

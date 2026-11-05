@@ -1,8 +1,8 @@
 // Arranque: antes de cargar el juego se pide el nombre de usuario (una vez; queda guardado) y,
-// si hay multijugador (js/red-config.js), se conecta y se toma uno de los 9 terrenos. Recién
+// si hay multijugador (js/red-config.js), se conecta y se toma uno de los 10 terrenos. Recién
 // ahí se carga main.js: las constantes (constantes.js) ya saben qué terreno es el tuyo.
 import { FIREBASE } from './red-config.js';
-import { conectarRed } from './red.js';
+import { conectarRed, LOTES_TOTAL } from './red.js';
 
 import { PRUEBA, clave, llaveOk } from './entorno.js';
 
@@ -69,7 +69,7 @@ function pedirNombre() {
   let red = null;
   let slot = Number(leer(`${CLAVE_SLOT}-${uid}`)) || 0;
   const aviso = '';
-  // Hay una sola partida (el server original, con los 9 pibes): si no se puede entrar, no se juega
+  // Hay una sola partida (el server original, con los 10 pibes): si no se puede entrar, no se juega
   // (nada de jugar solo aparte). Lo guardado en este navegador queda para cuando se pueda.
   const parar = (texto) => { if (msg) msg.textContent = texto; return new Promise(() => {}); };
   if (FIREBASE && !vista && !(enCompu && !param.has('redlocal'))) {
@@ -84,7 +84,7 @@ function pedirNombre() {
         if (k === null) red = null;
         else if (k < 0) {
           const quienes = await Promise.race([red.ocupantes(), esperar(10000)]);
-          await parar(`Los 9 lugares de la partida están ocupados: no se puede jugar${quienes ? ` (${quienes.join(', ')})` : ''}`);
+          await parar(`Los ${LOTES_TOTAL} lugares de la partida están ocupados: la partida está cerrada${quienes ? ` (${quienes.join(', ')})` : ''}`);
         }
         else slot = k;
       }

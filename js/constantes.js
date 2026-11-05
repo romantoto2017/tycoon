@@ -1,11 +1,14 @@
 // Medidas del mundo. Sin imports para que también se pueda usar desde herramientas/.
 
-// ---------- Multijugador: 9 terrenos sobre la misma calle ----------
+// ---------- Multijugador: 10 terrenos sobre la misma calle ----------
 // LOTES: x del centro de cada terreno en el mundo compartido (el 0 es el de siempre; los otros,
 // pasando el restaurante, con lugar para el galpón de cada uno). Cada jugador tiene el suyo
 // (VECI.slot, js/arranque.js) y lo ve en el centro, como siempre: lo compartido (gym, resto,
 // playa, montaña, autopista, ciudad...) se corre DX en x. local = compartido + DX.
-export const LOTES = [0, 340, 570, 800, 1030, 1260, 1490, 1720, 1950];
+// El décimo (el último: después no entra nadie más) va a la izquierda del primero, entre el gym y la
+// mansión de siempre, a la misma distancia que los demás. Va AL FINAL de la lista: los índices de los
+// que ya juegan no cambian (su terreno y todo lo que ven queda donde estaba).
+export const LOTES = [0, 340, 570, 800, 1030, 1260, 1490, 1720, 1950, -230];
 export const SLOT = globalThis.VECI?.slot ?? 0;
 export const DX = -LOTES[SLOT];
 // Donde está la casa del terreno k en tu mundo.
@@ -94,7 +97,7 @@ export const CIUDAD = { x: -4000 + DX, z: CALLE_Z }; // antes a 20 km: se hacía
 // Playa frente a la mansión (cruzando la calle): la arena va de la vereda a la orilla y el mar sigue
 // hasta el horizonte. Se camina por el agua solo cerca de la orilla (hasta orilla + vadeo); el auto
 // no entra al agua. El muelle sale de la arena hacia el mar.
-// Llega de punta a punta del barrio (frente a los 9 terrenos).
+// Llega de punta a punta del barrio (frente a los 10 terrenos).
 export const PLAYA = { x0: -700 + DX, x1: 2300 + DX, z0: CALLE_Z + 8.5, orilla: CALLE_Z + 58, vadeo: 6.5, mar: { x0: -1150 + DX, x1: 4600 + DX, z1: 2600 }, muelle: { x: 46 + DX, largo: 40, ancho: 5 } };
 // TP a la ciudad: el portal a la salida de la mansión (se compra, 10 T) y donde aparecés en la
 // ciudad (en la avenida de la entrada, con el portal de vuelta).

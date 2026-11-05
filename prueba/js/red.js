@@ -1,5 +1,5 @@
 // Multijugador: la base de datos compartida (Firebase Realtime Database, gratis). Lo que se guarda:
-//   lotes/{k}        uid del dueño del terreno k (0 a 8)
+//   lotes/{k}        uid del dueño del terreno k (0 a 9)
 //   jugadores/{uid}  { nombre, personaje, slot, progreso, compras, ropa, enLinea, visto }
 //   pos/{uid}        { x, y, z, a, v, m, t } en coordenadas compartidas (m: 0 a pie, 1 auto, 2 pony)
 //   chat/{id}        { uid, nombre, texto, t } (se leen los últimos 40)
@@ -8,7 +8,7 @@
 import { clave, RAIZ_RED } from './entorno.js';
 
 const VERSION = '10.12.2';
-export const LOTES_TOTAL = 9;
+export const LOTES_TOTAL = 10; // la partida se cerró con 10: cuando están todos ocupados, no entra nadie más
 // Tepho y le shpet entraron primero desde el navegador y ahora juegan desde la app (para el juego
 // es otro usuario). Cuando entran desde una sesión sin terreno, se llevan el terreno de su otra
 // sesión (con el mismo nombre), esté conectada o no. Se quedan con lo guardado en esa sesión nueva
@@ -184,7 +184,7 @@ export async function conectarRed(config) {
     import(`https://www.gstatic.com/firebasejs/${VERSION}/firebase-database.js`),
   ]);
   const app = initializeApp(config);
-  // La copia de prueba usa su propia rama de la base (prueba/...): no toca a los 9 de verdad.
+  // La copia de prueba usa su propia rama de la base (prueba/...): no toca a los 10 de verdad.
   const ref = (base, p) => db.ref(base, RAIZ_RED ? (p ? `${RAIZ_RED}/${p}` : RAIZ_RED) : p);
   return new RedFirebase({ ...db, ref }, db.getDatabase(app));
 }

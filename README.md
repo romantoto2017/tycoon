@@ -72,7 +72,7 @@ En el patio de atrás, al lado de la pileta: una estatua griega de mármol con l
 
 ## Multijugador
 
-Hasta 9 jugadores a la vez, cada uno con su terreno sobre la misma calle (los 8 nuevos están pasando el restaurante, con lugar para el galpón). Lo compartido (gym, restaurante, playa, montaña, autopista, ciudad, tiendas) es uno solo; cada uno ve su mansión en el centro de siempre y el resto del mundo corrido según su terreno (`LOTES`, `DX` y `loteLocal` en `js/constantes.js`), así nadie se teletransporta.
+Hasta 10 jugadores a la vez, cada uno con su terreno sobre la misma calle (los 8 nuevos están pasando el restaurante, con lugar para el galpón; el décimo, el último, está a la izquierda del primero, entre el gym y la mansión de siempre). **La partida está cerrada**: con los 10 ocupados no entra nadie más (los terrenos no se liberan solos). Lo compartido (gym, restaurante, playa, montaña, autopista, ciudad, tiendas) es uno solo; cada uno ve su mansión en el centro de siempre y el resto del mundo corrido según su terreno (`LOTES`, `DX` y `loteLocal` en `js/constantes.js`), así nadie se teletransporta.
 
 - **Al entrar** se pide el nombre de usuario (una vez; queda guardado). Arriba de los demás se ve su nombre y abajo el del personaje.
 - **Las mansiones de los demás** se ven solo por fuera, armadas según lo que compraron (sin muebles ni cuadros). A la casa no se puede entrar; al patio sí: la cancha (con su pelota), la pileta, el garage y el galpón.
@@ -81,7 +81,7 @@ Hasta 9 jugadores a la vez, cada uno con su terreno sobre la misma calle (los 8 
 - **Parrilla Vecibanda**: se compra al lado de lo de Lourdes y cada uno ve solo la suya (las mansiones de los demás no la muestran).
 - **Podio en el cielo** (atrás de las mansiones): los 3 con la mansión más avanzada, con su personaje, nombre y porcentaje.
 - Archivos: `js/arranque.js` (nombre, conexión y terreno, antes de cargar el juego), `js/red.js` (la base de datos), `js/multijugador.js` (los demás, sus mansiones, el podio y la puerta láser).
-- **Una sola partida**: si no hay lugar (los 9 ocupados) o no hay conexión, no se puede jugar (no hay partida aparte para jugar solo). Lo guardado en el navegador queda para cuando entres.
+- **Una sola partida**: si no hay lugar (los 10 ocupados) o no hay conexión, no se puede jugar (no hay partida aparte para jugar solo). Lo guardado en el navegador queda para cuando entres.
 - **Navegador → app**: Tepho y le shpet entraron primero desde Safari y después desde la app (para el juego, otro usuario: no comparten lo guardado). Cuando entran desde una sesión sin terreno, se llevan el de su otra sesión con el mismo nombre, esté abierta o no (`LIBERAR` en `js/red.js`). Se quedan con lo guardado en la sesión nueva; la vieja queda en `movidos/`: si está abierta se recarga y avisa que ahora juegan desde la app. Si están los 9 ocupados, el aviso dice quién está en cada lugar.
 - `?completo`, `?redlocal`, `?uid=` y `?nombre=` andan solo en la compu (localhost), para probar.
 
@@ -358,7 +358,7 @@ Para la Chromebook: cada manzana es una sola malla por material (lo que no se ve
 En `prueba/` hay una copia exacta del juego, publicada en la misma página con `/prueba/` al final (por ejemplo `https://romantoto2017.github.io/tycoon/prueba/`). Sirve para probar una actualización antes de que la vean todos:
 
 - **Solo con el link del dueño** (`…/prueba/#llave=…`): sin la llave muestra "404 · Página no encontrada". En el código está solo la huella SHA-256 de la llave (`HUELLA` en `js/entorno.js`), no la llave; el navegador que entró con el link la recuerda. Para cambiarla: otra llave, su huella en `HUELLA` y `copiar_prueba.sh`.
-- **No toca el juego de verdad:** usa sus propias partidas guardadas (claves `prueba-...` en el navegador) y su propio lugar en Firebase (`prueba/...`, con sus 9 terrenos aparte). Todo eso sale de `js/entorno.js`, según si el juego corre desde `/prueba/`.
+- **No toca el juego de verdad:** usa sus propias partidas guardadas (claves `prueba-...` en el navegador) y su propio lugar en Firebase (`prueba/...`, con sus 10 terrenos aparte). Todo eso sale de `js/entorno.js`, según si el juego corre desde `/prueba/`.
 - **Arranca con tu partida:** la primera vez, la copia toma una copia de lo que tenés guardado en el juego de verdad (y tu nombre). Lo que hagas después queda solo en la prueba.
 - **Con `?completa` en el link** (`…/prueba/?completa#llave=…`): la partida de la prueba queda con la mansión al 100% y 500T, guardada (para probar lo nuevo sin jugar todo).
 - `sh herramientas/copiar_prueba.sh` rehace la copia desde el juego; `sh herramientas/pasar_prueba.sh` pasa lo de `prueba/` al juego de verdad.
